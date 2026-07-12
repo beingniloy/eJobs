@@ -1,0 +1,57 @@
+name: Deploy to cPanel
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Create .env.production
+        run: |
+          cat > .env.production <<EOF
+          NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_APP_NAME=${{ secrets.NEXT_PUBLIC_APP_NAME }}
+          NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
+          NEXT_PUBLIC_REVERB_APP_KEY=${{ secrets.NEXT_PUBLIC_REVERB_APP_KEY }}
+          NEXT_PUBLIC_REVERB_HOST=${{ secrets.NEXT_PUBLIC_REVERB_HOST }}
+          NEXT_PUBLIC_REVERB_PORT=${{ secrets.NEXT_PUBLIC_REVERB_PORT }}
+          NEXT_PUBLIC_REVERB_SCHEME=${{ secrets.NEXT_PUBLIC_REVERB_SCHEME }}
+          EOF
+
+      - name: Build
+        run: npm run build
+
+      - name: Copy public assets into standalone build
+        run: |
+          cp -r public .next/standalone/public 2>/dev/null || true
+          mkdir -p .next/standalone/.next/static
+          cp -r .next/static/* .next/standalone/.next/static/ 2>/dev/null || true
+
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
+      - name: Deploy to cPanel via SFTP
+        run: |
+          cat > deploy.lftp <<'SCRIPT'
+          set sftp:auto-confirm yes
+          set net:timeout 60
+          set net:max-retries 3
+          open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} sftp://${{ secrets.FTP_HOST }}
+          mirror -R --verbose --exclude .env* --exclude .git --delete --only-newer .next/standalone/ ${{ secrets.FTP_REMOTE_DIR }}
+          quit
+          SCRIPT
+          lftp -f deploy.lftp

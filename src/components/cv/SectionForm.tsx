@@ -1,0 +1,417 @@
+"use client";
+
+import { useState } from "react";
+import { X, Plus, User, Globe } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import api from "@/lib/api-client";
+import { toast } from "sonner";
+
+export default function SectionForm({ section, data, onChange, isBn }: { section: string; data: any; onChange: (d: any) => void; isBn: boolean }) {
+  const handleChange = (newData: any) => {
+    onChange(newData);
+  };
+
+  switch (section) {
+    case "personal":
+      return <PersonalSectionForm data={data || {}} onChange={handleChange} isBn={isBn} />;
+    case "experience":
+      return <ExperienceSectionForm data={data || []} onChange={onChange} isBn={isBn} />;
+    case "education":
+      return <EducationSectionForm data={data || []} onChange={onChange} isBn={isBn} />;
+    case "skills":
+      return <SkillsSectionForm data={data || []} onChange={onChange} isBn={isBn} />;
+    case "certifications":
+      return <CertificationsSectionForm data={data || []} onChange={onChange} isBn={isBn} />;
+    case "languages":
+      return <LanguagesSectionForm data={data || []} onChange={onChange} isBn={isBn} />;
+    case "projects":
+      return <ProjectsSectionForm data={data || []} onChange={onChange} isBn={isBn} />;
+    case "awards":
+      return <AwardsSectionForm data={data || []} onChange={onChange} isBn={isBn} />;
+    case "hobbies":
+      return <HobbiesSectionForm data={data || []} onChange={onChange} isBn={isBn} />;
+    case "social_links":
+      return <SocialSectionForm data={data || {}} onChange={handleChange} isBn={isBn} />;
+    default:
+      return <p className="text-sm text-muted-foreground">{isBn ? "এই সেকশনটি শীঘ্রই আসছে..." : "Coming soon..."}</p>;
+  }
+}
+
+function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, any>; onChange: (d: any) => void; isBn: boolean }) {
+  const [uploading, setUploading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      toast.error(isBn ? "শুধুমাত্র JPG, PNG এবং WebP ছবি অনুমোদিত" : "Only JPG, PNG and WebP images are allowed");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(isBn ? "ছবির সাইজ ৫MB এর কম হতে হবে" : "Image size must be under 5MB");
+      e.target.value = "";
+      return;
+    }
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      const res = await api.post("/candidate/cv/profile/upload-photo", formData, {
+        headers: { "Content-Type": undefined },
+      });
+      const photoUrl = res.data.data?.photo_url || res.data?.photo_url;
+      if (photoUrl) onChange({ ...data, photo_url: photoUrl });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || (isBn ? "আপলোড ব্যর্থ" : "Upload failed");
+      toast.error(msg);
+    } finally { setUploading(false); }
+    e.target.value = "";
+  };
+
+  const photoFullUrl = data.photo_url
+    ? (data.photo_url.startsWith("http") ? data.photo_url : `/storage/${data.photo_url}`)
+    : null;
+
+  const field = (label_en: string, label_bn: string, key: string, type = "text", placeholder?: string, validate?: (v: string) => string | null) => {
+    const validateValue = (value: string) => {
+      if (!validate) return;
+      const msg = validate(value);
+      setFieldErrors((prev) => ({ ...prev, [key]: msg || "" }));
+    };
+    return (
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">{isBn ? label_bn : label_en}</Label>
+        <Input
+          type={type}
+          value={data[key] || ""}
+          onChange={(e) => { onChange({ ...data, [key]: e.target.value }); validateValue(e.target.value); }}
+          onBlur={(e) => validateValue(e.target.value)}
+          placeholder={placeholder || (isBn ? label_bn : label_en)}
+          className="h-9 text-sm"
+        />
+        {fieldErrors[key] && <p className="text-xs text-destructive h-4" aria-live="polite">{fieldErrors[key]}</p>}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-4">
+        <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-dashed border-muted-foreground/30 flex items-center justify-center bg-muted/30 shrink-0">
+          {photoFullUrl ? (
+            <img src={photoFullUrl} alt="Profile" className="w-full h-full object-cover" />
+          ) : (
+            <User className="h-8 w-8 text-muted-foreground/50" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <Label className="text-xs font-medium">{isBn ? "প্রোফাইল ছবি" : "Profile Photo"}</Label>
+          <Input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploading} className="h-8 text-sm mt-1" />
+          {uploading && <p className="text-xs text-muted-foreground mt-1">{isBn ? "আপলোড হচ্ছে..." : "Uploading..."}</p>}
+        </div>
+      </div>
+      {field("Full Name", "পূর্ণ নাম", "full_name", "text", isBn ? "আপনার পূর্ণ নাম" : "John Doe")}
+      {field("Professional Title", "পেশাদার উপাধি", "title", "text", isBn ? "যেমন: সফটওয়্যার ইঞ্জিনিয়ার" : "e.g. Software Engineer")}
+      {field("Email", "ইমেইল", "email", "email", isBn ? "আপনা@উদাহরণ.com" : "you@example.com", (v) => {
+        if (!v.trim()) return null;
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : (isBn ? "সঠিক ইমেইল দিন" : "Enter a valid email");
+      })}
+      {field("Phone", "ফোন", "phone", "tel", isBn ? "০১XXXXXXXXX" : "01XXXXXXXXX", (v) => {
+        if (!v.trim()) return null;
+        return /^[+]?[\d\s()-]{7,20}$/.test(v) ? null : (isBn ? "সঠিক ফোন নম্বর দিন" : "Enter a valid phone number");
+      })}
+      {field("Location", "অবস্থান", "location", "text", isBn ? "যেমন: ঢাকা, বাংলাদেশ" : "e.g. Dhaka, Bangladesh")}
+      {field("Website", "ওয়েবসাইট", "website", "url", "https://...", (v) => {
+        if (!v.trim()) return null;
+        return /^https?:\/\//i.test(v) ? null : (isBn ? "https:// দিয়ে শুরু করুন" : "Must start with http(s)");
+      })}
+      {field("LinkedIn", "LinkedIn", "linkedin", "url", "https://linkedin.com/in/...", (v) => {
+        if (!v.trim()) return null;
+        return /^https?:\/\//i.test(v) ? null : (isBn ? "https:// দিয়ে শুরু করুন" : "Must start with http(s)");
+      })}
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">{isBn ? "সারসংক্ষেপ" : "Summary"}</Label>
+        <Textarea value={data.summary || ""} onChange={(e) => onChange({ ...data, summary: e.target.value })} placeholder={isBn ? "আপনার পেশাদার সারসংক্ষেপ লিখুন..." : "Write your professional summary..."} className="min-h-[100px] text-sm" />
+      </div>
+    </div>
+  );
+}
+
+function ExperienceSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
+  const addEntry = () => onChange([...data, { company: "", position: "", start_date: "", end_date: "", description: "" }]);
+  const updateEntry = (i: number, field: string, value: string) => {
+    const updated = [...data];
+    updated[i] = { ...updated[i], [field]: value };
+    onChange(updated);
+  };
+  const removeEntry = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="space-y-4">
+      {data.map((exp, i) => (
+        <div key={i} className="p-3 border rounded-lg space-y-2 relative">
+          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => removeEntry(i)}><X className="h-3 w-3" /></Button>
+          <Input value={exp.position || ""} onChange={(e) => updateEntry(i, "position", e.target.value)} placeholder={isBn ? "পদবি" : "Position"} className="h-8 text-sm" />
+          <Input value={exp.company || ""} onChange={(e) => updateEntry(i, "company", e.target.value)} placeholder={isBn ? "কোম্পানি" : "Company"} className="h-8 text-sm" />
+          <div className="grid grid-cols-2 gap-2">
+            <Input value={exp.start_date || ""} onChange={(e) => updateEntry(i, "start_date", e.target.value)} placeholder={isBn ? "শুরু" : "Start"} className="h-8 text-sm" />
+            <Input value={exp.end_date || ""} onChange={(e) => updateEntry(i, "end_date", e.target.value)} placeholder={isBn ? "শেষ" : "End"} className="h-8 text-sm" />
+          </div>
+          <Textarea value={exp.description || ""} onChange={(e) => updateEntry(i, "description", e.target.value)} placeholder={isBn ? "দায়িত্ব ও অর্জন..." : "Responsibilities & achievements..."} className="min-h-[60px] text-sm" />
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={addEntry} className="w-full"><Plus className="h-3.5 w-3.5 mr-1" />{isBn ? "অভিজ্ঞতা যোগ করুন" : "Add Experience"}</Button>
+    </div>
+  );
+}
+
+function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
+  const addEntry = () => onChange([...data, { degree: "", institution: "", year: "", field: "" }]);
+  const updateEntry = (i: number, field: string, value: string) => {
+    const updated = [...data];
+    updated[i] = { ...updated[i], [field]: value };
+    onChange(updated);
+  };
+  const removeEntry = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="space-y-4">
+      {data.map((edu, i) => (
+        <div key={i} className="p-3 border rounded-lg space-y-2 relative">
+          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => removeEntry(i)}><X className="h-3 w-3" /></Button>
+          <Input value={edu.degree || ""} onChange={(e) => updateEntry(i, "degree", e.target.value)} placeholder={isBn ? "ডিগ্রি" : "Degree"} className="h-8 text-sm" />
+          <Input value={edu.institution || ""} onChange={(e) => updateEntry(i, "institution", e.target.value)} placeholder={isBn ? "প্রতিষ্ঠান" : "Institution"} className="h-8 text-sm" />
+          <div className="grid grid-cols-2 gap-2">
+            <Input value={edu.field || ""} onChange={(e) => updateEntry(i, "field", e.target.value)} placeholder={isBn ? "বিষয়" : "Field of Study"} className="h-8 text-sm" />
+            <Input value={edu.year || ""} onChange={(e) => updateEntry(i, "year", e.target.value)} placeholder={isBn ? "বছর" : "Year"} className="h-8 text-sm" />
+          </div>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={addEntry} className="w-full"><Plus className="h-3.5 w-3.5 mr-1" />{isBn ? "শিক্ষা যোগ করুন" : "Add Education"}</Button>
+    </div>
+  );
+}
+
+function SkillsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
+  const [newSkill, setNewSkill] = useState("");
+  const [newLevel, setNewLevel] = useState("intermediate");
+
+  const addSkill = () => {
+    if (!newSkill.trim()) return;
+    onChange([...data, { name: newSkill.trim(), level: newLevel }]);
+    setNewSkill("");
+  };
+  const removeSkill = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-1.5 min-h-[40px]">
+        {data.map((skill, i) => (
+          <Badge key={i} variant="secondary" className="text-xs gap-1">
+            {typeof skill === "string" ? skill : skill.name}
+            <button onClick={() => removeSkill(i)} className="ml-0.5 hover:text-destructive"><X className="h-2.5 w-2.5" /></button>
+          </Badge>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <Input value={newSkill} onChange={(e) => setNewSkill(e.target.value)} placeholder={isBn ? "দক্ষতা লিখুন..." : "Type a skill..."} className="h-8 text-sm flex-1" onKeyDown={(e) => e.key === "Enter" && addSkill()} />
+        <Select value={newLevel} onValueChange={setNewLevel}>
+          <SelectTrigger className="w-[120px] h-8 text-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="beginner">{isBn ? "শিক্ষানবিস" : "Beginner"}</SelectItem>
+            <SelectItem value="intermediate">{isBn ? "মধ্যম" : "Intermediate"}</SelectItem>
+            <SelectItem value="advanced">{isBn ? "উন্নত" : "Advanced"}</SelectItem>
+            <SelectItem value="expert">{isBn ? "বিশেষজ্ঞ" : "Expert"}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button size="sm" onClick={addSkill}><Plus className="h-3.5 w-3.5" /></Button>
+      </div>
+    </div>
+  );
+}
+
+function CertificationsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
+  const addEntry = () => onChange([...data, { name: "", issuer: "", date: "" }]);
+  const updateEntry = (i: number, field: string, value: string) => {
+    const updated = [...data];
+    updated[i] = { ...updated[i], [field]: value };
+    onChange(updated);
+  };
+  const removeEntry = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="space-y-3">
+      {data.map((cert, i) => (
+        <div key={i} className="p-3 border rounded-lg space-y-2 relative">
+          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => removeEntry(i)}><X className="h-3 w-3" /></Button>
+          <Input value={cert.name || ""} onChange={(e) => updateEntry(i, "name", e.target.value)} placeholder={isBn ? "সার্টিফিকেশন" : "Certification"} className="h-8 text-sm" />
+          <div className="grid grid-cols-2 gap-2">
+            <Input value={cert.issuer || ""} onChange={(e) => updateEntry(i, "issuer", e.target.value)} placeholder={isBn ? "প্রদানকারী" : "Issuer"} className="h-8 text-sm" />
+            <Input value={cert.date || ""} onChange={(e) => updateEntry(i, "date", e.target.value)} placeholder={isBn ? "তারিখ" : "Date"} className="h-8 text-sm" />
+          </div>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={addEntry} className="w-full"><Plus className="h-3.5 w-3.5 mr-1" />{isBn ? "সার্টিফিকেশন যোগ করুন" : "Add Certification"}</Button>
+    </div>
+  );
+}
+
+function LanguagesSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
+  const addEntry = () => onChange([...data, { name: "", proficiency: "intermediate" }]);
+  const updateEntry = (i: number, field: string, value: string) => {
+    const updated = [...data];
+    updated[i] = { ...updated[i], [field]: value };
+    onChange(updated);
+  };
+  const removeEntry = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
+  const proficiencies = [
+    { value: "basic", label_en: "Basic", label_bn: "মৌলিক" },
+    { value: "conversational", label_en: "Conversational", label_bn: "কথোপকথন" },
+    { value: "professional", label_en: "Professional", label_bn: "পেশাদার" },
+    { value: "native", label_en: "Native", label_bn: "মাতৃভাষী" },
+  ];
+
+  return (
+    <div className="space-y-3">
+      {data.map((lang, i) => (
+        <div key={i} className="flex items-center gap-2 p-2 border rounded-lg relative">
+          <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-5 w-5" onClick={() => removeEntry(i)}><X className="h-3 w-3" /></Button>
+          <Input value={lang.name || ""} onChange={(e) => updateEntry(i, "name", e.target.value)} placeholder={isBn ? "ভাষা" : "Language"} className="h-8 text-sm flex-1" />
+          <Select value={lang.proficiency || "intermediate"} onValueChange={(v) => updateEntry(i, "proficiency", v)}>
+            <SelectTrigger className="w-[110px] h-8 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {proficiencies.map((p) => <SelectItem key={p.value} value={p.value}>{isBn ? p.label_bn : p.label_en}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={addEntry} className="w-full"><Plus className="h-3.5 w-3.5 mr-1" />{isBn ? "ভাষা যোগ করুন" : "Add Language"}</Button>
+    </div>
+  );
+}
+
+function ProjectsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
+  const addEntry = () => onChange([...data, { name: "", description: "", url: "" }]);
+  const updateEntry = (i: number, field: string, value: string) => {
+    const updated = [...data];
+    updated[i] = { ...updated[i], [field]: value };
+    onChange(updated);
+  };
+  const removeEntry = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="space-y-4">
+      {data.map((proj, i) => (
+        <div key={i} className="p-3 border rounded-lg space-y-2 relative">
+          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => removeEntry(i)}><X className="h-3 w-3" /></Button>
+          <Input value={proj.name || ""} onChange={(e) => updateEntry(i, "name", e.target.value)} placeholder={isBn ? "প্রকল্পের নাম" : "Project Name"} className="h-8 text-sm" />
+          <Input value={proj.url || ""} onChange={(e) => updateEntry(i, "url", e.target.value)} placeholder={isBn ? "লিঙ্ক (ঐচ্ছিক)" : "URL (optional)"} className="h-8 text-sm" />
+          <Textarea value={proj.description || ""} onChange={(e) => updateEntry(i, "description", e.target.value)} placeholder={isBn ? "বিবরণ..." : "Description..."} className="min-h-[60px] text-sm" />
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={addEntry} className="w-full"><Plus className="h-3.5 w-3.5 mr-1" />{isBn ? "প্রকল্প যোগ করুন" : "Add Project"}</Button>
+    </div>
+  );
+}
+
+function AwardsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
+  const addEntry = () => onChange([...data, { title: "", issuer: "", date: "" }]);
+  const updateEntry = (i: number, field: string, value: string) => {
+    const updated = [...data];
+    updated[i] = { ...updated[i], [field]: value };
+    onChange(updated);
+  };
+  const removeEntry = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="space-y-3">
+      {data.map((award, i) => (
+        <div key={i} className="p-3 border rounded-lg space-y-2 relative">
+          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => removeEntry(i)}><X className="h-3 w-3" /></Button>
+          <Input value={award.title || ""} onChange={(e) => updateEntry(i, "title", e.target.value)} placeholder={isBn ? "পুরস্কার" : "Award"} className="h-8 text-sm" />
+          <div className="grid grid-cols-2 gap-2">
+            <Input value={award.issuer || ""} onChange={(e) => updateEntry(i, "issuer", e.target.value)} placeholder={isBn ? "প্রদানকারী" : "Issuer"} className="h-8 text-sm" />
+            <Input value={award.date || ""} onChange={(e) => updateEntry(i, "date", e.target.value)} placeholder={isBn ? "তারিখ" : "Date"} className="h-8 text-sm" />
+          </div>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={addEntry} className="w-full"><Plus className="h-3.5 w-3.5 mr-1" />{isBn ? "পুরস্কার যোগ করুন" : "Add Award"}</Button>
+    </div>
+  );
+}
+
+function HobbiesSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
+  const [newHobby, setNewHobby] = useState("");
+
+  const addHobby = () => {
+    if (!newHobby.trim()) return;
+    onChange([...data, newHobby.trim()]);
+    setNewHobby("");
+  };
+  const removeHobby = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-1.5 min-h-[40px]">
+        {data.map((hobby, i) => (
+          <Badge key={i} variant="secondary" className="text-xs gap-1">
+            {typeof hobby === "string" ? hobby : hobby.name || hobby}
+            <button onClick={() => removeHobby(i)} className="ml-0.5 hover:text-destructive"><X className="h-2.5 w-2.5" /></button>
+          </Badge>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <Input value={newHobby} onChange={(e) => setNewHobby(e.target.value)} placeholder={isBn ? "শখ লিখুন..." : "Type a hobby..."} className="h-8 text-sm flex-1" onKeyDown={(e) => e.key === "Enter" && addHobby()} />
+        <Button size="sm" onClick={addHobby}><Plus className="h-3.5 w-3.5" /></Button>
+      </div>
+    </div>
+  );
+}
+
+function SocialSectionForm({ data, onChange, isBn }: { data: Record<string, any>; onChange: (d: any) => void; isBn: boolean }) {
+  const platforms = ["linkedin", "github", "twitter", "facebook", "portfolio"];
+  const labels: Record<string, { en: string; bn: string }> = {
+    linkedin: { en: "LinkedIn", bn: "LinkedIn" },
+    github: { en: "GitHub", bn: "GitHub" },
+    twitter: { en: "Twitter / X", bn: "Twitter / X" },
+    facebook: { en: "Facebook", bn: "Facebook" },
+    portfolio: { en: "Portfolio URL", bn: "পোর্টফোলিও URL" },
+  };
+
+  const validateUrl = (value: string) => {
+    if (!value.trim()) return null;
+    return /^https?:\/\//i.test(value) ? null : (isBn ? "https:// দিয়ে শুরু করুন" : "Must start with http(s)");
+  };
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleChange = (key: string, value: string) => {
+    onChange({ ...data, [key]: value });
+    const msg = validateUrl(value);
+    setErrors((prev) => ({ ...prev, [key]: msg || "" }));
+  };
+
+  return (
+    <div className="space-y-2">
+      {platforms.map((p) => (
+        <div key={p} className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <Input value={data[p] || ""} onChange={(e) => handleChange(p, e.target.value)} placeholder={isBn ? labels[p].bn : labels[p].en} className="h-8 text-sm" />
+          </div>
+          {errors[p] ? <p className="text-xs text-destructive pl-[26px]">{errors[p]}</p> : null}
+        </div>
+      ))}
+    </div>
+  );
+}

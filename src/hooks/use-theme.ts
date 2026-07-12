@@ -1,0 +1,118 @@
+"use client";
+
+import { useEffect } from "react";
+import { useThemeStore } from "@/store/theme-store";
+import api from "@/lib/api-client";
+
+/**
+ * Convert a hex color (e.g. "#2563EB") to an HSL string
+ * suitable for use as a CSS color value (e.g. "hsl(217 92% 53%)").
+ */
+function hexToHsl(hex: string): string {
+  hex = hex.replace(/^#/, "");
+  if (hex.length === 3) {
+    hex = hex.split("").map((c) => c + c).join("");
+  }
+  const r = parseInt(hex.substring(0, 2), 16) / 255;
+  const g = parseInt(hex.substring(2, 4), 16) / 255;
+  const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+
+  if (max === min) {
+    return `hsl(0 0% ${Math.round(l * 100)}%)`;
+  }
+
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+  let h = 0;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+  else if (max === g) h = ((b - r) / d + 2) / 6;
+  else h = ((r - g) / d + 4) / 6;
+
+  return `hsl(${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%)`;
+}
+
+/**
+ * Apply admin-configured brand settings to CSS custom properties
+ * on `document.documentElement`.
+ */
+function applySettingsToDOM(settings: Record<string, any>) {
+  const root = document.documentElement;
+
+  if (settings.border_radius) {
+    root.style.setProperty("--radius", settings.border_radius);
+  }
+  if (settings.english_font) {
+    root.style.setProperty("--font-english", settings.english_font);
+  }
+  if (settings.bangla_font) {
+    root.style.setProperty("--font-bangla", settings.bangla_font);
+  }
+  const fontSize = settings.global_font_size || settings.font_size;
+  if (fontSize) {
+    root.style.setProperty("--app-font-size", fontSize);
+  }
+  if (settings.phone_font_size) {
+    root.style.setProperty("--app-font-size-phone", settings.phone_font_size);
+  }
+  if (settings.tablet_font_size) {
+    root.style.setProperty("--app-font-size-tablet", settings.tablet_font_size);
+  }
+  if (settings.primary_color) {
+    root.style.setProperty("--primary-color", hexToHsl(settings.primary_color));
+  }
+  if (settings.button_bg) {
+    root.style.setProperty("--button-bg", settings.button_bg);
+  }
+}
+
+/**
+ * Bridge hook: syncs the Zustand theme store with next-themes and
+ * applies theme settings (colors, border-radius) from the API.
+ *
+ * Call this once at the app root level to keep everything in sync.
+ */
+export function useTheme() {
+  const store = useThemeStore();
+
+  // Fetch theme settings from API on mount
+  useEffect(() => {
+    api
+      .get("/settings/theme")
+      .then((res) => {
+        const data = res.data.data;
+        if (data) {
+          store.setSettings(data);
+          store.setLoadingSettings(false);
+
+          // Apply brand settings to the DOM
+          applySettingsToDOM(data);
+
+          // Store admin-configured timezone in localStorage for utils
+          if (data.timezone) {
+            localStorage.setItem("timezone", data.timezone);
+          }
+
+          // Set default language from admin if user hasn't manually toggled
+          if (data.default_language && !localStorage.getItem("theme-storage")) {
+            document.documentElement.lang = data.default_language;
+            store.setLanguage(data.default_language as "en" | "bn");
+          }
+
+          // Store AI behavior tracking toggle from admin settings
+          if (data.behavior_tracking_enabled !== undefined) {
+            localStorage.setItem("behavior_tracking_enabled", String(data.behavior_tracking_enabled));
+          }
+        }
+      })
+      .catch(() => {
+        store.setLoadingSettings(false);
+      });
+  }, [store.setSettings, store.setLoadingSettings]);
+
+  return store;
+}
