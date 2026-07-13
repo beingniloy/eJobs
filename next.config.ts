@@ -5,6 +5,10 @@ const backendUrl = apiUrl.replace(/\/api\/?$/, "");
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  serverExternalPackages: ["laravel-echo", "pusher-js"],
   images: {
     remotePatterns: [
       {

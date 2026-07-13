@@ -1,3 +1,5 @@
+"use client";
+
 import { FileText, Crown, Check, Eye, Shield, PenTool, CreditCard, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

@@ -1,13 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { ThemeProvider } from "@/providers/theme-provider";
-import { QueryProvider } from "@/providers/query-provider";
-import { AuthProvider } from "@/providers/auth-provider";
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import PwaInstallBanner from "@/components/pwa-install-banner";
-import CookieConsent from "@/components/cookie-consent";
-import TrackingScripts from "@/components/analytics/TrackingScripts";
+import ClientProviders from "@/components/client-providers";
 import "./globals.css";
+
+export const dynamic = "force-dynamic";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api").replace(/\/api\/?$/, "");
 
@@ -140,20 +135,9 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="min-h-screen bg-background antialiased">
-        <ThemeProvider>
-          <QueryProvider>
-            <AuthProvider>
-              <TooltipProvider>
-                {children}
-                <PwaInstallBanner />
-                <Toaster position="top-right" richColors closeButton />
-                <CookieConsent />
-                <TrackingScripts />
-              </TooltipProvider>
-            </AuthProvider>
-          </QueryProvider>
-        </ThemeProvider>
-
+        <ClientProviders>
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );
