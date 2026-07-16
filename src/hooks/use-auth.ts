@@ -36,8 +36,11 @@ export function useAuth() {
   const loginMutation = useMutation({
     mutationFn: (data: LoginPayload) => authService.login(data),
     onSuccess: (data) => {
+      if (data.requires_2fa) {
+        return;
+      }
       const userRole = (data.role || data.user?.role || "candidate") as UserRole;
-      setAuth(data.user, data.token, userRole);
+      setAuth(data.user ?? null, data.token || "", userRole);
       queryClient.clear();
       toast.success("Login successful!");
       if (userRole === "employer") {
@@ -53,11 +56,31 @@ export function useAuth() {
     },
   });
 
+  const verify2faMutation = useMutation({
+    mutationFn: (data: { temp_token: string; code: string }) => authService.verify2fa(data),
+    onSuccess: (data) => {
+      const userRole = (data.role || data.user?.role || "candidate") as UserRole;
+      setAuth(data.user ?? null, data.token || "", userRole);
+      queryClient.clear();
+      toast.success("Login successful!");
+      if (userRole === "employer") {
+        router.push("/employer/dashboard");
+      } else if (userRole === "admin") {
+        router.push("/admin/dashboard");
+      } else {
+        router.push("/dashboard");
+      }
+    },
+    onError: (error: { response?: { data?: { message?: string } } }) => {
+      toast.error(error.response?.data?.message || "2FA verification failed");
+    },
+  });
+
   const registerMutation = useMutation({
     mutationFn: (data: RegisterPayload) => authService.register(data),
     onSuccess: (data) => {
       const userRole = (data.role || data.user?.role || "candidate") as UserRole;
-      setAuth(data.user, data.token, userRole);
+      setAuth(data.user ?? null, data.token || "", userRole);
       queryClient.clear();
       toast.success("Registration successful! Please verify your email.");
       if (userRole === "employer") {
@@ -89,6 +112,7 @@ export function useAuth() {
     isAuthenticated,
     isLoading,
     login: loginMutation,
+    verify2fa: verify2faMutation,
     register: registerMutation,
     logout,
     setLoading,

@@ -58,8 +58,11 @@ export const aiService = {
     return res.data;
   },
 
-  getCareerRoadmap: async () => {
-    const res = await api.get<ApiResponse<CareerRoadmap>>("/ai/career-roadmap");
+  getCareerRoadmap: async (prompt?: string, regenerate?: boolean) => {
+    const params: any = {};
+    if (prompt) params.prompt = prompt;
+    if (regenerate) params.regenerate = true;
+    const res = await api.get<ApiResponse<CareerRoadmap>>("/ai/career-roadmap", { params });
     return res.data.data;
   },
 

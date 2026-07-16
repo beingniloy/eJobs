@@ -18,14 +18,21 @@ export interface RegisterPayload {
 export interface AuthResponse {
   status: boolean;
   message?: string;
-  token: string;
-  user: User;
-  role: string;
+  token?: string;
+  user?: User;
+  role?: string;
+  requires_2fa?: boolean;
+  temp_token?: string;
 }
 
 export const authService = {
   login: async (data: LoginPayload) => {
     const res = await api.post<AuthResponse>("/login", data);
+    return res.data;
+  },
+
+  verify2fa: async (data: { temp_token: string; code: string }) => {
+    const res = await api.post<AuthResponse>("/two-factor/verify-login", data);
     return res.data;
   },
 

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import JobDetailClient from "./JobDetailClient";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
+const cleanApiUrl = rawApiUrl.replace(/\/$/, "");
+const API_URL = cleanApiUrl.endsWith("/api") ? cleanApiUrl : `${cleanApiUrl}/api`;
 
 export function generateStaticParams() {
   return [{ id: "__placeholder__" }];

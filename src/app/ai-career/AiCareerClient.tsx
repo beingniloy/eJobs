@@ -33,7 +33,7 @@ const ROADMAP_PROMPTS = [
 export default function AiCareerClient() {
   const { language } = useThemeStore();
   const isBn = language === "bn";
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,6 +45,8 @@ export default function AiCareerClient() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [quotas, setQuotas] = useState<Record<string, QuotaInfo>>({});
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [roadmapError, setRoadmapError] = useState<string | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -57,23 +59,48 @@ export default function AiCareerClient() {
       .catch(() => { /* handled */ });
   }, []);
 
-  // Auto-load roadmap on mount
-  useEffect(() => {
-    if (activeTab === "roadmap" && !roadmap && !roadmapLoading) {
-      handleLoadRoadmap();
-    }
-  }, [activeTab]);
-
   const chatQuota = quotas.ai_chat_messages;
   const chatLimitReached = chatQuota && chatQuota.max_limit > 0 && chatQuota.remaining <= 0;
 
-  const handleLoadRoadmap = async () => {
+  const isPaidSubscription = (subscription: any) => {
+    if (!subscription) return false;
+    const price = Number(subscription.plan_details?.price ?? subscription.plan?.price ?? subscription.price ?? 0);
+    return price > 0;
+  };
+
+  const activeSubscription = (subscriptionService as any).activeSubscription;
+  const canAccessRoadmap = isAuthenticated && isPaidSubscription(activeSubscription);
+
+  const loadSavedRoadmap = async () => {
+    if (!isAuthenticated) return;
     setRoadmapLoading(true);
+    setRoadmapError(null);
     try {
       const data = await aiService.getCareerRoadmap();
       setRoadmap(data || null);
-    } catch {
-      // Silently fail
+    } catch (err: any) {
+      setRoadmapError(err?.response?.data?.message || (isBn ? "রোডম্যাপ লোড করতে ব্যর্থ হয়েছে" : "Failed to load roadmap"));
+    } finally {
+      setRoadmapLoading(false);
+    }
+  };
+
+  // Auto-load saved roadmap on mount when roadmap tab is active
+  useEffect(() => {
+    if (activeTab === "roadmap" && !roadmap && !roadmapLoading) {
+      loadSavedRoadmap();
+    }
+  }, [activeTab]);
+
+  const handleGenerateOrRegenerate = async () => {
+    setRoadmapLoading(true);
+    setRoadmapError(null);
+    try {
+      const data = await aiService.getCareerRoadmap(customPrompt || undefined, true);
+      setRoadmap(data || null);
+      setCustomPrompt("");
+    } catch (err: any) {
+      setRoadmapError(err?.response?.data?.message || (isBn ? "রোডম্যাপ তৈরি করতে ব্যর্থ হয়েছে" : "Failed to generate roadmap"));
     } finally {
       setRoadmapLoading(false);
     }
@@ -143,7 +170,27 @@ export default function AiCareerClient() {
       {activeTab === "roadmap" && (
         <div className="flex-1 overflow-y-auto">
           <div className="container max-w-3xl mx-auto px-3 py-4 pb-6">
-            {roadmapLoading ? (
+            {!canAccessRoadmap ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center mb-4">
+                  <Crown className="h-8 w-8 text-amber-500" />
+                </div>
+                <h3 className="font-semibold text-lg mb-1">
+                  {isBn ? "প্রিমিয়াম ফিচার" : "Premium Feature"}
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-sm mb-4">
+                  {isBn
+                    ? "AI ক্যারিয়ার রোডম্যাপ仅供 প্রিমিয়াম এবং প্রো প্ল্যান ব্যবহারকারীর জন্য।"
+                    : "AI Career Roadmap is only available for Premium and Pro plan users."}
+                </p>
+                <Button asChild>
+                  <Link href="/pricing">
+                    <Crown className="h-4 w-4 mr-2" />
+                    {isBn ? "প্ল্যান আপগ্রেড করুন" : "Upgrade Plan"}
+                  </Link>
+                </Button>
+              </div>
+            ) : roadmapLoading ? (
               <div className="flex flex-col items-center justify-center py-16">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                   <Route className="h-8 w-8 text-primary animate-pulse" />
@@ -223,10 +270,47 @@ export default function AiCareerClient() {
                 <p className="text-sm text-muted-foreground max-w-sm mb-4">
                   {isBn ? "AI আপনার প্রোফাইল বিশ্লেষণ করে একটি ব্যক্তিগতকৃত ক্যারিয়ার রোডম্যাপ তৈরি করবে।" : "AI analyzes your profile to create a personalized career roadmap."}
                 </p>
-                <Button onClick={handleLoadRoadmap} disabled={roadmapLoading}>
-                  <Route className="h-4 w-4 mr-2" />
-                  {isBn ? "রোডম্যাপ তৈরি করুন" : "Generate Roadmap"}
-                </Button>
+                {!canAccessRoadmap ? (
+                  <Button asChild>
+                    <Link href="/pricing">
+                      <Crown className="h-4 w-4 mr-2" />
+                      {isBn ? "প্রিমিয়াম আপগ্রেড করুন" : "Upgrade to Premium"}
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button onClick={handleGenerateOrRegenerate} disabled={roadmapLoading}>
+                    <Route className="h-4 w-4 mr-2" />
+                    {isBn ? "রোডম্যাপ তৈরি করুন" : "Generate Roadmap"}
+                  </Button>
+                )}
+              </div>
+            )}
+            {roadmapError && (
+              <div className="mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 text-sm text-red-700 dark:text-red-400">
+                {roadmapError}
+              </div>
+            )}
+            {canAccessRoadmap && roadmap && (
+              <div className="mt-4 p-4 rounded-lg border bg-muted/40 space-y-3">
+                <p className="text-sm font-medium">
+                  {isBn ? "রোডম্যাপ কাস্টমাইজ করুন" : "Customize your roadmap"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {isBn
+                    ? "প্রম্পট দিন এবং AI রোডম্যাপ পুনরায় তৈরি করবে।"
+                    : "Give instructions and AI will regenerate your roadmap."}
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    value={customPrompt}
+                    onChange={(e) => setCustomPrompt(e.target.value)}
+                    placeholder={isBn ? "যেমন: আরও ফোকাস করুন DevOps上" : "Example: focus more on DevOps"}
+                    onKeyDown={(e) => e.key === "Enter" && handleGenerateOrRegenerate()}
+                  />
+                  <Button onClick={handleGenerateOrRegenerate} disabled={roadmapLoading || !customPrompt.trim()}>
+                    {roadmapLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
             )}
           </div>

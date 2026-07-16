@@ -10,7 +10,10 @@ type Props = { params: Promise<{ category_id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { category_id } = await params;
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api"}/categories/${category_id}`, { next: { revalidate: 300 } });
+    const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
+    const cleanApiUrl = rawApiUrl.replace(/\/$/, "");
+    const apiUrl = cleanApiUrl.endsWith("/api") ? cleanApiUrl : `${cleanApiUrl}/api`;
+    const res = await fetch(`${apiUrl}/categories/${category_id}`, { next: { revalidate: 300 } });
     const json = await res.json();
     const cat = json?.data?.category;
     if (cat) {

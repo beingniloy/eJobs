@@ -92,8 +92,17 @@ function EmployerSSOHandler() {
 function EmployerLoginInner() {
   const { language, settings } = useThemeStore();
   const isBn = language === "bn";
-  const { login } = useAuth();
+  const { login, verify2fa } = useAuth();
   const searchParams = useSearchParams();
+  const [tempToken, setTempToken] = useState<string | null>(null);
+  const [otpCode, setOtpCode] = useState<string>("");
+
+  useEffect(() => {
+    if (login.data?.requires_2fa && login.data?.temp_token) {
+      setTempToken(login.data.temp_token);
+      toast.info(isBn ? "অনুগ্রহ করে আপনার ২-ফ্যাক্টর অথেন্টিকেশন কোড লিখুন।" : "Please enter your 2-Factor Authentication code.");
+    }
+  }, [login.data, isBn]);
 
   const ssoToken = searchParams.get("sso_token");
   const ssoRole = searchParams.get("role");
@@ -112,6 +121,83 @@ function EmployerLoginInner() {
 
   if (ssoToken && ssoRole) {
     return <EmployerSSOHandler />;
+  }
+
+  if (tempToken) {
+    const handleOtpSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (otpCode.length < 6) {
+        toast.error(isBn ? "সঠিক কোড দিন (৬ ডিজিট)" : "Please enter a valid 6-digit code");
+        return;
+      }
+      verify2fa.mutate({ temp_token: tempToken, code: otpCode });
+    };
+
+    return (
+      <PublicLayout>
+        <div className="flex items-center justify-center min-h-[70vh] py-12 px-4">
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4">
+                {settings.site_logo ? (
+                  <Image src={settings.site_logo.startsWith("http") ? settings.site_logo : `/storage/${settings.site_logo}`} alt={settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs"} width={48} height={48} className="h-12 w-auto object-contain" unoptimized />
+                ) : (
+                  <p className="text-xl font-bold text-primary">{settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs"}</p>
+                )}
+              </div>
+              <CardTitle className="text-2xl">
+                {isBn ? "২-ফ্যাক্টর যাচাইকরণ" : "2-Factor Verification"}
+              </CardTitle>
+              <CardDescription>
+                {isBn
+                  ? "আপনার প্রমাণীকরণকারী অ্যাপ থেকে ৬ ডিজিটের কোডটি লিখুন"
+                  : "Enter the 6-digit code from your authenticator app"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleOtpSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="otp">
+                    {isBn ? "৬-ডিজিটের কোড" : "6-Digit Security Code"}
+                  </Label>
+                  <Input
+                    id="otp"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    placeholder="000000"
+                    className="text-center text-2xl tracking-widest font-mono py-6"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                    autoFocus
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-1/3"
+                    onClick={() => {
+                      setTempToken(null);
+                      setOtpCode("");
+                      login.reset();
+                    }}
+                  >
+                    {isBn ? "বাতিল" : "Cancel"}
+                  </Button>
+                  <Button type="submit" className="w-2/3" disabled={verify2fa.isPending}>
+                    {verify2fa.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    {isBn ? "যাচাই করুন" : "Verify Code"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </PublicLayout>
+    );
   }
 
   return (
