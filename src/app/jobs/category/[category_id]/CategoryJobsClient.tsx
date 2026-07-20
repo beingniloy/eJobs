@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import api from "@/lib/api-client";
 import { useThemeStore } from "@/store/theme-store";
+import { useAuth } from "@/hooks/use-auth";
 import PublicLayout from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -63,11 +64,12 @@ const HOW_IT_WORKS = [
   { icon: MessageSquare, text: "Company Candidate দেখে ও শুরু করে" },
   { icon: CheckCircle2, text: "Company কাজ রিভিউ করে" },
   { icon: CreditCard, text: "Payment Release হয়" },
-  { icon: Star, text: "জববাজার রিভিউ দেয়" },
+  { icon: Star, text: "eJob reviews jobs" },
 ];
 
 export default function CategoryJobsClient({ categoryId }: { categoryId: string }) {
   const { language, settings } = useThemeStore();
+  const { isAuthenticated } = useAuth();
   const isBn = language === "bn";
   const siteName = settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs";
 
@@ -92,14 +94,33 @@ export default function CategoryJobsClient({ categoryId }: { categoryId: string 
   const [experienceLevel, setExperienceLevel] = useState("all");
   const [showAllSkills, setShowAllSkills] = useState(false);
 
-  // Featured companies (static demo)
-  const featuredCompanies = [
-    { name: "GreenwayOffshore", color: "bg-green-500", rating: 4.8 },
-    { name: "Innovate Limited", color: "bg-blue-500", rating: 4.7 },
-    { name: "Beximco Bangladesh", color: "bg-red-500", rating: 4.6 },
-    { name: "British American Tobacco", color: "bg-purple-500", rating: 4.5 },
-    { name: "10 Minute School", color: "bg-orange-500", rating: 4.4 },
-  ];
+  // Sidebar collapse
+  const [leftOpen, setLeftOpen] = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Featured companies (dynamic)
+  const [featuredCompanies, setFeaturedCompanies] = useState<any[]>([]);
+
+  useEffect(() => {
+    const lv = localStorage.getItem("jobs-left-open");
+    if (lv !== null) setLeftOpen(lv === "true");
+    const rv = localStorage.getItem("jobs-right-open");
+    if (rv !== null) setRightOpen(rv === "true");
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (hydrated) {
+      localStorage.setItem("jobs-left-open", String(leftOpen));
+      localStorage.setItem("jobs-right-open", String(rightOpen));
+    }
+  }, [leftOpen, rightOpen, hydrated]);
+
+  // Fetch featured companies from API
+  useEffect(() => {
+    api.get("/companies/featured").then((res) => setFeaturedCompanies(res.data?.data || [])).catch(() => {});
+  }, []);
 
   // Load category details
   useEffect(() => {
@@ -234,15 +255,17 @@ export default function CategoryJobsClient({ categoryId }: { categoryId: string 
                 ))}
               </div>
             </div>
-            {/* CTA Card */}
-            <Card className="w-full lg:w-72 shrink-0 border-primary/20">
-              <CardContent className="p-5 text-center space-y-3">
-                <Zap className="h-8 w-8 mx-auto text-primary" />
-                <p className="text-sm font-medium">{isBn ? "আপনার প্রোফাইল তৈরি করুন" : "Create Your Profile"}</p>
-                <p className="text-xs text-muted-foreground">{isBn ? "নতুন কাজের সুযোগ সরাসরি পান" : "Get new job opportunities directly"}</p>
-                <Button size="sm" className="w-full" asChild><Link href="/register">{isBn ? "ফ্রি অ্যাকাউন্ট খুঁজুন" : "Create Free Account"}</Link></Button>
-              </CardContent>
-            </Card>
+            {/* CTA Card - only for guests */}
+            {!isAuthenticated && (
+              <Card className="w-full lg:w-72 shrink-0 border-primary/20">
+                <CardContent className="p-5 text-center space-y-3">
+                  <Zap className="h-8 w-8 mx-auto text-primary" />
+                  <p className="text-sm font-medium">{isBn ? "আপনার প্রোফাইল তৈরি করুন" : "Create Your Profile"}</p>
+                  <p className="text-xs text-muted-foreground">{isBn ? "নতুন কাজের সুযোগ সরাসরি পান" : "Get new job opportunities directly"}</p>
+                  <Button size="sm" className="w-full" asChild><Link href="/register">{isBn ? "ফ্রি অ্যাকাউন্ট খুঁজুন" : "Create Free Account"}</Link></Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Search Bar */}
@@ -278,109 +301,103 @@ export default function CategoryJobsClient({ categoryId }: { categoryId: string 
 
       {/* ═══ MAIN 3-COLUMN LAYOUT ═══ */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr_280px] gap-6">
+        <div className="flex gap-6">
+
+          {/* ── LEFT SIDEBAR TOGGLE ── */}
+          <button onClick={() => setLeftOpen(!leftOpen)} className="hidden lg:flex items-center justify-center w-6 h-6 shrink-0 mt-2 text-muted-foreground hover:text-foreground" title={leftOpen ? "Hide sidebar" : "Show sidebar"}>
+            {leftOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </button>
 
           {/* ── LEFT SIDEBAR ── */}
-          <aside className="space-y-5">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-primary" />
-              <h3 className="font-semibold text-sm">{isBn ? "ফিল্টার" : "Filter"}</h3>
-              <button onClick={() => { setSelectedJobType("all"); setSelectedSalary(0); setBudgetMin(""); setBudgetMax(""); setExperienceLevel("all"); setCurrentPage(1); }} className="ml-auto text-xs text-primary hover:underline">{isBn ? "সব মুছুন" : "All Clear"}</button>
-            </div>
-
-            {/* Job Type */}
-            <div>
-              <p className="text-xs font-semibold mb-2 uppercase tracking-wider text-muted-foreground">{isBn ? "চাকরির ধরন" : "Job Type"}</p>
-              <div className="space-y-1.5">
-                {JOB_TYPES.map((t) => (
-                  <label key={t.value} className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary">
-                    <input type="radio" name="jobType" checked={selectedJobType === t.value} onChange={() => { setSelectedJobType(t.value); setCurrentPage(1); }} className="accent-primary" />
-                    {t.label}
-                  </label>
-                ))}
+          {leftOpen && (
+            <aside className="hidden lg:block w-[220px] shrink-0 space-y-5">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold text-sm">{isBn ? "ফিল্টার" : "Filter"}</h3>
+                <button onClick={() => { setSelectedJobType("all"); setSelectedSalary(0); setBudgetMin(""); setBudgetMax(""); setExperienceLevel("all"); setCurrentPage(1); }} className="ml-auto text-xs text-primary hover:underline">{isBn ? "সব মুছুন" : "All Clear"}</button>
               </div>
-            </div>
-            <Separator />
 
-            {/* Employment */}
-            <div>
-              <p className="text-xs font-semibold mb-2 uppercase tracking-wider text-muted-foreground">{isBn ? "চুক্তির ধরন" : "Employment Type"}</p>
-              <div className="space-y-1.5">
-                {["All", "Permanent", "Contractual", "Full Time", "Part Time"].map((t) => (
-                  <label key={t} className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary">
-                    <input type="radio" name="empType" className="accent-primary" /> {t}
-                  </label>
-                ))}
-              </div>
-            </div>
-            <Separator />
-
-            {/* Salary Range */}
-            <div>
-              <p className="text-xs font-semibold mb-2 uppercase tracking-wider text-muted-foreground">{isBn ? "বেতন" : "Salary"}</p>
-              <div className="space-y-1.5">
-                {SALARY_RANGES.map((s, i) => (
-                  <label key={i} className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary">
-                    <input type="radio" name="salary" checked={selectedSalary === i} onChange={() => handleSalarySelect(i)} className="accent-primary" />
-                    {s.label}
-                  </label>
-                ))}
-              </div>
-              <div className="flex gap-2 mt-3">
-                <Input type="number" placeholder="Min" value={budgetMin} onChange={(e) => setBudgetMin(e.target.value)} className="h-8 text-xs" />
-                <Input type="number" placeholder="Max" value={budgetMax} onChange={(e) => setBudgetMax(e.target.value)} className="h-8 text-xs" />
-              </div>
-            </div>
-            <Separator />
-
-            {/* Sort */}
-            <div>
-              <p className="text-xs font-semibold mb-2 uppercase tracking-wider text-muted-foreground">{isBn ? "সাজানো" : "Sort"}</p>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="recent">{isBn ? "সাম্প্রতিক" : "Most Recent"}</SelectItem>
-                  <SelectItem value="salary_high">{isBn ? "বেশি বেতন" : "Salary: High-Low"}</SelectItem>
-                  <SelectItem value="salary_low">{isBn ? "কম বেতন" : "Salary: Low-High"}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Separator />
-
-            {/* District */}
-            <div>
-              <p className="text-xs font-semibold mb-2 uppercase tracking-wider text-muted-foreground">{isBn ? "জেলা" : "District"}</p>
-              <div className="space-y-1.5">
-                {[isBn ? "সব জেলা" : "All Districts", isBn ? "ঢাকা" : "Dhaka", isBn ? "চট্টগ্রাম" : "Chittagong", isBn ? "গাজীপুর" : "Gazipur", isBn ? "নারায়ণগঞ্জ" : "Narayanganj"].map((d) => (
-                  <label key={d} className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary">
-                    <input type="radio" name="district" defaultChecked={d.includes("All") || d.includes("সব")} className="accent-primary" /> {d}
-                  </label>
-                ))}
-              </div>
-              <button className="text-xs text-primary mt-2 flex items-center gap-1 hover:underline">{isBn ? "আরও জেলা" : "More Districts"} <ChevronDown className="h-3 w-3" /></button>
-            </div>
-
-            {/* Sub-categories */}
-            {category.children && category.children.length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <p className="text-xs font-semibold mb-2 uppercase tracking-wider text-muted-foreground">{isBn ? "সাব-ক্যাটাগরি" : "Sub-categories"}</p>
-                  <div className="space-y-1.5">
-                    {category.children.map((child) => (
-                      <Link key={child.id} href={`/jobs/category/${child.id}`} className="flex items-center justify-between text-sm hover:text-primary group">
-                        <span className="group-hover:underline">{isBn ? child.name_bn : child.name_en}</span>
-                        <span className="text-xs text-muted-foreground">{child.jobs_count}</span>
-                      </Link>
-                    ))}
-                  </div>
+              {/* Job Type */}
+              <div>
+                <p className="text-xs font-semibold mb-2 uppercase tracking-wider text-muted-foreground">{isBn ? "চাকরির ধরন" : "Job Type"}</p>
+                <div className="space-y-1.5">
+                  {JOB_TYPES.map((t) => (
+                    <label key={t.value} className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary">
+                      <input type="radio" name="jobType" checked={selectedJobType === t.value} onChange={() => { setSelectedJobType(t.value); setCurrentPage(1); }} className="accent-primary" />
+                      {t.label}
+                    </label>
+                  ))}
                 </div>
-              </>
-            )}
-          </aside>
+              </div>
+              <Separator />
+
+              {/* Employment */}
+              <div>
+                <p className="text-xs font-semibold mb-2 uppercase tracking-wider text-muted-foreground">{isBn ? "চুক্তির ধরন" : "Employment Type"}</p>
+                <div className="space-y-1.5">
+                  {["All", "Permanent", "Contractual", "Full Time", "Part Time"].map((t) => (
+                    <label key={t} className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary">
+                      <input type="radio" name="empType" className="accent-primary" /> {t}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <Separator />
+
+              {/* Salary Range */}
+              <div>
+                <p className="text-xs font-semibold mb-2 uppercase tracking-wider text-muted-foreground">{isBn ? "বেতন" : "Salary"}</p>
+                <div className="space-y-1.5">
+                  {SALARY_RANGES.map((s, i) => (
+                    <label key={i} className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary">
+                      <input type="radio" name="salary" checked={selectedSalary === i} onChange={() => handleSalarySelect(i)} className="accent-primary" />
+                      {s.label}
+                    </label>
+                  ))}
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <Input type="number" placeholder="Min" value={budgetMin} onChange={(e) => setBudgetMin(e.target.value)} className="h-8 text-xs" />
+                  <Input type="number" placeholder="Max" value={budgetMax} onChange={(e) => setBudgetMax(e.target.value)} className="h-8 text-xs" />
+                </div>
+              </div>
+              <Separator />
+
+              {/* Sort */}
+              <div>
+                <p className="text-xs font-semibold mb-2 uppercase tracking-wider text-muted-foreground">{isBn ? "সাজানো" : "Sort"}</p>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="recent">{isBn ? "সাম্প্রতিক" : "Most Recent"}</SelectItem>
+                    <SelectItem value="salary_high">{isBn ? "বেশি বেতন" : "Salary: High-Low"}</SelectItem>
+                    <SelectItem value="salary_low">{isBn ? "কম বেতন" : "Salary: Low-High"}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Separator />
+
+              {/* Sub-categories */}
+              {category.children && category.children.length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-xs font-semibold mb-2 uppercase tracking-wider text-muted-foreground">{isBn ? "সাব-ক্যাটাগরি" : "Sub-categories"}</p>
+                    <div className="space-y-1.5">
+                      {category.children.map((child) => (
+                        <Link key={child.id} href={`/jobs/category/${child.id}`} className="flex items-center justify-between text-sm hover:text-primary group">
+                          <span className="group-hover:underline">{isBn ? child.name_bn : child.name_en}</span>
+                          <span className="text-xs text-muted-foreground">{child.jobs_count}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </aside>
+          )}
 
           {/* ── CENTER: Job Listings ── */}
-          <main className="space-y-4">
+          <main className="flex-1 min-w-0 space-y-4">
             {/* Job count & sort */}
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
@@ -497,84 +514,95 @@ export default function CategoryJobsClient({ categoryId }: { categoryId: string 
             )}
           </main>
 
-          {/* ── RIGHT SIDEBAR ── */}
-          <aside className="space-y-6">
-            {/* How It Works */}
-            <Card>
-              <CardContent className="p-5">
-                <h3 className="font-semibold text-sm mb-4">{isBn ? "কিভাবে কাজ করে" : "How It Works"}</h3>
-                <div className="space-y-3">
-                  {HOW_IT_WORKS.map((step, i) => {
-                    const stepText = i === 6
-                      ? (isBn ? `${siteName === "eJobs" ? "ই-জবস" : siteName} রিভিউ দেয়` : `${siteName} reviews jobs`)
-                      : step.text;
-                    return (
-                      <div key={i} className="flex items-start gap-3">
-                        <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                          <step.icon className="h-3.5 w-3.5 text-primary" />
-                        </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">{stepText}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+          {/* ── RIGHT SIDEBAR TOGGLE ── */}
+          <button onClick={() => setRightOpen(!rightOpen)} className="hidden lg:flex items-center justify-center w-6 h-6 shrink-0 mt-2 text-muted-foreground hover:text-foreground" title={rightOpen ? "Hide sidebar" : "Show sidebar"}>
+            {rightOpen ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </button>
 
-            {/* Popular Skills */}
-            {popularSkills.length > 0 && (
+          {/* ── RIGHT SIDEBAR ── */}
+          {rightOpen && (
+            <aside className="hidden lg:block w-[280px] shrink-0 space-y-6">
+              {/* How It Works */}
               <Card>
                 <CardContent className="p-5">
-                  <h3 className="font-semibold text-sm mb-3">{isBn ? "জনপ্রিয় স্কিল" : "Popular Skills (Top 10)"}</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(showAllSkills ? popularSkills : popularSkills.slice(0, 8)).map((skill, i) => (
-                      <Badge key={i} variant="secondary" className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors">{skill}</Badge>
-                    ))}
+                  <h3 className="font-semibold text-sm mb-4">{isBn ? "কিভাবে কাজ করে" : "How It Works"}</h3>
+                  <div className="space-y-3">
+                    {HOW_IT_WORKS.map((step, i) => {
+                      const stepText = i === 6
+                        ? (isBn ? `${siteName === "eJobs" ? "ই-জবস" : siteName} রিভিউ দেয়` : `${siteName} reviews jobs`)
+                        : step.text;
+                      return (
+                        <div key={i} className="flex items-start gap-3">
+                          <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <step.icon className="h-3.5 w-3.5 text-primary" />
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">{stepText}</p>
+                        </div>
+                      );
+                    })}
                   </div>
-                  {popularSkills.length > 8 && (
-                    <button onClick={() => setShowAllSkills(!showAllSkills)} className="text-xs text-primary mt-2 flex items-center gap-1 hover:underline">
-                      {showAllSkills ? <><ChevronUp className="h-3 w-3" /> {isBn ? "কম" : "Less"}</> : <><ChevronDown className="h-3 w-3" /> {isBn ? "আরও" : "More"}</>}
-                    </button>
-                  )}
                 </CardContent>
               </Card>
-            )}
 
-            {/* CTA */}
-            <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
-              <CardContent className="p-5 text-center space-y-3">
-                <Zap className="h-8 w-8 mx-auto" />
-                <h3 className="font-semibold">{isBn ? "আপনার প্রোফাইল তৈরি করুন" : "Create Your Profile"}</h3>
-                <p className="text-xs text-primary-foreground/80">{isBn ? "এখনই শুরু করুন এবং চাকরি পান" : "Start now and get matched with jobs"}</p>
-                <Button variant="secondary" size="sm" className="w-full" asChild><Link href="/register">{isBn ? "ফ্রি অ্যাকাউন্ট খুঁজুন" : "Create Free Account"}</Link></Button>
-              </CardContent>
-            </Card>
-
-            {/* Featured Companies */}
-            <Card>
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-sm">{isBn ? "সুনামী কোম্পানি" : "Featured Companies"}</h3>
-                  <Link href="/companies" className="text-xs text-primary hover:underline">{isBn ? "সব দেখুন" : "View All"}</Link>
-                </div>
-                <div className="space-y-3">
-                  {featuredCompanies.map((c) => (
-                    <div key={c.name} className="flex items-center gap-3">
-                      <CompanyLogo name={c.name}>
-                        <div className={`w-8 h-8 rounded-lg ${c.color} flex items-center justify-center text-white text-xs font-bold shrink-0`}>{c.name.charAt(0)}</div>
-                      </CompanyLogo>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{c.name}</p>
-                      </div>
-                      <div className="flex items-center gap-0.5 text-xs text-amber-500 shrink-0">
-                        <Star className="h-3 w-3 fill-amber-500" /> {c.rating}
-                      </div>
+              {/* Popular Skills */}
+              {popularSkills.length > 0 && (
+                <Card>
+                  <CardContent className="p-5">
+                    <h3 className="font-semibold text-sm mb-3">{isBn ? "জনপ্রিয় স্কিল" : "Popular Skills (Top 10)"}</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(showAllSkills ? popularSkills : popularSkills.slice(0, 8)).map((skill, i) => (
+                        <Badge key={i} variant="secondary" className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors">{skill}</Badge>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </aside>
+                    {popularSkills.length > 8 && (
+                      <button onClick={() => setShowAllSkills(!showAllSkills)} className="text-xs text-primary mt-2 flex items-center gap-1 hover:underline">
+                        {showAllSkills ? <><ChevronUp className="h-3 w-3" /> {isBn ? "কম" : "Less"}</> : <><ChevronDown className="h-3 w-3" /> {isBn ? "আরও" : "More"}</>}
+                      </button>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* CTA - only for guests */}
+              {!isAuthenticated && (
+                <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
+                  <CardContent className="p-5 text-center space-y-3">
+                    <Zap className="h-8 w-8 mx-auto" />
+                    <h3 className="font-semibold">{isBn ? "আপনার প্রোফাইল তৈরি করুন" : "Create Your Profile"}</h3>
+                    <p className="text-xs text-primary-foreground/80">{isBn ? "এখনই শুরু করুন এবং চাকরি পান" : "Start now and get matched with jobs"}</p>
+                    <Button variant="secondary" size="sm" className="w-full" asChild><Link href="/register">{isBn ? "ফ্রি অ্যাকাউন্ট খুঁজুন" : "Create Free Account"}</Link></Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Featured Companies */}
+              {featuredCompanies.length > 0 && (
+                <Card>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-sm">{isBn ? "শীর্ষ কোম্পানি" : "Top Companies"}</h3>
+                      <Link href="/companies" className="text-xs text-primary hover:underline">{isBn ? "সব দেখুন" : "View All"}</Link>
+                    </div>
+                    <div className="space-y-3">
+                      {featuredCompanies.map((c: any) => (
+                        <Link key={c.id || c.slug} href={`/companies/${c.slug || ""}`} className="flex items-center gap-3 hover:bg-muted/50 rounded-lg p-1 -m-1 transition-colors">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0 overflow-hidden">
+                            <CompanyLogo src={c.logo} name={c.name}>
+                              {c.name?.charAt(0) || "C"}
+                            </CompanyLogo>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{c.name}</p>
+                            <p className="text-xs text-muted-foreground">{c.jobs_count || 0} {isBn ? "জব" : "jobs"}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </aside>
+          )}
         </div>
       </div>
 

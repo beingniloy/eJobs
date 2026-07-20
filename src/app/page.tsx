@@ -155,12 +155,7 @@ const CATEGORY_ICON_MAP: Record<string, { icon: typeof Briefcase; bg: string; te
 const CATEGORY_FALLBACK_STYLE = { icon: Briefcase, bg: "bg-teal-50 dark:bg-teal-950/20", text: "text-teal-600 dark:text-teal-400" };
 
 const CATEGORY_URL_MAP: Record<string, string> = {
-  'briefcase': '/jobs',
-  'building-2': '/jobs',
-  'users': '/jobs',
   'bell-ring': '/dashboard/job-alerts',
-  'star': '/jobs',
-  'layers': '/jobs',
 };
 
 /* ─────────────────────────────────────────────
@@ -558,12 +553,12 @@ export default function HomePage() {
 
             {/* Glass Morphism Box — shifted slightly left */}
             {heroShowBox && (
-              <div className="md:w-[380px] bg-white/10 p-6 rounded-xl backdrop-blur-sm border border-white/20 z-10 transition-transform duration-300" style={{ transform: `translateX(${heroBoxOffset}px)` }}>
-                <h3 className="text-[#F59E0B] font-bold text-lg mb-4">{heroBoxTitle}</h3>
-                <ul className="text-white space-y-3 text-sm">
+              <div className="md:w-[320px] bg-white/10 p-4 rounded-lg backdrop-blur-sm border border-white/20 z-10 transition-transform duration-300" style={{ transform: `translateX(${heroBoxOffset}px)` }}>
+                <h3 className="text-[#F59E0B] font-bold text-base mb-3">{heroBoxTitle}</h3>
+                <ul className="text-white space-y-2 text-xs">
                   {heroBullets.map((b: any, i: number) => (
                     <li key={i} className="flex items-center space-x-2">
-                      <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-white shrink-0" />
                       <span>{isBn ? (b.text_bn || b.text) : (b.text || b.text_bn)}</span>
                     </li>
                   ))}
@@ -693,9 +688,7 @@ export default function HomePage() {
       {(() => {
         const catSettings = hpData?.homepage_categories || {};
         if (catSettings.enabled === false) return null;
-        const catCardBg = catSettings.card_bg || '#F0FDF4';
         const catCardText = catSettings.card_text || '#1F2937';
-        const catCardBgDark = catSettings.card_bg_dark || '#022C22';
         const catCardTextDark = catSettings.card_text_dark || '#F3F4F6';
         const catIconBg = catSettings.icon_bg || '#FFFFFF';
         const catIconColor = catSettings.icon_color || '#059669';
@@ -703,6 +696,14 @@ export default function HomePage() {
         const catBtnText = catSettings.button_text || '#059669';
         const catHeading = catSettings.heading_color || '#1F2937';
         const catCount = catSettings.count_color || '#6B7280';
+        const catGradFrom = catSettings.gradient_from;
+        const catGradVia = catSettings.gradient_via;
+        const catGradTo = catSettings.gradient_to;
+        const catGradFromDark = catSettings.gradient_from_dark;
+        const catGradViaDark = catSettings.gradient_via_dark;
+        const catGradToDark = catSettings.gradient_to_dark;
+        const catLightBg = catGradFrom && catGradVia && catGradTo ? `linear-gradient(to right, ${catGradFrom}, ${catGradVia}, ${catGradTo})` : catSettings.card_bg || '#F0FDF4';
+        const catDarkBg = catGradFromDark && catGradViaDark && catGradToDark ? `linear-gradient(to right, ${catGradFromDark}, ${catGradViaDark}, ${catGradToDark})` : catSettings.card_bg_dark || '#022C22';
         return (
           <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -715,7 +716,7 @@ export default function HomePage() {
 
                 return (
                   <Link key={cat.id} href={catUrl}>
-                    <div className="border border-border rounded-lg p-5 text-center hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer h-full dark:hidden" style={{ backgroundColor: catCardBg, color: catCardText }}>
+                    <div className="border border-border rounded-lg p-5 text-center hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer h-full dark:hidden" style={{ background: catLightBg, color: catCardText }}>
                       <div className="w-12 h-12 mx-auto rounded-lg flex items-center justify-center mb-3 shadow-sm" style={{ backgroundColor: catIconBg, color: catIconColor }}>
                         <IconComp className="w-6 h-6" />
                       </div>
@@ -727,7 +728,7 @@ export default function HomePage() {
                         {isBn ? "দেখুন" : "View"}
                       </button>
                     </div>
-                    <div className="border border-border rounded-lg p-5 text-center hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer h-full hidden dark:block" style={{ backgroundColor: catCardBgDark, color: catCardTextDark }}>
+                    <div className="border border-border rounded-lg p-5 text-center hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer h-full hidden dark:block" style={{ background: catDarkBg, color: catCardTextDark }}>
                       <div className="w-12 h-12 mx-auto rounded-lg flex items-center justify-center mb-3 shadow-sm" style={{ backgroundColor: catIconBg, color: catIconColor }}>
                         <IconComp className="w-6 h-6" />
                       </div>
@@ -937,7 +938,7 @@ export default function HomePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               {remoteJobs.slice(0, 30).map((job: any) => (
                 <Link key={job.id} href={`/jobs/${job.id}`}>
-                  <div className="border border-border rounded-lg p-3 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer h-full flex flex-col dark:hidden" style={{ backgroundColor: rjCardBg, color: rjCardText }}>
+                  <div className="border border-border rounded-lg p-3 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer h-full flex flex-col dark:hidden" style={{ background: rjCardBg, color: rjCardText }}>
                     <h4 className="font-bold text-xs line-clamp-2 mb-1">{job.title}</h4>
                     <p className="text-[11px] mb-1 flex items-center gap-1" style={{ opacity: 0.7 }}>
                       <Building2 className="w-3 h-3 shrink-0" />
@@ -957,7 +958,7 @@ export default function HomePage() {
                       </span>
                     </div>
                   </div>
-                  <div className="border border-border rounded-lg p-3 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer h-full flex flex-col hidden dark:block" style={{ backgroundColor: rjCardBgDark, color: rjCardTextDark }}>
+                  <div className="border border-border rounded-lg p-3 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer h-full flex flex-col hidden dark:block" style={{ background: rjCardBgDark, color: rjCardTextDark }}>
                     <h4 className="font-bold text-xs line-clamp-2 mb-1">{job.title}</h4>
                     <p className="text-[11px] mb-1 flex items-center gap-1" style={{ opacity: 0.7 }}>
                       <Building2 className="w-3 h-3 shrink-0" />
@@ -1110,11 +1111,15 @@ export default function HomePage() {
               const btnBg = isDark ? card.button_bg_dark : card.button_bg;
               const btnText = isDark ? card.button_text_color_dark : card.button_text_color;
 
+              const featGradFrom = card.gradient_from;
+              const featGradVia = card.gradient_via;
+              const featGradTo = card.gradient_to;
+              const featBg = featGradFrom && featGradVia && featGradTo ? `linear-gradient(to right, ${featGradFrom}, ${featGradVia}, ${featGradTo})` : cardBg;
               return (
                 <div
                   key={idx}
                   className="rounded-xl p-5 flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
-                  style={{ backgroundColor: cardBg, color: cardText }}
+                  style={{ background: featBg, color: cardText }}
                 >
                   <div>
                     <h3 className="font-bold mb-1">

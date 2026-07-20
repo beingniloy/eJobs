@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { useThemeStore } from "@/store/theme-store";
@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Plus, Plane, MapPin, CheckCircle, Circle, XCircle, Clock, Pencil } from "lucide-react";
+import { Loader2, Plus, Plane, MapPin, CheckCircle, Circle, XCircle, Clock, Pencil, Search } from "lucide-react";
 
 interface DeploymentStage {
   id: number;
@@ -75,6 +75,9 @@ export default function EmployerDeploymentsClient() {
   const [city, setCity] = useState("");
   const [joiningDate, setJoiningDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [candidates, setCandidates] = useState<{ id: number; name: string; email: string }[]>([]);
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
+  const [candidateSearch, setCandidateSearch] = useState("");
 
   // Stage update form state
   const [stageStatus, setStageStatus] = useState("");
@@ -103,6 +106,32 @@ export default function EmployerDeploymentsClient() {
     if (user) fetchDeployments();
   }, [user, authLoading, router]);
 
+  useEffect(() => {
+    if (!createOpen) return;
+    setLoadingCandidates(true);
+    let active = true;
+    api.get("/employer/candidates")
+      .then((res) => {
+        if (!active) return;
+        const data = res.data?.data ?? res.data ?? [];
+        const items = Array.isArray(data) ? data : data?.data ?? [];
+        const mapped = (items as any[]).map((c) => ({
+          id: c.id,
+          name: c.name ?? c.username ?? "Unnamed",
+          email: c.email ?? "",
+        }));
+        setCandidates(mapped);
+      })
+      .catch(() => {
+        if (!active) return;
+        setCandidates([]);
+      })
+      .finally(() => {
+        if (active) setLoadingCandidates(false);
+      });
+    return () => { active = false; };
+  }, [createOpen]);
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!candidateId || !jobTitle || !country) {
@@ -123,8 +152,7 @@ export default function EmployerDeploymentsClient() {
       toast.success("Deployment created successfully");
       setCreateOpen(false);
       fetchDeployments();
-      // Reset form
-      setCandidateId(""); setJobTitle(""); setCompanyName(""); setCountry(""); setCity(""); setJoiningDate(""); setNotes("");
+      setCandidateId(""); setJobTitle(""); setCompanyName(""); setCountry(""); setCity(""); setJoiningDate(""); setNotes(""); setCandidateSearch("");
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Failed to create deployment");
     } finally {
@@ -201,7 +229,16 @@ export default function EmployerDeploymentsClient() {
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
                 <Label>Candidate User ID *</Label>
-                <Input type="number" placeholder="Candidate user ID" value={candidateId} onChange={(e) => setCandidateId(e.target.value)} />
+                <Select value={candidateId} onValueChange={(v) => { setCandidateId(v); setCandidateSearch(v ? String(v) : ""); }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={loadingCandidates ? "Loading..." : "Select candidate"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {candidates.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>{c.name} - {c.email}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Job Title *</Label>
@@ -319,22 +356,25 @@ export default function EmployerDeploymentsClient() {
             <div className="space-y-2">
               <Label>Status</Label>
               <Select value={stageStatus} onValueChange={setStageStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
+                  <SelectItem value="on_hold">On Hold</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Deadline</Label>
-              <Input type="date" value={stageDeadline} onChange={(e) => setStageDeadline(e.target.value)} />
+              <Label>Remarks</Label>
+              <Textarea rows={3} value={stageRemarks} onChange={(e) => setStageRemarks(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Remarks</Label>
-              <Textarea rows={3} placeholder="Notes about this stage..." value={stageRemarks} onChange={(e) => setStageRemarks(e.target.value)} />
+              <Label>Deadline</Label>
+              <Input type="date" value={stageDeadline} onChange={(e) => setStageDeadline(e.target.value)} />
             </div>
             <Button className="w-full" onClick={handleStageUpdate} disabled={updatingStage}>
               {updatingStage ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Updating...</> : "Update Stage"}

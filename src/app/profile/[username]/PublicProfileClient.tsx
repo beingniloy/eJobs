@@ -131,7 +131,7 @@ export default function PublicProfileClient({ username }: { username: string }) 
               <DefaultAvatar src={avatar?.startsWith("http") ? avatar : avatar ? `/storage/${avatar}` : null} name={profile.name} className="h-24 w-24 border-4 border-white/20 shadow-xl" fallback={<span className="text-2xl font-bold bg-white/10">{getInitials(profile.name || "?")}</span>} />
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-2xl font-bold">{profile.name}</h1>
+                  <h1 className="text-2xl font-bold">{profile.name || profile.username || username}</h1>
                   {activeBadges.some((b: any) => b.badge_key === "premium") && <Badge className="bg-yellow-500 text-white text-xs"><Zap className="h-3 w-3 mr-1" />Pro</Badge>}
                   {profile.is_verified && <><CheckCircle className="h-5 w-5 text-green-400 fill-green-400/20" /><span className="text-xs text-green-400 font-medium">Verified</span></>}
                   {profile.trust_score != null && profile.trust_score > 0 && <div className="flex items-center gap-1 text-sm"><Shield className="h-4 w-4 text-green-400" /><span className="text-green-400 font-medium">Trust: {profile.trust_score}%</span></div>}

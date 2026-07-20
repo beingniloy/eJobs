@@ -35,7 +35,9 @@ import {
 import {
   Menu, Sun, Moon, Bell, LogOut, User, Settings, LayoutDashboard,
   ChevronDown, Sparkles, Briefcase, Globe, Building2, Users,
-  FileText, CreditCard, Home, Trophy, GraduationCap, BookOpen,
+  FileText, CreditCard, Home, Trophy, GraduationCap, BookOpen, Plus,
+  MessageSquare, FolderKanban, Wallet, ShoppingCart,
+  Megaphone, ShieldCheck, BarChart3, Headphones, Plane,
 } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import type { Subscription } from "@/types";
@@ -106,6 +108,77 @@ export default function Navbar() {
     { href: "/certificates", label: isBn ? "সার্টিফিকেট" : "Certificates", icon: Trophy },
     { href: "/assessments", label: isBn ? "মূল্যায়ন" : "Assessments", icon: BookOpen },
   ];
+
+  // Employer dashboard pages for mobile menu - grouped same as desktop sidebar
+  const employerMobileLinks = isEmployer ? [
+    { group: isBn ? "সারসংক্ষেপ" : "Overview", items: [
+      { href: "/employer/dashboard", label: isBn ? "ড্যাশবোর্ড" : "Dashboard", icon: LayoutDashboard },
+      { href: "/employer/company-overview", label: isBn ? "কোম্পানি সারসংক্ষেপ" : "Company Overview", icon: Building2 },
+      { href: "/employer/profile", label: isBn ? "প্রোফাইল" : "Profile", icon: User },
+      { href: "/employer/analytics", label: isBn ? "অ্যানালিটিক্স" : "Analytics", icon: BarChart3 },
+    ]},
+    { group: isBn ? "নিয়োগ" : "Hiring", items: [
+      { href: "/employer/post-job", label: isBn ? "চাকরি পোস্ট করুন" : "Post Job", icon: Plus },
+      { href: "/employer/manage-jobs", label: isBn ? "চাকরি ব্যবস্থাপনা" : "Manage Jobs", icon: Briefcase },
+      { href: "/employer/applicants", label: isBn ? "আবেদনকারীগণ" : "Applicants", icon: Users },
+      { href: "/employer/candidates", label: isBn ? "প্রার্থীগণ" : "Candidates", icon: Users },
+      { href: "/employer/deployments", label: isBn ? "নিয়োগ ট্র্যাকার" : "Deployments", icon: Plane },
+      { href: "/employer/cv-database", label: isBn ? "সিভি ডাটাবেজ" : "CV Database", icon: FileText },
+      { href: "/employer/workspace", label: isBn ? "ওয়ার্কস্পেস" : "Workspace", icon: FolderKanban },
+    ]},
+    { group: isBn ? "আর্থিক" : "Finance", items: [
+      { href: "/employer/wallet", label: isBn ? "ওয়ালেট" : "Wallet", icon: Wallet },
+      { href: "/employer/purchases", label: isBn ? "ক্রয়সমূহ" : "Purchases", icon: ShoppingCart },
+      { href: "/employer/promotions", label: isBn ? "বিজ্ঞাপন প্রচার" : "Promotions", icon: Megaphone },
+      { href: "/employer/subscription", label: isBn ? "সাবস্ক্রিপশন" : "Subscription", icon: CreditCard },
+    ]},
+    { group: isBn ? "অ্যাকাউন্ট" : "Account", items: [
+      { href: "/employer/messages", label: isBn ? "বার্তা" : "Messages", icon: MessageSquare },
+      { href: "/employer/verify", label: isBn ? "যাচাইকরণ" : "Verification", icon: ShieldCheck },
+      { href: "/employer/notifications", label: isBn ? "নোটিফিকেশন" : "Notifications", icon: Bell },
+      { href: "/employer/support", label: isBn ? "সাপোর্ট" : "Support", icon: Headphones },
+      { href: "/employer/settings", label: isBn ? "সেটিংস" : "Settings", icon: Settings },
+    ]},
+  ] : [];
+
+  // Candidate dashboard pages for mobile menu - grouped same as desktop sidebar
+  const candidateMobileLinks = isCandidate ? [
+    { group: isBn ? "সারসংক্ষেপ" : "Overview", items: [
+      { href: "/dashboard", label: isBn ? "ড্যাশবোর্ড" : "Dashboard", icon: LayoutDashboard },
+      { href: "/dashboard/profile/overview", label: isBn ? "প্রোফাইল ওভারভিউ" : "Profile Overview", icon: BarChart3 },
+      { href: "/dashboard/profile", label: isBn ? "প্রোফাইল" : "Profile", icon: User },
+      { href: "/dashboard/resume", label: isBn ? "জীবনবৃত্তান্ত" : "Resume", icon: FileText },
+      { href: "/dashboard/analytics", label: isBn ? "অ্যানালিটিক্স" : "Analytics", icon: BarChart3 },
+    ]},
+    { group: isBn ? "চাকরি ও কাজ" : "Jobs & Work", items: [
+      { href: "/dashboard/applied-jobs", label: isBn ? "আবেদনকৃত চাকরি" : "Applied Jobs", icon: Send },
+      { href: "/dashboard/accepted-jobs", label: isBn ? "গৃহীত চাকরি" : "Accepted Jobs", icon: CheckCircle },
+      { href: "/dashboard/saved-jobs", label: isBn ? "সংরক্ষিত চাকরি" : "Saved Jobs", icon: Bookmark },
+      { href: "/dashboard/job-alerts", label: isBn ? "জব এলার্ট" : "Job Alerts", icon: Bell },
+      { href: "/dashboard/workspace", label: isBn ? "ওয়ার্কস্পেস" : "Workspace", icon: FolderKanban },
+      { href: "/dashboard/deployments", label: isBn ? "নিয়োগ ট্র্যাকার" : "Deployments", icon: Plane },
+      { href: "/dashboard/interviews", label: isBn ? "সাক্ষাৎকার" : "Interviews", icon: Calendar },
+    ]},
+    { group: isBn ? "দক্ষতা কেন্দ্র" : "Skill Center", items: [
+      { href: "/dashboard/skill-center", label: isBn ? "দক্ষতা কেন্দ্র" : "Skill Center", icon: GraduationCap },
+      { href: "/dashboard/skill-center/certificates", label: isBn ? "আমার সার্টিফিকেট" : "My Certificates", icon: Award },
+    ]},
+    { group: isBn ? "আর্থিক" : "Finance", items: [
+      { href: "/dashboard/wallet", label: isBn ? "ওয়ালেট" : "Wallet", icon: Wallet },
+      { href: "/dashboard/purchases", label: isBn ? "ক্রয়সমূহ" : "Purchases", icon: ShoppingCart },
+      { href: "/dashboard/subscription", label: isBn ? "সাবস্ক্রিপশন" : "Subscription", icon: CreditCard },
+      { href: "/dashboard/tax-info", label: isBn ? "ট্যাক্স তথ্য" : "Tax Info", icon: Receipt },
+    ]},
+    { group: isBn ? "অ্যাকাউন্ট" : "Account", items: [
+      { href: "/dashboard/messages", label: isBn ? "বার্তা" : "Messages", icon: MessageSquare },
+      { href: "/dashboard/verify", label: isBn ? "যাচাইকরণ" : "Verification", icon: Shield },
+      { href: "/dashboard/notifications", label: isBn ? "নোটিফিকেশন" : "Notifications", icon: Bell },
+      { href: "/dashboard/notifications/preferences", label: isBn ? "নোটিফিকেশন পছন্দ" : "Notification Prefs", icon: Settings },
+      { href: "/dashboard/disputes", label: isBn ? "বিরোধসমূহ" : "Disputes", icon: Shield },
+      { href: "/dashboard/settings", label: isBn ? "সেটিংস" : "Settings", icon: Settings },
+      { href: "/dashboard/support", label: isBn ? "সাপোর্ট" : "Support", icon: Headphones },
+    ]},
+  ] : [];
 
   // All mobile nav links (navLinks + extras, no duplicates)
   const allMobileLinks = [
@@ -336,65 +409,73 @@ export default function Navbar() {
                 </div>
               )}
 
-              {/* Navigation Links — ALL pages */}
-              <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-                {allMobileLinks.map((link) => {
-                  const Icon = link.icon;
-                  const isActive = pathname === link.href;
-                  return (
-                    <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors ${
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : link.highlight
-                            ? "text-[#7C3AED] bg-[#7C3AED]/5 hover:bg-[#7C3AED]/10 dark:bg-[#7C3AED]/10 dark:hover:bg-[#7C3AED]/20"
-                            : "text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      <Icon className={`h-4 w-4 shrink-0 ${link.highlight ? "animate-pulse" : ""}`} />
-                      {link.label}
-                    </Link>
-                  );
-                })}
-
-                {/* Dashboard & Account (if authenticated) */}
-                {isAuthenticated && (
-                  <>
-                    <div className="h-px bg-border my-3" />
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3">
-                      {isBn ? "অ্যাকাউন্ট" : "Account"}
-                    </p>
-                    <Link href={dashboardPath} onClick={() => setMobileOpen(false)}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-muted">
-                      <LayoutDashboard className="h-4 w-4 shrink-0" />
-                      {isBn ? "ড্যাশবোর্ড" : "Dashboard"}
-                    </Link>
-                    <Link href={`${notificationsPath}`} onClick={() => setMobileOpen(false)}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-muted">
-                      <Bell className="h-4 w-4 shrink-0" />
-                      {isBn ? "নোটিফিকেশন" : "Notifications"}
-                      {unreadCount > 0 && (
-                        <Badge variant="destructive" className="ml-auto h-5 min-w-5 text-[10px]">
-                          {unreadCount > 99 ? "99+" : unreadCount}
-                        </Badge>
-                      )}
-                    </Link>
-                    <Link href={`${settingsPath}`} onClick={() => setMobileOpen(false)}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-muted">
-                      <Settings className="h-4 w-4 shrink-0" />
-                      {isBn ? "সেটিংস" : "Settings"}
-                    </Link>
-                    <button onClick={() => { setMobileOpen(false); logout(); }}
-                      className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 text-left">
-                      <LogOut className="h-4 w-4 shrink-0" />
-                      {isBn ? "লগআউট" : "Logout"}
-                    </button>
-                  </>
+              {/* Mobile Navigation */}
+              <nav className="flex-1 overflow-y-auto p-4 space-y-4">
+                {isEmployer && employerMobileLinks.length > 0 ? (
+                  employerMobileLinks.map((group) => (
+                    <div key={group.group}>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider mb-1.5 px-3 text-muted-foreground">
+                        {group.group}
+                      </p>
+                      <div className="space-y-0.5">
+                        {group.items.map((link) => {
+                          const Icon = link.icon;
+                          const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+                          return (
+                            <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)}
+                              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${
+                                isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-foreground hover:bg-muted"
+                              }`}>
+                              <Icon className="h-4 w-4 shrink-0" />
+                              {link.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))
+                ) : isCandidate && candidateMobileLinks.length > 0 ? (
+                  candidateMobileLinks.map((group) => (
+                    <div key={group.group}>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider mb-1.5 px-3 text-muted-foreground">
+                        {group.group}
+                      </p>
+                      <div className="space-y-0.5">
+                        {group.items.map((link) => {
+                          const Icon = link.icon;
+                          const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+                          return (
+                            <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)}
+                              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${
+                                isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-foreground hover:bg-muted"
+                              }`}>
+                              <Icon className="h-4 w-4 shrink-0" />
+                              {link.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  allMobileLinks.map((link) => {
+                    const Icon = link.icon;
+                    const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+                    return (
+                      <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${
+                          isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-foreground hover:bg-muted"
+                        }`}>
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {link.label}
+                      </Link>
+                    );
+                  })
                 )}
               </nav>
 
               {/* Bottom Actions */}
-              <div className="p-4 border-t space-y-2">
+              <div className="p-4 border-t">
                 {isAuthenticated ? (
                   <Button variant="outline"
                     className="w-full justify-center gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"

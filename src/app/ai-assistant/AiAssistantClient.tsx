@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useThemeStore } from "@/store/theme-store";
 import { aiService } from "@/services/ai.service";
@@ -13,11 +13,12 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DefaultAvatar } from "@/components/ui/default-avatar";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, Sparkles, Bot, User, Zap, Crown, Loader2, MessageCircle } from "lucide-react";
+import { Send, Sparkles, Bot, User, Zap, Crown, Loader2, MessageCircle, RefreshCcw, Copy, Check } from "lucide-react";
 
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  typedChars?: number;
 }
 
 const QUICK_PROMPTS = [
@@ -27,12 +28,16 @@ const QUICK_PROMPTS = [
   { en: "How to negotiate salary?", bn: "বেতন নিয়ে আলোচনা কিভাবে করবেন?" },
 ];
 
+const MAX_PREVIEW_CHARS = 180;
+const TYPING_SPEED = 18;
+
 export default function AiAssistantClient() {
   const { language } = useThemeStore();
   const isBn = language === "bn";
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [quotas, setQuotas] = useState<Record<string, QuotaInfo>>({});
@@ -40,6 +45,19 @@ export default function AiAssistantClient() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    const lastAssistantIndex = messages.reduce((acc, msg, i) => (msg.role === "assistant" && loading ? i : acc), -1);
+    if (lastAssistantIndex < 0) return;
+    const target = messages[lastAssistantIndex].content.length;
+    setMessages((prev) => {
+      const next = [...prev];
+      const current = next[lastAssistantIndex].typedChars || 0;
+      if (current >= target) return prev;
+      next[lastAssistantIndex] = { ...next[lastAssistantIndex], typedChars: Math.min(current + Math.max(1, Math.floor(target / 40)), target) };
+      return next;
+    });
+  }, [messages, loading]);
 
   useEffect(() => {
     subscriptionService
@@ -69,6 +87,33 @@ export default function AiAssistantClient() {
     } finally {
       setLoading(false);
       inputRef.current?.focus();
+    }
+  };
+
+  const handleRegenerate = async (index: number) => {
+    const userMsg = messages[index - 1]?.content;
+    if (!userMsg || loading) return;
+    setMessages((prev) => prev.slice(0, index));
+    setLoading(true);
+    try {
+      const data = await aiService.chat(userMsg);
+      const reply = data?.response || data || (isBn ? "দুঃখিত, উত্তর তৈরি করা যায়নি।" : "Sorry, could not generate a response.");
+      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.response || err?.response?.data?.message || err?.message || (isBn ? "একটি ত্রুটি ঘটেছে।" : "An error occurred.");
+      console.error("AI Regenerate Error:", err);
+      setMessages((prev) => [...prev, { role: "assistant", content: errMsg }]);
+    } finally {
+      setLoading(false);
+      inputRef.current?.focus();
+    }
+  };
+
+  const copyMessage = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+    } catch {
+      // ignore copy failures
     }
   };
 
@@ -153,48 +198,93 @@ export default function AiAssistantClient() {
               </div>
             )}
 
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                {msg.role === "assistant" && (
-                  <DefaultAvatar name="AI" className="h-8 w-8 shrink-0 mt-0.5" fallback={<Bot className="h-4 w-4" />} />
-                )}
+            {messages.map((msg, i) => {
+              const isAssistant = msg.role === "assistant";
+              const showTyping = isAssistant && typingIndex === i;
+              const displayContent = isAssistant && showTyping ? msg.content.slice(0, msg.typedChars) : msg.content;
+              const isLongReply = isAssistant && msg.content.length > MAX_PREVIEW_CHARS;
+              const previewText = isLongReply ? msg.content.slice(0, MAX_PREVIEW_CHARS) + "..." : msg.content;
+              const effectiveText = isAssistant && isLongReply && !showTyping ? previewText : displayContent;
+
+              return (
                 <div
-                  className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-br-md"
-                      : "bg-muted rounded-bl-md"
-                  }`}
+                  key={i}
+                  className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      a: ({ href, children }) => (
-                        <a href={href} className="text-primary underline underline-offset-2 hover:text-primary/80" target="_blank" rel="noopener noreferrer">
-                          {children}
-                        </a>
-                      ),
-                      ul: ({ children }) => <ul className="list-disc pl-5 space-y-1 my-1.5">{children}</ul>,
-                      ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1 my-1.5">{children}</ol>,
-                      li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-                      strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                      h1: ({ children }) => <h1 className="text-lg font-bold my-2">{children}</h1>,
-                      h2: ({ children }) => <h2 className="text-base font-bold my-1.5">{children}</h2>,
-                      h3: ({ children }) => <h3 className="text-sm font-bold my-1">{children}</h3>,
-                      p: ({ children }) => <p className="mb-1 last:mb-0 leading-relaxed">{children}</p>,
-                      code: ({ children }) => <code className="bg-muted-foreground/10 rounded px-1 py-0.5 text-xs font-mono">{children}</code>,
-                    }}
+                  {isAssistant && (
+                    <DefaultAvatar name="AI" className="h-8 w-8 shrink-0 mt-0.5" fallback={<Bot className="h-4 w-4" />} />
+                  )}
+                  <div
+                    className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground rounded-br-md"
+                        : "bg-muted rounded-bl-md"
+                    }`}
                   >
-                    {msg.content}
-                  </ReactMarkdown>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        a: ({ href, children }) => (
+                          <a href={href} className="text-primary underline underline-offset-2 hover:text-primary/80" target="_blank" rel="noopener noreferrer">
+                            {children}
+                          </a>
+                        ),
+                        ul: ({ children }) => <ul className="list-disc pl-5 space-y-1 my-1.5">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1 my-1.5">{children}</ol>,
+                        li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                        h1: ({ children }) => <h1 className="text-lg font-bold my-2">{children}</h1>,
+                        h2: ({ children }) => <h2 className="text-base font-bold my-1.5">{children}</h2>,
+                        h3: ({ children }) => <h3 className="text-sm font-bold my-1">{children}</h3>,
+                        p: ({ children }) => <p className="mb-1 last:mb-0 leading-relaxed">{children}</p>,
+                        code: ({ children }) => <code className="bg-muted-foreground/10 rounded px-1 py-0.5 text-xs font-mono">{children}</code>,
+                      }}
+                    >
+                      {effectiveText}
+                    </ReactMarkdown>
+
+                    {isAssistant && isLongReply && !showTyping && (
+                      <button
+                        type="button"
+                        onClick={() => setMessages((prev) => prev.map((m, idx) => idx === i ? { ...m, typedChars: m.content.length } : m))}
+                        className="mt-1 text-[10px] font-medium text-primary/80 hover:text-primary"
+                      >
+                        {isBn ? "পুরো উত্তর দেখুন" : "Show full reply"}
+                      </button>
+                    )}
+
+                    {isAssistant && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleRegenerate(i)}
+                          disabled={loading}
+                          className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground disabled:opacity-50"
+                        >
+                          <RefreshCcw className="h-3 w-3" />
+                          {isBn ? "ফিরে লিখুন" : "Regenerate"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await copyMessage(msg.content);
+                            setCopiedId(i);
+                            setTimeout(() => setCopiedId((current) => (current === i ? null : current)), 1500);
+                          }}
+                          className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
+                        >
+                          {copiedId === i ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                          {copiedId === i ? (isBn ? "কপি হয়েছে" : "Copied") : (isBn ? "কপি" : "Copy")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {msg.role === "user" && (
+                    <DefaultAvatar name="You" className="h-8 w-8 shrink-0 mt-0.5" fallback={<User className="h-4 w-4" />} />
+                  )}
                 </div>
-                {msg.role === "user" && (
-                  <DefaultAvatar name="You" className="h-8 w-8 shrink-0 mt-0.5" fallback={<User className="h-4 w-4" />} />
-                )}
-              </div>
-            ))}
+              );
+            })}
 
             {loading && (
               <div className="flex gap-2.5 justify-start">

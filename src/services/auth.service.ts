@@ -74,4 +74,46 @@ export const authService = {
     const res = await api.get("/check-username", { params: { username } });
     return res.data;
   },
+
+  // 2FA Management
+  get2faStatus: async () => {
+    const res = await api.get("/two-factor/status");
+    return res.data;
+  },
+
+  setup2faTotp: async () => {
+    const res = await api.post("/two-factor/setup");
+    return res.data;
+  },
+
+  confirm2faTotp: async (code: string) => {
+    const res = await api.post("/two-factor/confirm", { code });
+    return res.data;
+  },
+
+  send2faOtp: async (channel: "sms" | "email") => {
+    const res = await api.post("/two-factor/send-otp", { channel });
+    return res.data;
+  },
+
+  confirm2faOtp: async (channel: "sms" | "email", code: string) => {
+    const res = await api.post("/two-factor/confirm-otp", { channel, code });
+    return res.data;
+  },
+
+  disable2fa: async (code: string) => {
+    const res = await api.post("/two-factor/disable", { code });
+    return res.data;
+  },
+
+  // Login OTP
+  sendLoginOtp: async (tempToken: string) => {
+    const res = await api.post("/two-factor/send-login-otp", { temp_token: tempToken });
+    return res.data;
+  },
+
+  verifyLoginOtp: async (tempToken: string, code: string) => {
+    const res = await api.post("/two-factor/verify-login-otp", { temp_token: tempToken, code });
+    return res.data;
+  },
 };

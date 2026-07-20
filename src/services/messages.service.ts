@@ -19,7 +19,16 @@ export const messagesService = {
     return { messages: res.data.data, conversation: res.data.conversation };
   },
 
-  sendMessage: async (uuid: string, body: string) => {
+  sendMessage: async (uuid: string, body: string, file?: File) => {
+    if (file) {
+      const formData = new FormData();
+      if (body) formData.append("message", body);
+      formData.append("attachment", file);
+      const res = await api.post(`/messages/conversation/${uuid}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data;
+    }
     const res = await api.post(`/messages/conversation/${uuid}`, { message: body });
     return res.data;
   },

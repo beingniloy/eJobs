@@ -108,6 +108,11 @@ export default function SubscriptionPage() {
     }
   };
 
+  const expiryDate = subscription?.expires_at || subscription?.end_date;
+  const daysRemaining = expiryDate
+    ? Math.max(0, Math.ceil((new Date(expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null;
+
   // Get current plan's sort order for upgrade/downgrade logic
   const currentPlanIndex = useMemo(() => {
     if (!subscription?.plan_id) return -1;
@@ -270,6 +275,26 @@ export default function SubscriptionPage() {
                     {isBn ? "বৈধ পর্যন্ত" : "Valid until"}{" "}
                     {subscription.end_date ? new Date(subscription.end_date).toLocaleDateString() : "-"}
                   </div>
+                  {expiryDate && daysRemaining !== null && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">
+                        {isBn ? "বাকি দিন" : "Days remaining"}:
+                      </span>
+                      <Badge
+                        variant={daysRemaining <= 7 ? "destructive" : daysRemaining <= 30 ? "warning" : "success"}
+                        className="text-xs"
+                      >
+                        {daysRemaining} {isBn ? "দিন" : "days"}
+                      </Badge>
+                      {daysRemaining <= 7 && (
+                        <span className="text-destructive text-xs flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          {isBn ? "শীঘ্রই মেয়াদ শেষ!" : "Expiring soon!"}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">

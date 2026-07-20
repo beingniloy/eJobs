@@ -39,13 +39,13 @@ export const subscriptionService = {
 
   getMySubscription: async () => {
     const res = await api.get("/subscriptions/my-subscription");
-    return res.data.active_subscription ?? null;
+    return res.data.subscription ?? res.data.active_subscription ?? null;
   },
 
   getMySubscriptionWithQuotas: async (): Promise<MySubscriptionResult> => {
     const res = await api.get("/subscriptions/my-subscription");
     return {
-      subscription: res.data.active_subscription ?? null,
+      subscription: res.data.subscription ?? res.data.active_subscription ?? null,
       quotas: res.data.quotas ?? {},
     };
   },

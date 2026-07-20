@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import api from "@/lib/api-client";
 import { useThemeStore } from "@/store/theme-store";
 import PublicLayout from "@/components/layout/PublicLayout";
@@ -52,19 +53,21 @@ const HOW_IT_WORKS = [
   { icon: MessageSquare, text: "Company Candidate দেখে" },
   { icon: CheckCircle2, text: "Company কাজ রিভিউ করে" },
   { icon: CreditCard, text: "Payment Release হয়" },
-  { icon: Star, text: "জববাজার রিভিউ দেয়" },
+  { icon: Star, text: "eJob reviews jobs" },
 ];
 
 export default function JobsListClient() {
   const { language, settings } = useThemeStore();
   const isBn = language === "bn";
   const siteName = settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs";
+  const searchParams = useSearchParams();
 
   useScrollDepthTracking();
   useClickPatternTracking();
   useSessionEngagementTracking();
 
   const { isAuthenticated } = useAuth();
+  const router = useRouter();
   const { data: savedJobsData, refetch: refetchSavedJobs } = useSavedJobs();
   const savedJobIds = new Set((savedJobsData as any)?.map?.((j: any) => String(j.id)) ?? []);
   const [savingJobId, setSavingJobId] = useState<string | number | null>(null);
@@ -102,7 +105,8 @@ export default function JobsListClient() {
   const [showAllCategories, setShowAllCategories] = useState(false);
 
   // Filters
-  const [searchQuery, setSearchQuery] = useState("");
+  const initialKeyword = typeof searchParams.get("keyword") === "string" ? searchParams.get("keyword")! : "";
+  const [searchQuery, setSearchQuery] = useState(initialKeyword);
   const [category, setCategory] = useState("all");
   const [selectedJobType, setSelectedJobType] = useState("all");
   const [selectedExperience, setSelectedExperience] = useState("All Levels");
@@ -203,6 +207,11 @@ export default function JobsListClient() {
     if (searchQuery.trim()) {
       trackBehavior("search_history", { metaData: { query: searchQuery, category, jobType: selectedJobType, experience: selectedExperience } });
     }
+    const url = new URL(window.location.href);
+    if (searchQuery.trim()) url.searchParams.set("keyword", searchQuery.trim());
+    else url.searchParams.delete("keyword");
+    router.replace(url.pathname + url.search, { scroll: false });
+    setSortBy("recent");
     setCurrentPage(1);
   };
 
@@ -542,15 +551,17 @@ export default function JobsListClient() {
                   </CardContent>
                 </Card>
 
-                {/* CTA */}
-                <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
-                  <CardContent className="p-5 text-center space-y-3">
-                    <Zap className="h-8 w-8 mx-auto" />
-                    <h3 className="font-semibold">{isBn ? "এখনই শুরু করুন" : "Start Hiring Today"}</h3>
-                    <p className="text-xs text-primary-foreground/80">{isBn ? "আপনার প্রতিভা প্রদর্শন করুন" : "Showcase your talent to top companies"}</p>
-                    <Button variant="secondary" size="sm" className="w-full" asChild><Link href="/register">{isBn ? "ফ্রি অ্যাকাউন্ট খুঁজুন" : "Create Free Account"}</Link></Button>
-                  </CardContent>
-                </Card>
+                {/* CTA - only for guests */}
+                {!isAuthenticated && (
+                  <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
+                    <CardContent className="p-5 text-center space-y-3">
+                      <Zap className="h-8 w-8 mx-auto" />
+                      <h3 className="font-semibold">{isBn ? "এখনই শুরু করুন" : "Start Hiring Today"}</h3>
+                      <p className="text-xs text-primary-foreground/80">{isBn ? "আপনার প্রতিভা প্রদর্শন করুন" : "Showcase your talent to top companies"}</p>
+                      <Button variant="secondary" size="sm" className="w-full" asChild><Link href="/register">{isBn ? "ফ্রি অ্যাকাউন্ট খুঁজুন" : "Create Free Account"}</Link></Button>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Featured Companies */}
                 <Card>

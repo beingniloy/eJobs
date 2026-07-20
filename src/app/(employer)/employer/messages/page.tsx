@@ -66,16 +66,16 @@ export default function EmployerMessagesPage() {
             <Link key={conv.id} href={`/employer/messages/${conv.uuid}`}>
               <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4 flex items-center gap-3">
-                  <DefaultAvatar src={conv.participant?.avatar} name={conv.participant?.name} />
+                  <DefaultAvatar src={conv.other_party?.avatar} name={conv.other_party?.name} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <p className="font-medium truncate">{conv.participant?.name}</p>
+                      <p className="font-medium truncate">{conv.other_party?.name || conv.participant?.name || (isBn ? "ব্যবহারকারী" : "User")}</p>
                       <span className="text-xs text-muted-foreground shrink-0">
-                        {conv.last_message?.created_at && formatRelativeTime(conv.last_message.created_at)}
+                        {conv.messages?.[0]?.created_at && formatRelativeTime(conv.messages[0].created_at)}
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground truncate">
-                      {conv.last_message?.body || (isBn ? "কোনো বার্তা নেই" : "No messages")}
+                      {conv.messages?.[0]?.message || conv.last_message?.body || (isBn ? "কোনো বার্তা নেই" : "No messages")}
                     </p>
                   </div>
                   {(conv.unread_count ?? 0) > 0 && (

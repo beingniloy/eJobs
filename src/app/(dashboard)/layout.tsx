@@ -12,6 +12,7 @@ import {
   LayoutDashboard, Briefcase, Bookmark, Send, FileText, Wallet,
   Settings, Bell, User, MessageSquare, BarChart3, Shield, CreditCard,
   FolderKanban, Receipt, Headphones, ShoppingCart, Home, Calendar, Plane,
+  GraduationCap, Award, ClipboardCheck, CheckCircle,
 } from "lucide-react";
 
 type SidebarGroup = { group: string; groupBn: string; color: string; items: typeof sidebarItems };
@@ -22,11 +23,14 @@ const sidebarItems = [
   { href: "/dashboard/profile", label: "Profile", labelBn: "প্রোফাইল", icon: User },
   { href: "/dashboard/resume", label: "Resume", labelBn: "জীবনবৃত্তান্ত", icon: FileText },
   { href: "/dashboard/applied-jobs", label: "Applied Jobs", labelBn: "আবেদনকৃত চাকরি", icon: Send },
+  { href: "/dashboard/accepted-jobs", label: "Accepted Jobs", labelBn: "গৃহীত চাকরি", icon: CheckCircle },
   { href: "/dashboard/saved-jobs", label: "Saved Jobs", labelBn: "সংরক্ষিত চাকরি", icon: Bookmark },
   { href: "/dashboard/job-alerts", label: "Job Alerts", labelBn: "জব এলার্ট", icon: Bell },
   { href: "/dashboard/messages", label: "Messages", labelBn: "বার্তা", icon: MessageSquare },
   { href: "/dashboard/workspace", label: "Workspace", labelBn: "ওয়ার্কস্পেস", icon: FolderKanban },
   { href: "/dashboard/deployments", label: "Deployments", labelBn: "নিয়োগ ট্র্যাকার", icon: Plane },
+  { href: "/dashboard/skill-center", label: "Skill Center", labelBn: "দক্ষতা কেন্দ্র", icon: GraduationCap },
+  { href: "/dashboard/skill-center/certificates", label: "My Certificates", labelBn: "আমার সার্টিফিকেট", icon: Award },
   { href: "/dashboard/interviews", label: "Interviews", labelBn: "সাক্ষাৎকার", icon: Calendar },
   { href: "/dashboard/wallet", label: "Wallet", labelBn: "ওয়ালেট", icon: Wallet },
   { href: "/dashboard/purchases", label: "Purchases", labelBn: "ক্রয়সমূহ", icon: ShoppingCart },
@@ -43,7 +47,8 @@ const sidebarItems = [
 
 const sidebarGroups: SidebarGroup[] = [
   { group: "Overview", groupBn: "সারসংক্ষেপ", color: "text-blue-500", items: sidebarItems.filter(i => ["/dashboard", "/dashboard/profile/overview", "/dashboard/profile", "/dashboard/analytics"].includes(i.href)) },
-  { group: "Jobs & Work", groupBn: "চাকরি ও কাজ", color: "text-emerald-500", items: sidebarItems.filter(i => ["/dashboard/resume", "/dashboard/applied-jobs", "/dashboard/saved-jobs", "/dashboard/job-alerts", "/dashboard/workspace", "/dashboard/interviews"].includes(i.href)) },
+  { group: "Jobs & Work", groupBn: "চাকরি ও কাজ", color: "text-emerald-500", items: sidebarItems.filter(i => ["/dashboard/resume", "/dashboard/applied-jobs", "/dashboard/accepted-jobs", "/dashboard/saved-jobs", "/dashboard/job-alerts", "/dashboard/workspace", "/dashboard/interviews"].includes(i.href)) },
+  { group: "Skill Center", groupBn: "দক্ষতা কেন্দ্র", color: "text-orange-500", items: sidebarItems.filter(i => ["/dashboard/skill-center", "/dashboard/skill-center/certificates"].includes(i.href)) },
   { group: "Finance", groupBn: "আর্থিক", color: "text-amber-500", items: sidebarItems.filter(i => ["/dashboard/wallet", "/dashboard/purchases", "/dashboard/subscription", "/dashboard/tax-info"].includes(i.href)) },
   { group: "Account", groupBn: "অ্যাকাউন্ট", color: "text-purple-500", items: sidebarItems.filter(i => ["/dashboard/messages", "/dashboard/verify", "/dashboard/notifications", "/dashboard/notifications/preferences", "/dashboard/disputes", "/dashboard/settings", "/dashboard/support"].includes(i.href)) },
 ];

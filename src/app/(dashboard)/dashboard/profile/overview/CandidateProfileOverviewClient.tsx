@@ -55,14 +55,14 @@ export default function CandidateProfileOverviewClient() {
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
   const resumeInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!user) return;
+  const load = async () => {
     setLoading(true);
-    Promise.all([
-      api.get("/candidate/dashboard"),
-      api.get("/candidate/cv-data"),
-      api.get("/candidate/profile-views"),
-    ]).then(([dashRes, cvRes, viewsRes]) => {
+    try {
+      const [dashRes, cvRes, viewsRes] = await Promise.all([
+        api.get("/candidate/dashboard"),
+        api.get("/candidate/cv-data"),
+        api.get("/candidate/profile-views"),
+      ]);
       const d = dashRes.data;
       const profileData = d.user?.profile || {};
       if (!profileData.avatar && d.user?.avatar) {
@@ -75,8 +75,17 @@ export default function CandidateProfileOverviewClient() {
       setCvData(cvRes.data?.data || {});
       setProfileViews(viewsRes.data?.data || []);
       setIsPublic(d.user?.profile?.is_public !== false);
-      resumeService.getResumes().then((r) => setCvResumes(r)).catch(() => {});
-    }).finally(() => setLoading(false));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    load();
+    const handler = () => load();
+    window.addEventListener("candidate-profile-saved", handler);
+    return () => window.removeEventListener("candidate-profile-saved", handler);
   }, [user, isBn]);
 
   const toggleVisibility = async (val: boolean) => {

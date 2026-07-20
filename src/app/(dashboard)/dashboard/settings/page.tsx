@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Moon, Sun, Globe, LogOut } from "lucide-react";
+import { TwoFactorSettings } from "@/components/dashboard/two-factor-settings";
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
@@ -114,6 +115,8 @@ export default function SettingsPage() {
           </Button>
         </CardContent>
       </Card>
+
+      <TwoFactorSettings />
     </div>
   );
 }

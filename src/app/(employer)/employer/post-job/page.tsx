@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import api from "@/lib/api-client";
 import { useThemeStore } from "@/store/theme-store";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Sparkles } from "lucide-react";
+import { Loader2, Plus, Trash2, Sparkles, Briefcase, MapPin, Calendar, DollarSign, Users, FileText, Shield, Globe } from "lucide-react";
 import dynamic from "next/dynamic";
 import { aiService } from "@/services/ai.service";
 import { subscriptionService, type QuotaInfo } from "@/services/subscription.service";
@@ -28,7 +28,6 @@ import { subscriptionService, type QuotaInfo } from "@/services/subscription.ser
 const RichTextEditor = dynamic(() => import("@/components/ui/rich-text-editor"), { ssr: false });
 
 const postJobSchema = z.object({
-  // Section 1: Basic Job Information
   title: z.string().min(5, "Title must be at least 5 characters"),
   category_id: z.string().min(1, "Category is required"),
   job_type: z.string().min(1, "Job type is required"),
@@ -39,13 +38,6 @@ const postJobSchema = z.object({
   salary_max: z.coerce.number().min(0).optional(),
   salary_type: z.string().optional(),
   deadline: z.string().min(1, "Deadline is required"),
-
-  // Section 2: Company Information
-  contact_person_name: z.string().optional(),
-  contact_email: z.string().email("Invalid email").optional().or(z.literal("")),
-  contact_phone: z.string().optional(),
-
-  // Section 3: Job Description
   description: z.string().min(50, "Description must be at least 50 characters"),
   job_summary: z.string().optional(),
   responsibilities: z.string().optional(),
@@ -55,28 +47,26 @@ const postJobSchema = z.object({
   additional_requirements: z.string().optional(),
   benefits: z.string().optional(),
   required_skills: z.string().optional(),
-
-  // Section 4: Candidate Requirements
   min_age: z.coerce.number().min(16).max(70).optional(),
   max_age: z.coerce.number().min(16).max(70).optional(),
   gender_preference: z.string().optional(),
-  language_skills: z.string().optional(),
+  language_skills: z.array(z.string()).optional(),
   required_certifications: z.string().optional(),
   driving_license_required: z.boolean().optional(),
-
-  // Section 5: Application Information
   application_method: z.string().optional(),
   application_url: z.string().url("Invalid URL").optional().or(z.literal("")),
   application_email: z.string().email("Invalid email").optional().or(z.literal("")),
   required_documents: z.array(z.string()).optional(),
-
-  // Remote project
   is_remote_project: z.boolean().optional(),
   budget: z.coerce.number().min(0).optional(),
   budget_type: z.string().optional(),
 });
 
 type PostJobForm = z.input<typeof postJobSchema>;
+
+const languageOptions = [
+  "Bengali", "English", "Hindi", "Arabic", "Chinese", "Spanish", "French", "German", "Japanese", "Korean", "Other"
+];
 
 export default function PostJobPage() {
   const router = useRouter();
@@ -88,6 +78,7 @@ export default function PostJobPage() {
   const [generatingJD, setGeneratingJD] = useState(false);
   const [aiQuota, setAiQuota] = useState<QuotaInfo | null>(null);
   const [categories, setCategories] = useState<{ id: string; name_en: string; name_bn: string }[]>([]);
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
 
   useEffect(() => {
     document.title = isBn ? `চাকরি পোস্ট করুন | ${siteName}` : `Post a Job | ${siteName}`;
@@ -121,11 +112,21 @@ export default function PostJobPage() {
       application_method: "internal",
       required_documents: ["cv"],
       driving_license_required: false,
+      language_skills: [],
     },
   });
 
   const applicationMethod = watch("application_method");
   const requiredDocuments = watch("required_documents") || [];
+  const currentLanguageSkills = watch("language_skills") || [];
+
+  const toggleLanguage = (lang: string) => {
+    const updated = currentLanguageSkills.includes(lang)
+      ? currentLanguageSkills.filter((l) => l !== lang)
+      : [...currentLanguageSkills, lang];
+    setValue("language_skills", updated, { shouldValidate: true });
+    setSelectedLanguages(updated);
+  };
 
   const toggleDocument = (doc: string) => {
     const current = requiredDocuments;
@@ -153,29 +154,40 @@ export default function PostJobPage() {
       toast.success(isBn ? "চাকরি সফলভাবে পোস্ট হয়েছে!" : "Job posted successfully!");
       router.push("/employer/manage-jobs");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to post job");
+      const msg = error.response?.data?.message || error.response?.data?.error || "Failed to post job";
+      toast.error(isBn ? "চাকরি পোস্ট করতে ব্যর্থ" : msg);
     } finally {
       setSubmitting(false);
     }
   };
 
+  const inputClassName = "flex min-h-[40px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
+
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10 space-y-6">
-      <h1 className="text-2xl font-bold">{isBn ? "নতুন চাকরি পোস্ট করুন" : "Post a New Job"}</h1>
+    <div className="max-w-4xl mx-auto px-4 py-10 space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="p-2.5 rounded-lg bg-primary/10 text-primary">
+          <Briefcase className="h-5 w-5" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold">{isBn ? "নতুন চাকরি পোস্ট করুন" : "Post a New Job"}</h1>
+          <p className="text-sm text-muted-foreground">{isBn ? "চাকরির বিস্তারিত তথ্য দিন" : "Fill in the job details below"}</p>
+        </div>
+      </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-
-        {/* ════════════════════════════════════════════
-            Section 0: Remote / Freelance Project Toggle
-           ════════════════════════════════════════════ */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Remote Project */}
         <Card className="border-dashed border-primary/30 bg-primary/5">
-          <CardContent className="p-4 space-y-3">
+          <CardContent className="p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-sm">{isBn ? "রিমোট/ফ্রিল্যান্স প্রজেক্ট" : "Remote / Freelance Project"}</p>
-                <p className="text-xs text-muted-foreground">
-                  {isBn ? "এটি একটি রিমোট কাজ — বাজেট ও দক্ষতা নির্ধারণ করুন" : "Enable for remote work — set budget and required skills"}
-                </p>
+              <div className="flex items-center gap-3">
+                <Globe className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium">{isBn ? "রিমোট/ফ্রিল্যান্স প্রজেক্ট" : "Remote / Freelance Project"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isBn ? "এটি একটি রিমোট কাজ — বাজেট ও দক্ষতা নির্ধারণ করুন" : "Enable for remote work — set budget and required skills"}
+                  </p>
+                </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -191,19 +203,25 @@ export default function PostJobPage() {
                 <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2"></div>
               </label>
             </div>
+
             {isRemoteProject && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">{isBn ? "বাজেট (BDT)" : "Budget (BDT)"}</Label>
+                  <Label className="flex items-center gap-2"><DollarSign className="h-4 w-4" />{isBn ? "বাজেট (BDT)" : "Budget (BDT)"}</Label>
                   <Input type="number" placeholder="15000" {...register("budget")} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">{isBn ? "বাজেটের ধরন" : "Budget Type"}</Label>
+                  <Label>{isBn ? "বাজেটের ধরন" : "Budget Type"}</Label>
                   <Select onValueChange={(v) => setValue("budget_type", v)}>
                     <SelectTrigger><SelectValue placeholder={isBn ? "নির্বাচন করুন" : "Select type"} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="fixed">{isBn ? "নির্ধারিত" : "Fixed Price"}</SelectItem>
-                      <SelectItem value="hourly">{isBn ? "প্রতি ঘণ্টা" : "Hourly Rate"}</SelectItem>
+                      <SelectItem value="fixed">{isBn ? "ফিক্সড প্রাইস" : "Fixed Price"}</SelectItem>
+                      <SelectItem value="hourly">{isBn ? "প্রতি ঘণ্টা" : "Per Hour"}</SelectItem>
+                      <SelectItem value="daily">{isBn ? "প্রতি দিন" : "Per Day"}</SelectItem>
+                      <SelectItem value="monthly">{isBn ? "প্রতি মাস" : "Per Month"}</SelectItem>
+                      <SelectItem value="6_months">{isBn ? "৬ মাস" : "6 Months"}</SelectItem>
+                      <SelectItem value="1_year">{isBn ? "১ বছর" : "1 Year"}</SelectItem>
+                      <SelectItem value="full_project">{isBn ? "ফুল প্রজেক্ট" : "Full Project"}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -212,15 +230,15 @@ export default function PostJobPage() {
           </CardContent>
         </Card>
 
-        {/* ════════════════════════════════════════════
-            Section 1: Basic Job Information
-           ════════════════════════════════════════════ */}
+        {/* Basic Info */}
         <Card>
-          <CardContent className="p-5 space-y-4">
-            <h2 className="text-lg font-semibold border-b pb-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Briefcase className="h-4 w-4" />
               {isBn ? "১. মৌলিক চাকরির তথ্য" : "1. Basic Job Information"}
-            </h2>
-
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-1.5">
               <Label>{isBn ? "পদের নাম" : "Job Title"} *</Label>
               <Input placeholder="e.g. Senior React Developer" {...register("title")} />
@@ -230,7 +248,7 @@ export default function PostJobPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>{isBn ? "চাকরির ক্যাটাগরি" : "Job Category"} *</Label>
-                <Select onValueChange={(v) => setValue("category_id", v)}>
+                <Select value={watch("category_id") || ""} onValueChange={(v) => setValue("category_id", v)}>
                   <SelectTrigger><SelectValue placeholder={isBn ? "নির্বাচন করুন" : "Select category"} /></SelectTrigger>
                   <SelectContent>
                     {categories.map((cat) => (
@@ -266,7 +284,6 @@ export default function PostJobPage() {
                 <Input type="number" min={1} {...register("vacancies")} />
                 {errors.vacancies && <p className="text-sm text-destructive">{errors.vacancies.message}</p>}
               </div>
-
               <div className="space-y-1.5">
                 <Label>{isBn ? "চাকরির স্থান" : "Job Location"} *</Label>
                 <Input placeholder="e.g. Dhaka, Bangladesh" {...register("location")} />
@@ -286,9 +303,8 @@ export default function PostJobPage() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-1.5">
-                <Label>{isBn ? "অভিজ্ঞতা" : "Experience Level"}</Label>
+                <Label>{isBn ? "অভিজ্ঞতা লেভেল" : "Experience Level"}</Label>
                 <Select onValueChange={(v) => setValue("experience_level", v)}>
                   <SelectTrigger><SelectValue placeholder={isBn ? "নির্বাচন করুন" : "Select level"} /></SelectTrigger>
                   <SelectContent>
@@ -301,70 +317,43 @@ export default function PostJobPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <Label>{isBn ? "সর্বনিম্ন বেতন (BDT)" : "Min Salary (BDT)"}</Label>
-                <Input type="number" placeholder="25000" {...register("salary_min")} />
+            {!isRemoteProject && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <Label>{isBn ? "সর্বনিম্ন বেতন (BDT)" : "Min Salary (BDT)"}</Label>
+                  <Input type="number" placeholder="25000" {...register("salary_min")} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{isBn ? "সর্বোচ্চ বেতন (BDT)" : "Max Salary (BDT)"}</Label>
+                  <Input type="number" placeholder="50000" {...register("salary_max")} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{isBn ? "বেতনের ধরন" : "Salary Type"}</Label>
+                  <Select value={watch("salary_type") || "monthly"} onValueChange={(v) => setValue("salary_type", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">{isBn ? "মাসিক" : "Monthly"}</SelectItem>
+                      <SelectItem value="hourly">{isBn ? "ঘণ্টাপ্রতি" : "Hourly"}</SelectItem>
+                      <SelectItem value="negotiable">{isBn ? "আলোচনযোগ্য" : "Negotiable"}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label>{isBn ? "সর্বোচ্চ বেতন (BDT)" : "Max Salary (BDT)"}</Label>
-                <Input type="number" placeholder="50000" {...register("salary_max")} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{isBn ? "বেতনের ধরন" : "Salary Type"}</Label>
-                <Select value={watch("salary_type") || "monthly"} onValueChange={(v) => setValue("salary_type", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">{isBn ? "মাসিক" : "Monthly"}</SelectItem>
-                    <SelectItem value="hourly">{isBn ? "ঘণ্টাপ্রতি" : "Hourly"}</SelectItem>
-                    <SelectItem value="negotiable">{isBn ? "আলোচনযোগ্য" : "Negotiable"}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            )}
 
             <div className="space-y-1.5">
-              <Label>{isBn ? "শেষ তারিখ" : "Application Deadline"} *</Label>
+              <Label className="flex items-center gap-2"><Calendar className="h-4 w-4" />{isBn ? "আবেদনের শেষ তারিখ" : "Application Deadline"} *</Label>
               <Input type="date" {...register("deadline")} />
               {errors.deadline && <p className="text-sm text-destructive">{errors.deadline.message}</p>}
             </div>
           </CardContent>
         </Card>
 
-        {/* ════════════════════════════════════════════
-            Section 2: Company / Contact Information
-           ════════════════════════════════════════════ */}
+        {/* Description */}
         <Card>
-          <CardContent className="p-5 space-y-4">
-            <h2 className="text-lg font-semibold border-b pb-2">
-              {isBn ? "২. কোম্পানি/যোগাযোগ তথ্য" : "2. Company / Contact Information"}
-            </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>{isBn ? "যোগাযোগকারীর নাম" : "Contact Person Name"}</Label>
-                <Input placeholder="John Doe" {...register("contact_person_name")} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{isBn ? "যোগাযোগ ইমেইল" : "Contact Email"}</Label>
-                <Input type="email" placeholder="john@company.com" {...register("contact_email")} />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>{isBn ? "যোগাযোগ ফোন" : "Contact Phone Number"}</Label>
-              <Input placeholder="+880 1XXXXXXXXX" {...register("contact_phone")} />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* ════════════════════════════════════════════
-            Section 3: Job Description
-           ════════════════════════════════════════════ */}
-        <Card>
-          <CardContent className="p-5 space-y-4">
-            <h2 className="text-lg font-semibold border-b pb-2 flex items-center justify-between">
-              <span>{isBn ? "৩. চাকরির বিবরণ" : "3. Job Description"}</span>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between text-base">
+              <span className="flex items-center gap-2"><FileText className="h-4 w-4" />{isBn ? "২. চাকরির বিবরণ" : "2. Job Description"}</span>
               <Button
                 type="button"
                 variant="outline"
@@ -388,15 +377,12 @@ export default function PostJobPage() {
                   }
                 }}
               >
-                {generatingJD ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="mr-2 h-4 w-4" />
-                )}
+                {generatingJD ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                 {isBn ? "AI দিয়ে তৈরি করুন" : "AI Generate"}
               </Button>
-            </h2>
-
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-1.5">
               <Label>{isBn ? "চাকরির বিবরণ" : "Job Description"} *</Label>
               <RichTextEditor
@@ -410,77 +396,51 @@ export default function PostJobPage() {
 
             <div className="space-y-1.5">
               <Label>{isBn ? "চাকরির সারসংক্ষেপ" : "Job Summary"}</Label>
-              <textarea
-                className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder={isBn ? "এক লাইনে চাকরির সারসংক্ষেপ..." : "Brief summary of the role..."}
-                {...register("job_summary")}
-              />
+              <textarea className={inputClassName} placeholder={isBn ? "এক লাইনে চাকরির সারসংক্ষেপ..." : "Brief summary of the role..."} {...register("job_summary")} />
             </div>
 
             <div className="space-y-1.5">
               <Label>{isBn ? "দায়িত্ব" : "Responsibilities"} *</Label>
-              <textarea
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder={isBn ? "প্রধান দায়িত্বগুলো লিখুন..." : "List main responsibilities..."}
-                {...register("responsibilities")}
-              />
+              <textarea className={inputClassName} placeholder={isBn ? "প্রধান দায়িত্বগুলো লিখুন..." : "List main responsibilities..."} {...register("responsibilities")} />
+              {errors.responsibilities && <p className="text-sm text-destructive">{errors.responsibilities.message}</p>}
             </div>
 
             <div className="space-y-1.5">
               <Label>{isBn ? "প্রয়োজনীয় দক্ষতা" : "Required Skills"}</Label>
-              <Input
-                placeholder={isBn ? "React, Node.js, TypeScript (কমা দিয়ে আলাদা করুন)" : "React, Node.js, TypeScript (comma-separated)"}
-                {...register("required_skills")}
-              />
+              <Input placeholder={isBn ? "React, Node.js, TypeScript (কমা দিয়ে আলাদা করুন)" : "React, Node.js, TypeScript (comma-separated)"} {...register("required_skills")} />
             </div>
 
             <div className="space-y-1.5">
               <Label>{isBn ? "শিক্ষাগত যোগ্যতা" : "Educational Requirements"}</Label>
-              <textarea
-                className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder={isBn ? "BS.c in CSE, বা সমতুল্য..." : "BS.c in CSE or equivalent..."}
-                {...register("education_requirements")}
-              />
+              <textarea className={inputClassName} placeholder={isBn ? "BS.c in CSE, বা সমতুল্য..." : "BS.c in CSE or equivalent..."} {...register("education_requirements")} />
             </div>
 
             <div className="space-y-1.5">
               <Label>{isBn ? "অভিজ্ঞতার প্রয়োজনীয়তা" : "Experience Requirements"}</Label>
-              <textarea
-                className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder={isBn ? "৩+ বছরের অভিজ্ঞতা..." : "3+ years experience..."}
-                {...register("experience_requirements")}
-              />
+              <textarea className={inputClassName} placeholder={isBn ? "৩+ বছরের অভিজ্ঞতা..." : "3+ years experience..."} {...register("experience_requirements")} />
             </div>
 
             <div className="space-y-1.5">
               <Label>{isBn ? "অতিরিক্ত প্রয়োজনীয়তা" : "Additional Requirements"}</Label>
-              <textarea
-                className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder={isBn ? "অতিরিক্ত যোগ্যতা..." : "Nice-to-have skills..."}
-                {...register("additional_requirements")}
-              />
+              <textarea className={inputClassName} placeholder={isBn ? "অতিরিক্ত যোগ্যতা..." : "Nice-to-have skills..."} {...register("additional_requirements")} />
             </div>
 
             <div className="space-y-1.5">
               <Label>{isBn ? "সুবিধা ও পার্কিং" : "Benefits & Perks"}</Label>
-              <textarea
-                className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder={isBn ? "হেলথ ইন্সুরেন্স, ফ্লেক্সিবল আওয়ার্স..." : "Health insurance, flexible hours..."}
-                {...register("benefits")}
-              />
+              <textarea className={inputClassName} placeholder={isBn ? "হেলথ ইন্সুরেন্স, ফ্লেক্সিবল আওয়ার্স..." : "Health insurance, flexible hours..."} {...register("benefits")} />
             </div>
           </CardContent>
         </Card>
 
-        {/* ════════════════════════════════════════════
-            Section 4: Candidate Requirements
-           ════════════════════════════════════════════ */}
+        {/* Candidate Requirements */}
         <Card>
-          <CardContent className="p-5 space-y-4">
-            <h2 className="text-lg font-semibold border-b pb-2">
-              {isBn ? "৪. প্রার্থীর প্রয়োজনীয়তা" : "4. Candidate Requirements"}
-            </h2>
-
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Users className="h-4 w-4" />
+              {isBn ? "৩. প্রার্থীর প্রয়োজনীয়তা" : "3. Candidate Requirements"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>{isBn ? "ন্যূনতম বয়স" : "Minimum Age"}</Label>
@@ -507,14 +467,33 @@ export default function PostJobPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label>{isBn ? "ভাষা দক্ষতা" : "Required Language Skills"}</Label>
-                <Input placeholder={isBn ? "বাংলা, ইংরেজি (কমা দিয়ে)" : "English, Bengali (comma-separated)"} {...register("language_skills")} />
+                <Label>{isBn ? "প্রয়োজনীয় সার্টিফিকেশন" : "Required Certifications"}</Label>
+                <Input placeholder={isBn ? "AWS, PMP (কমা দিয়ে)" : "AWS, PMP (comma-separated)"} {...register("required_certifications")} />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label>{isBn ? "প্রয়োজনীয় সার্টিফিকেশন" : "Required Certifications"}</Label>
-              <Input placeholder={isBn ? "AWS, PMP (কমা দিয়ে)" : "AWS, PMP (comma-separated)"} {...register("required_certifications")} />
+              <Label className="flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                {isBn ? "ভাষা দক্ষতা" : "Required Language Skills"}
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {languageOptions.map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => toggleLanguage(lang)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                      currentLanguageSkills.includes(lang)
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background hover:bg-muted border-input"
+                    }`}
+                  >
+                    {lang}
+                  </button>
+                ))}
+              </div>
+              {errors.language_skills && <p className="text-sm text-destructive">{errors.language_skills.message}</p>}
             </div>
 
             <div className="flex items-center gap-2">
@@ -523,22 +502,23 @@ export default function PostJobPage() {
                 checked={watch("driving_license_required") || false}
                 onCheckedChange={(checked) => setValue("driving_license_required", !!checked)}
               />
-              <Label htmlFor="driving" className="cursor-pointer">
+              <Label htmlFor="driving" className="cursor-pointer flex items-center gap-2">
+                <Shield className="h-4 w-4" />
                 {isBn ? "ড্রাইভিং লাইসেন্স প্রয়োজন" : "Driving License Required"}
               </Label>
             </div>
           </CardContent>
         </Card>
 
-        {/* ════════════════════════════════════════════
-            Section 5: Application Information
-           ════════════════════════════════════════════ */}
+        {/* Application + Documents */}
         <Card>
-          <CardContent className="p-5 space-y-4">
-            <h2 className="text-lg font-semibold border-b pb-2">
-              {isBn ? "৫. আবেদনের তথ্য" : "5. Application Information"}
-            </h2>
-
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FileText className="h-4 w-4" />
+              {isBn ? "৪. আবেদন ও ডকুমেন্ট" : "4. Application & Documents"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-1.5">
               <Label>{isBn ? "আবেদনের পদ্ধতি" : "Application Method"}</Label>
               <Select value={watch("application_method") || "internal"} onValueChange={(v) => setValue("application_method", v)}>
@@ -582,7 +562,7 @@ export default function PostJobPage() {
                       checked={requiredDocuments.includes(doc.key)}
                       onCheckedChange={() => toggleDocument(doc.key)}
                     />
-                    <Label htmlFor={`doc-${doc.key}`} className="cursor-pointer text-sm">{doc.label}</Label>
+                    <Label htmlFor={"doc-" + doc.key} className="cursor-pointer text-sm">{doc.label}</Label>
                   </div>
                 ))}
               </div>

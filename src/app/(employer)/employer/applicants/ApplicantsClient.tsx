@@ -1,0 +1,516 @@
+"use client";
+
+import React, { useEffect, useState, useMemo } from "react";
+import api from "@/lib/api-client";
+import { useThemeStore } from "@/store/theme-store";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DefaultAvatar } from "@/components/ui/default-avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Users,
+  Download,
+  Eye,
+  MessageSquare,
+  CheckCircle,
+  XCircle,
+  MoreHorizontal,
+  Filter,
+  FileText,
+  ClipboardList,
+} from "lucide-react";
+
+import { toast } from "sonner";
+import type { JobApplication } from "@/types";
+import { useRouter } from "next/navigation";
+import CandidateProfileModal from "@/components/modals/CandidateProfileModal";
+
+export default function ApplicantsClient() {
+  const { language, settings } = useThemeStore();
+  const router = useRouter();
+  const isBn = language === "bn";
+  const siteName = settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs";
+  const [applicants, setApplicants] = useState<JobApplication[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedApp, setSelectedApp] = useState<JobApplication | null>(null);
+  const [profileModalUser, setProfileModalUser] = useState<{ userId?: number; username?: string } | null>(null);
+  const [changeStatusApp, setChangeStatusApp] = useState<JobApplication | null>(null);
+
+  useEffect(() => {
+    document.title = isBn ? `আবেদনকারী | ${siteName}` : `Applicants | ${siteName}`;
+  }, [isBn, siteName]);
+
+  useEffect(() => {
+    api
+      .get("/employer/applicants")
+      .then((res) => {
+        const data = res.data.data?.data || res.data.data || [];
+        data.sort(
+          (a: JobApplication, b: JobApplication) =>
+            (b.profile_strength ?? 0) - (a.profile_strength ?? 0)
+        );
+        setApplicants(data);
+      })
+      .catch(() => toast.error(isBn ? "আবেদনকারী লোড করতে ব্যর্থ" : "Failed to load applicants"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const refreshStatus = (id: number, status: string) => {
+    setApplicants((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
+  };
+
+  const filteredApplicants = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return applicants.filter((app) => {
+      if (statusFilter !== "all" && app.status !== statusFilter) return false;
+      const name = app.user?.name?.toLowerCase() || "";
+      const job = app.job?.title?.toLowerCase() || "";
+      if (!q) return true;
+      return name.includes(q) || job.includes(q);
+    });
+  }, [applicants, statusFilter, searchQuery]);
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: applicants.length, pending: 0, reviewed: 0, shortlisted: 0, rejected: 0, hired: 0 };
+    applicants.forEach((app) => {
+      if (app.status && counts[app.status] !== undefined) counts[app.status]++;
+    });
+    return counts;
+  }, [applicants]);
+
+  const statusColors: Record<string, string> = {
+    pending: "bg-yellow-100 text-yellow-800",
+    reviewed: "bg-blue-100 text-blue-800",
+    shortlisted: "bg-green-100 text-green-800",
+    rejected: "bg-red-100 text-red-800",
+    hired: "bg-green-100 text-green-800",
+  };
+
+  const statusOptions = [
+    { value: "all", label: isBn ? "সব" : "All" },
+    { value: "pending", label: isBn ? "পেন্ডিং" : "Pending" },
+    { value: "reviewed", label: isBn ? "রিভিউ" : "Reviewed" },
+    { value: "shortlisted", label: isBn ? "শর্টলিস্ট" : "Shortlisted" },
+    { value: "rejected", label: isBn ? "প্রত্যাখ্যাত" : "Rejected" },
+    { value: "hired", label: isBn ? "নিয়োগ" : "Hired" },
+  ];
+
+  const candidateLabel = (app: JobApplication) => app.user?.name || "Candidate";
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">{isBn ? "আবেদনকারী" : "Applicants"}</h1>
+        <p className="text-muted-foreground mt-1">
+          {isBn ? "সব আবেদনকারী দেখুন" : "Review all applicants"}
+        </p>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <div className="flex gap-1 flex-wrap">
+            {statusOptions.map((opt) => (
+              <Button
+                key={opt.value}
+                variant={statusFilter === opt.value ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter(opt.value)}
+                className="h-8 text-xs"
+              >
+                {opt.label}
+                <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">
+                  {statusCounts[opt.value] ?? 0}
+                </Badge>
+              </Button>
+            ))}
+          </div>
+        </div>
+        <input
+          type="text"
+          placeholder={isBn ? "নাম বা চাকরি খুঁজুন..." : "Search by name or job..."}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-8 px-3 rounded-md border bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-ring w-full sm:w-64"
+        />
+      </div>
+
+      {loading ? (
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+        </div>
+      ) : !filteredApplicants.length ? (
+        <div className="text-center py-16">
+          <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold">
+            {isBn ? "এখনো কোনো আবেদন নেই" : "No applicants found"}
+          </h3>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredApplicants.map((app) => (
+            <Card key={app.id} className="overflow-hidden">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <DefaultAvatar
+                    src={(app as any).user?.avatar}
+                    name={candidateLabel(app)}
+                    className="h-10 w-10 rounded-full"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{candidateLabel(app)}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {app.job?.title || "Job"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {app.profile_strength != null && (
+                          <div className="hidden sm:flex items-center gap-2">
+                            <div className="relative h-2 w-16 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className={`absolute inset-y-0 left-0 rounded-full transition-all ${
+                                  app.profile_strength >= 80
+                                    ? "bg-emerald-500"
+                                    : app.profile_strength >= 50
+                                      ? "bg-amber-500"
+                                      : "bg-red-500"
+                                }`}
+                                style={{ width: `${app.profile_strength}%` }}
+                              />
+                            </div>
+                            <Badge
+                              variant={app.profile_strength >= 80 ? "success" : app.profile_strength >= 50 ? "warning" : "destructive"}
+                            >
+                              {app.profile_strength}%
+                            </Badge>
+                          </div>
+                        )}
+                        {app.ai_match_score && (
+                          <Badge variant="success" className="hidden sm:inline-flex">{app.ai_match_score}%</Badge>
+                        )}
+                        <Badge variant="outline" className={`capitalize text-xs ${statusColors[app.status as keyof typeof statusColors] || ""}`}>
+                          {app.status}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {app.cover_letter && (
+                      <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
+                        {app.cover_letter}
+                      </p>
+                    )}
+
+                    <div className="mt-3 flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title={isBn ? "প্রোফাইল দেখুন" : "View Profile"}
+                        onClick={() => setProfileModalUser({ userId: app.user?.id ?? app.id })}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title={isBn ? "বার্তা পাঠান" : "Send Message"}
+                        onClick={() => {
+                          const cid = app.user?.id ?? app.id;
+                          if (cid) window.location.href = `/employer/messages?to=${cid}`;
+                        }}
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                      </Button>
+                      {(app.status === "pending" || app.status === "reviewed") && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title={isBn ? "শর্টলিস্ট" : "Shortlist"}
+                            onClick={async () => {
+                              try {
+                                await api.patch(`/employer/applicants/${app.id}`, { status: "shortlisted" });
+                                refreshStatus(app.id, "shortlisted");
+                                toast.success(isBn ? "শর্টলিস্টে যোগ করা হয়েছে" : "Shortlisted");
+                              } catch {
+                                toast.error(isBn ? "ব্যর্থ" : "Failed");
+                              }
+                            }}
+                          >
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title={isBn ? "প্রত্যাখ্যান করুন" : "Reject"}
+                            onClick={async () => {
+                              try {
+                                await api.patch(`/employer/applicants/${app.id}`, { status: "rejected" });
+                                refreshStatus(app.id, "rejected");
+                                toast.success(isBn ? "প্রত্যাখ্যাত" : "Rejected");
+                              } catch {
+                                toast.error(isBn ? "ব্যর্থ" : "Failed");
+                              }
+                            }}
+                          >
+                            <XCircle className="h-4 w-4 text-red-600" />
+                          </Button>
+                        </>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {app.resume_url && (
+                            <DropdownMenuItem
+                              onClick={() => window.open(app.resume_url as string, "_blank")}
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              {isBn ? "সিভি" : "Download CV"}
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            onClick={() => setProfileModalUser({ userId: app.user?.id ?? app.id })}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            {isBn ? "প্রোফাইল" : "View Profile"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              const cid = app.user?.id ?? app.id;
+                              if (cid) window.location.href = `/employer/messages?to=${cid}`;
+                            }}
+                          >
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            {isBn ? "বার্তা" : "Message"}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {(app.status === "pending" || app.status === "reviewed") && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={async () => {
+                                  try {
+                                    await api.patch(`/employer/applicants/${app.id}`, { status: "shortlisted" });
+                                    refreshStatus(app.id, "shortlisted");
+                                    toast.success(isBn ? "শর্টলিস্টে যোগ করা হয়েছে" : "Shortlisted");
+                                  } catch {
+                                    toast.error(isBn ? "ব্যর্থ" : "Failed");
+                                  }
+                                }}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                                {isBn ? "শর্টলিস্ট" : "Shortlist"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={async () => {
+                                  try {
+                                    await api.patch(`/employer/applicants/${app.id}`, { status: "rejected" });
+                                    refreshStatus(app.id, "rejected");
+                                    toast.success(isBn ? "প্রত্যাখ্যাত" : "Rejected");
+                                  } catch {
+                                    toast.error(isBn ? "ব্যর্থ" : "Failed");
+                                  }
+                                }}
+                              >
+                                <XCircle className="h-4 w-4 mr-2 text-red-600" />
+                                {isBn ? "প্রত্যাখ্যান করুন" : "Reject"}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={!!selectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
+        <DialogContent className="max-w-3xl">
+          {selectedApp && (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  {isBn ? "আবেদনের বিবরণ" : "Applicant Details"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="flex items-start gap-4">
+                  <DefaultAvatar
+                    src={(selectedApp as any).user?.avatar}
+                    name={candidateLabel(selectedApp)}
+                    className="h-14 w-14 rounded-full"
+                  />
+                  <div className="flex-1">
+                    <p className="font-semibold text-base">{candidateLabel(selectedApp)}</p>
+                    <p className="text-sm text-muted-foreground">{selectedApp.job?.title || "Job"}</p>
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      <Badge variant="outline" className="capitalize text-xs">{selectedApp.status}</Badge>
+                      {selectedApp.profile_strength != null && (
+                        <Badge variant={selectedApp.profile_strength >= 80 ? "success" : selectedApp.profile_strength >= 50 ? "warning" : "destructive"}>
+                          {selectedApp.profile_strength}%
+                        </Badge>
+                      )}
+                      {selectedApp.ai_match_score && <Badge variant="success">{selectedApp.ai_match_score}% Match</Badge>}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                  {selectedApp.expected_salary && (
+                    <div className="rounded-lg border p-3">
+                      <p className="text-xs text-muted-foreground">{isBn ? "প্রত্যাশিত বেতন" : "Expected Salary"}</p>
+                      <p className="font-medium">{selectedApp.expected_salary}</p>
+                    </div>
+                  )}
+                  {selectedApp.delivery_days && (
+                    <div className="rounded-lg border p-3">
+                      <p className="text-xs text-muted-foreground">{isBn ? "ডেলিভারি" : "Delivery"}</p>
+                      <p className="font-medium">{selectedApp.delivery_days} {isBn ? "দিন" : "days"}</p>
+                    </div>
+                  )}
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">{isBn ? "স্ট্যাটাস" : "Status"}</p>
+                    <p className="font-medium capitalize">{selectedApp.status}</p>
+                  </div>
+                </div>
+
+                {selectedApp.cover_letter && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-4 w-4" />
+                        <p className="text-sm font-medium">
+                          {isBn ? "আবেদন পত্র" : "Cover Letter"}
+                        </p>
+                      </div>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                        {selectedApp.cover_letter}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedApp.resume_url && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(selectedApp.resume_url as string, "_blank")}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      {isBn ? "সিভি" : "Download CV"}
+                    </Button>
+                  )}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setProfileModalUser({ userId: selectedApp.user?.id ?? selectedApp.id })}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    {isBn ? "প্রোফাইল" : "View Full Profile"}
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setChangeStatusApp(selectedApp)}
+                  >
+                    <ClipboardList className="h-4 w-4 mr-2" />
+                    {isBn ? "স্ট্যাটাস পরিবর্তন" : "Change Status"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const cid = selectedApp.user?.id ?? selectedApp.id;
+                      if (cid) window.location.href = `/employer/messages?to=${cid}`;
+                    }}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    {isBn ? "বার্তা" : "Message"}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!changeStatusApp} onOpenChange={(open) => !open && setChangeStatusApp(null)}>
+        <DialogContent className="max-w-sm">
+          {changeStatusApp && (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  {isBn ? "স্ট্যাটাস পরিবর্তন করুন" : "Change Applicant Status"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  {candidateLabel(changeStatusApp)} — {changeStatusApp.job?.title || "Job"}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {["pending", "reviewed", "shortlisted", "rejected", "hired"].map((status) => (
+                    <Button
+                      key={status}
+                      variant={changeStatusApp.status === status ? "default" : "outline"}
+                      size="sm"
+                      className="capitalize"
+                      onClick={async () => {
+                        try {
+                          await api.patch(`/employer/applicants/${changeStatusApp.id}`, { status });
+                          refreshStatus(changeStatusApp.id, status);
+                          toast.success(isBn ? "স্ট্যাটাস আপডেট হয়েছে" : "Status updated");
+                          setChangeStatusApp(null);
+                        } catch {
+                          toast.error(isBn ? "ব্যর্থ হয়েছে" : "Failed");
+                        }
+                      }}
+                    >
+                      {status}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <CandidateProfileModal
+        open={!!profileModalUser}
+        onOpenChange={(open) => !open && setProfileModalUser(null)}
+        userId={profileModalUser?.userId}
+        username={profileModalUser?.username}
+      />
+    </div>
+  );
+}

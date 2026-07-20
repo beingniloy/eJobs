@@ -253,7 +253,8 @@ export default function EmployerSubscriptionPage() {
     ? Math.max(0, Math.ceil((new Date(expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
 
-  const planFeatures = subscription?.plan?.features || [];
+  const CANDIDATE_ONLY_FEATURES = ["Certificate Generation", "AI Interview Prep", "AI Skill Assessment"];
+  const planFeatures = (subscription?.plan?.features || []).filter((f: any) => !CANDIDATE_ONLY_FEATURES.includes(f.name));
   const planFeaturesMapped = subscription?.plan?.features_mapped || {};
 
   const handlePurchaseClick = (plan: Plan) => {
@@ -370,7 +371,7 @@ export default function EmployerSubscriptionPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-semibold text-lg">
-                      {subscription?.plan?.name || (isBn ? "বিনামূল্যে প্ল্যান" : "Free Plan")}
+                      {subscription?.plan?.name || subscription?.plan_name || (isBn ? "বিনামূল্যে প্ল্যান" : "Free Plan")}
                     </h3>
                     {subscription && subscription?.plan?.price > 0 && (
                       <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0">
@@ -545,7 +546,7 @@ export default function EmployerSubscriptionPage() {
                     <span className="text-muted-foreground text-sm font-medium">/{plan.billing_cycle}</span>
                   </div>
                   <ul className="space-y-2.5 text-sm py-2">
-                    {plan.features?.map((feature, i) => {
+                    {plan.features?.filter((f: any) => !["Certificate Generation", "AI Interview Prep", "certificate_generation", "ai_interview_prep"].some(k => (f.name || f.id || "").toLowerCase().includes(k.toLowerCase())))?.map((feature, i) => {
                       const val = plan.features_mapped?.[feature.id as string] ?? feature.value;
                       const isFalse = val === false || val === "false" || val === 0 || val === "0";
                       const isAvailable = !isFalse && val != null;

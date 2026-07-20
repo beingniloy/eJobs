@@ -49,6 +49,7 @@ import {
   XCircle,
   FileEdit,
   Loader2,
+  Copy,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import type { Job } from "@/types";
@@ -137,6 +138,43 @@ export default function ManageJobsPage() {
     setBoostJobId(job.id);
     setBoostJobTitle(job.title);
   };
+
+  const handleCopyLink = async (job: Job) => {
+    const url = `${window.location.origin}/jobs/${job.id}`;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        await legacyCopy(url);
+      }
+      toast.success(isBn ? "লিংক কপি করা হয়েছে" : "Link copied to clipboard");
+    } catch {
+      toast.error(isBn ? "কপি করতে ব্যর্থ" : "Failed to copy link");
+    }
+  };
+
+  const legacyCopy = (text: string) =>
+    new Promise<void>((resolve, reject) => {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      ta.style.top = "-9999px";
+      ta.setAttribute("readonly", "");
+      ta.setAttribute("aria-hidden", "true");
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        ok ? resolve() : reject(new Error("execCommand failed"));
+      } catch (e) {
+        document.body.removeChild(ta);
+        reject(e);
+      }
+    });
 
   const getStatusBadge = (job: Job) => {
     const status = job.status || (job.is_active ? "active" : "inactive");
@@ -363,6 +401,17 @@ export default function ManageJobsPage() {
                           title={isBn ? "বুস্ট" : "Boost"}
                         >
                           <Zap className="h-4 w-4" />
+                        </Button>
+
+                        {/* Copy Link */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
+                          onClick={() => handleCopyLink(job)}
+                          title={isBn ? "লিংক কপি" : "Copy Link"}
+                        >
+                          <Copy className="h-4 w-4" />
                         </Button>
 
                         {/* Edit */}

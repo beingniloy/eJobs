@@ -291,6 +291,7 @@ export default function EmployerProfilePage() {
           setCoverPreview(c.cover_photo ? `/storage/${c.cover_photo}` : coverPreview);
         }
         if (showToast) toast.success(isBn ? "সংরক্ষিত হয়েছে!" : "Profile saved!");
+        window.dispatchEvent(new Event("employer-company-saved"));
         return true;
       } else {
         if (showToast) toast.error(isBn ? "সংরক্ষণ ব্যর্থ হয়েছে" : "Failed to save profile");

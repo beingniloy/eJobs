@@ -32,6 +32,8 @@ import {
   User,
   Shield,
   XCircle,
+  ImageIcon,
+  Paperclip,
 } from "lucide-react";
 
 /* ─── Interfaces ─── */
@@ -58,6 +60,7 @@ interface TicketReply {
     id: number;
     name: string;
   };
+  attachments?: string[];
 }
 
 interface TicketDetail extends Ticket {
@@ -110,6 +113,7 @@ export default function EmployerSupportPage() {
     priority: "medium",
     message: "",
   });
+  const [ticketAttachments, setTicketAttachments] = useState<File[]>([]);
 
   /* ── Thread state ── */
   const [selectedTicket, setSelectedTicket] = useState<TicketDetail | null>(
@@ -117,8 +121,109 @@ export default function EmployerSupportPage() {
   );
   const [ticketDetailLoading, setTicketDetailLoading] = useState(false);
   const [replyMessage, setReplyMessage] = useState("");
+  const [replyAttachments, setReplyAttachments] = useState<File[]>([]);
   const [sendingReply, setSendingReply] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const ticketFileInputRef = useRef<HTMLInputElement>(null);
+  const replyFileInputRef = useRef<HTMLInputElement>(null);
+
+  const MAX_FILE_SIZE = 2 * 1024 * 1024;
+  const ALLOWED_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/pdf",
+  ];
+
+  const validateFiles = (files: FileList | File[]) => {
+    const valid: File[] = [];
+    const oversized: string[] = [];
+    const invalid: string[] = [];
+    Array.from(files).forEach((file) => {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        invalid.push(file.name);
+      } else if (file.size > MAX_FILE_SIZE) {
+        oversized.push(file.name);
+      } else {
+        valid.push(file);
+      }
+    });
+    if (oversized.length)
+      toast.error(
+        `${
+          isBn ? "২MB+ ফাইল" : "Files over 2MB"
+        }: ${oversized.join(", ")}`
+      );
+    if (invalid.length)
+      toast.error(
+        `${
+          isBn ? "অযোগ্য ফাইল" : "Invalid files"
+        }: ${invalid.join(", ")}`
+      );
+    return valid;
+  };
+
+  const compressImageToWebP = (file: File): Promise<File> =>
+    new Promise((resolve, reject) => {
+      if (!file.type.startsWith("image/")) return resolve(file);
+      const url = URL.createObjectURL(file);
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxDim = 1920;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          const ratio = Math.min(maxDim / width, maxDim / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("Canvas not supported"));
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            URL.revokeObjectURL(url);
+            if (!blob) return reject(new Error("Conversion failed"));
+            const converted = new File(
+              [blob],
+              file.name.replace(/\.[^.]+$/, ".webp"),
+              { type: "image/webp" }
+            );
+            resolve(converted);
+          },
+          "image/webp",
+          0.82
+        );
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Image load failed"));
+      };
+      img.src = url;
+    });
+
+  const prepareAttachments = async (files: File[]) => {
+    const valid = validateFiles(files);
+    const prepared = await Promise.all(
+      valid.map(async (file) =>
+        file.type.startsWith("image/")
+          ? compressImageToWebP(file)
+          : file
+      )
+    );
+    return prepared;
+  };
+
+  const toBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Read failed"));
+      reader.readAsDataURL(file);
+    });
 
   /* ─── Fetch ticket list ─── */
 
@@ -174,6 +279,7 @@ export default function EmployerSupportPage() {
   const handleBackToList = () => {
     setSelectedTicket(null);
     setReplyMessage("");
+    setReplyAttachments([]);
     fetchTickets();
   };
 
@@ -183,10 +289,16 @@ export default function EmployerSupportPage() {
     if (!selectedTicket || !replyMessage.trim()) return;
     setSendingReply(true);
     try {
+      const prepared = await prepareAttachments(replyAttachments);
+      const attachments = await Promise.all(
+        prepared.map((file) => toBase64(file))
+      );
       await api.post(`/support/tickets/${selectedTicket.id}/reply`, {
         message: replyMessage.trim(),
+        attachments,
       });
       setReplyMessage("");
+      setReplyAttachments([]);
       await fetchTicketDetail(selectedTicket.id);
       toast.success(isBn ? "উত্তর পাঠানো হয়েছে" : "Reply sent successfully");
     } catch {
@@ -215,7 +327,11 @@ export default function EmployerSupportPage() {
     if (!form.subject.trim() || !form.message.trim()) return;
     setSubmitting(true);
     try {
-      await api.post("/support/tickets", form);
+      const prepared = await prepareAttachments(ticketAttachments);
+      const attachments = await Promise.all(
+        prepared.map((file) => toBase64(file))
+      );
+      await api.post("/support/tickets", { ...form, attachments });
       setDialogOpen(false);
       setForm({
         subject: "",
@@ -223,6 +339,7 @@ export default function EmployerSupportPage() {
         priority: "medium",
         message: "",
       });
+      setTicketAttachments([]);
       toast.success(
         isBn ? "টিকিট তৈরি হয়েছে" : "Ticket created successfully"
       );
@@ -241,6 +358,59 @@ export default function EmployerSupportPage() {
   /* ─── Derived ─── */
 
   const isTicketClosed = selectedTicket?.status === "closed";
+
+  const AttachmentPreview = ({ files }: { files: File[] }) => {
+    const [previews, setPreviews] = useState<string[]>([]);
+    useEffect(() => {
+      let urls: string[] = [];
+      setPreviews([]);
+      Promise.all(
+        files.map(
+          (file) =>
+            new Promise<string>((resolve) => {
+              const url = URL.createObjectURL(file);
+              urls.push(url);
+              resolve(url);
+            })
+        )
+      ).then(setPreviews);
+      return () => urls.forEach((url) => URL.revokeObjectURL(url));
+    }, [files]);
+
+    if (!previews.length) return null;
+    return (
+      <div className="flex flex-wrap gap-2 mt-2">
+        {previews.map((src, idx) => (
+          <img
+            key={src}
+            src={src}
+            alt={files[idx].name}
+            className="h-16 w-16 object-cover rounded border"
+          />
+        ))}
+      </div>
+    );
+  };
+
+  const AttachmentList = ({ attachments }: { attachments?: string[] }) => {
+    if (!attachments || !attachments.length) return null;
+    return (
+      <div className="mt-2 space-y-1">
+        {attachments.map((item, idx) => (
+          <a
+            key={idx}
+            href={item}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2 text-xs text-primary underline"
+          >
+            <Paperclip className="h-3 w-3" />
+            {isBn ? "সংযুক্তি" : "Attachment"} {idx + 1}
+          </a>
+        ))}
+      </div>
+    );
+  };
 
   /* ─── Render ─── */
 
@@ -352,6 +522,38 @@ export default function EmployerSupportPage() {
                     }
                   />
                 </div>
+                <div>
+                  <Label>{isBn ? "সংযুক্তি" : "Attachments"}</Label>
+                  <input
+                    ref={ticketFileInputRef}
+                    type="file"
+                    className="hidden"
+                    multiple
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    onChange={async (e) => {
+                      const files = await prepareAttachments(
+                        Array.from(e.target.files || [])
+                      );
+                      setTicketAttachments((prev) => [...prev, ...files]);
+                      e.target.value = "";
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => ticketFileInputRef.current?.click()}
+                  >
+                    <Paperclip className="h-4 w-4 mr-2" />
+                    {isBn ? "ফাইল যোগ করুন" : "Add attachments"}
+                  </Button>
+                  <AttachmentPreview files={ticketAttachments} />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {isBn
+                      ? "সর্বোচ্চ ২MB, ছবি অটো webp-তে রূপান্তর হবে"
+                      : "Max 2MB per file, images auto-convert to webp"}
+                  </p>
+                </div>
                 <Button
                   onClick={handleSubmit}
                   disabled={submitting}
@@ -434,6 +636,7 @@ export default function EmployerSupportPage() {
                       {formatRelativeTime(selectedTicket.created_at)}
                     </span>
                   </div>
+                  <AttachmentList attachments={(selectedTicket as any).attachments} />
                 </CardContent>
               </Card>
 
@@ -507,6 +710,7 @@ export default function EmployerSupportPage() {
                               <p className="text-sm whitespace-pre-wrap break-words text-foreground">
                                 {reply.message}
                               </p>
+                              <AttachmentList attachments={reply.attachments} />
                             </div>
                           </div>
                         </CardContent>
@@ -549,11 +753,42 @@ export default function EmployerSupportPage() {
                         <Send className="h-4 w-4" />
                       </Button>
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-2">
-                      {isBn
-                        ? "এন্টার চেপে পাঠান, শিফট+এন্টার নতুন লাইন"
-                        : "Press Enter to send, Shift+Enter for new line"}
-                    </p>
+                    <div className="flex items-center justify-between mt-2">
+                      <div>
+                        <input
+                          ref={replyFileInputRef}
+                          type="file"
+                          className="hidden"
+                          multiple
+                          accept="image/jpeg,image/png,image/webp,application/pdf"
+                          onChange={async (e) => {
+                            const files = await prepareAttachments(
+                              Array.from(e.target.files || [])
+                            );
+                            setReplyAttachments((prev) => [
+                              ...prev,
+                              ...files,
+                            ]);
+                            e.target.value = "";
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => replyFileInputRef.current?.click()}
+                        >
+                          <Paperclip className="h-4 w-4 mr-1" />
+                          {isBn ? "সংযুক্তি" : "Attachment"}
+                        </Button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        {isBn
+                          ? "এন্টার চেপে পাঠান, শিফট+এন্টার নতুন লাইন"
+                          : "Press Enter to send, Shift+Enter for new line"}
+                      </p>
+                    </div>
+                    <AttachmentPreview files={replyAttachments} />
                   </CardContent>
                 </Card>
               ) : (

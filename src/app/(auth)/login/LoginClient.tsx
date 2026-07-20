@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useAuthStore } from "@/store/auth-store";
 import { useThemeStore } from "@/store/theme-store";
 import api from "@/lib/api-client";
+import { authService } from "@/services/auth.service";
 import PublicLayout from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,18 +93,50 @@ function SSOHandler() {
 function LoginClientInner() {
   const { language, settings } = useThemeStore();
   const isBn = language === "bn";
+  const router = useRouter();
   const { login, verify2fa } = useAuth();
   const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const [tempToken, setTempToken] = useState<string | null>(null);
   const [otpCode, setOtpCode] = useState<string>("");
+  const [twoFactorMethod, setTwoFactorMethod] = useState<"totp" | "sms" | "email">("totp");
+  const [otpSent, setOtpSent] = useState(false);
+  const [countdown, setCountdown] = useState(0);
 
   useEffect(() => {
     if (login.data?.requires_2fa && login.data?.temp_token) {
+      const method = (login.data as any).two_factor_method || "totp";
+      setTwoFactorMethod(method);
       setTempToken(login.data.temp_token);
       toast.info(isBn ? "অনুগ্রহ করে আপনার ২-ফ্যাক্টর অথেন্টিকেশন কোড লিখুন।" : "Please enter your 2-Factor Authentication code.");
+      if (method === "sms" || method === "email") {
+        authService.sendLoginOtp(login.data.temp_token).then(() => {
+          setOtpSent(true);
+          setCountdown(60);
+        }).catch(() => {
+          toast.error(isBn ? "কোড পাঠাতে ব্যর্থ" : "Failed to send code");
+        });
+      }
     }
   }, [login.data, isBn]);
+
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  const handleSendCode = async () => {
+    if (!tempToken) return;
+    try {
+      await authService.sendLoginOtp(tempToken);
+      setOtpSent(true);
+      setCountdown(60);
+      toast.success(isBn ? "কোড পাঠানো হয়েছে" : "Code sent successfully");
+    } catch {
+      toast.error(isBn ? "কোড পাঠাতে ব্যর্থ" : "Failed to send code");
+    }
+  };
 
   const ssoToken = searchParams.get("sso_token");
   const ssoRole = searchParams.get("role");
@@ -125,13 +158,36 @@ function LoginClientInner() {
   }
 
   if (tempToken) {
-    const handleOtpSubmit = (e: React.FormEvent) => {
+    const handleOtpSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       if (otpCode.length < 6) {
         toast.error(isBn ? "সঠিক কোড দিন (৬ ডিজিট)" : "Please enter a valid 6-digit code");
         return;
       }
-      verify2fa.mutate({ temp_token: tempToken, code: otpCode });
+      if (twoFactorMethod === "sms" || twoFactorMethod === "email") {
+        try {
+          const result = await authService.verifyLoginOtp(tempToken, otpCode);
+          if (result.status) {
+            const { setAuth } = useAuthStore.getState();
+            const userRole = (result.role || result.user?.role || "candidate") as UserRole;
+            setAuth(result.user ?? null, result.token || "", userRole);
+            toast.success(isBn ? "লগইন সফল!" : "Login successful!");
+            if (userRole === "employer") {
+              router.push("/employer/dashboard");
+            } else if (userRole === "admin") {
+              router.push("/admin/dashboard");
+            } else {
+              router.push("/dashboard");
+            }
+          } else {
+            toast.error(result.message || (isBn ? "যাচাইকরণ ব্যর্থ" : "Verification failed"));
+          }
+        } catch {
+          toast.error(isBn ? "যাচাইকরণ ব্যর্থ" : "Verification failed");
+        }
+      } else {
+        verify2fa.mutate({ temp_token: tempToken, code: otpCode });
+      }
     };
 
     return (
@@ -150,9 +206,11 @@ function LoginClientInner() {
                 {isBn ? "২-ফ্যাক্টর যাচাইকরণ" : "2-Factor Verification"}
               </CardTitle>
               <CardDescription>
-                {isBn
-                  ? "আপনার প্রমাণীকরণকারী অ্যাপ থেকে ৬ ডিজিটের কোডটি লিখুন"
-                  : "Enter the 6-digit code from your authenticator app"}
+                {twoFactorMethod === "sms"
+                  ? (isBn ? "আপনার মোবাইল নম্বরে পাঠানো কোডটি লিখুন" : "Enter the code sent to your mobile number")
+                  : twoFactorMethod === "email"
+                  ? (isBn ? "আপনার ইমেইলে পাঠানো কোডটি লিখুন" : "Enter the code sent to your email")
+                  : (isBn ? "আপনার প্রমাণীকরণকারী অ্যাপ থেকে ৬ ডিজিটের কোডটি লিখুন" : "Enter the 6-digit code from your authenticator app")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -175,6 +233,23 @@ function LoginClientInner() {
                     autoFocus
                   />
                 </div>
+                {(twoFactorMethod === "sms" || twoFactorMethod === "email") && (
+                  <div className="text-center">
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="text-sm p-0 h-auto"
+                      onClick={handleSendCode}
+                      disabled={countdown > 0}
+                    >
+                      {countdown > 0
+                        ? `${isBn ? "পুনরায় পাঠান" : "Resend Code"} (${countdown}s)`
+                        : otpSent
+                        ? (isBn ? "পুনরায় কোড পাঠান" : "Resend Code")
+                        : (isBn ? "কোড পাঠান" : "Send Code")}
+                    </Button>
+                  </div>
+                )}
                 <div className="flex gap-3">
                   <Button
                     type="button"

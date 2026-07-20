@@ -19,6 +19,9 @@ import {
   MoreVertical,
   Ban,
   Flag,
+  Paperclip,
+  Image,
+  X,
 } from "lucide-react";
 import { formatRelativeTime, getInitials } from "@/lib/utils";
 import { toast } from "sonner";
@@ -36,8 +39,11 @@ export default function EmployerConversationPage() {
   const [sending, setSending] = useState(false);
   const [body, setBody] = useState("");
   const [showMenu, setShowMenu] = useState(false);
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -58,10 +64,10 @@ export default function EmployerConversationPage() {
 
   const handleSend = async () => {
     const trimmed = body.trim();
-    if (!trimmed || sending) return;
+    if ((!trimmed && !attachment) || sending) return;
     setSending(true);
     try {
-      const res = await messagesService.sendMessage(id, trimmed);
+      const res = await messagesService.sendMessage(id, trimmed, attachment || undefined);
       const newMsg = res?.data || res?.message;
       if (newMsg) {
         setMessages((prev) => [...prev, newMsg]);
@@ -73,17 +79,42 @@ export default function EmployerConversationPage() {
             sender_id: user?.id,
             content: trimmed,
             message: trimmed,
+            attachment_path: attachment ? URL.createObjectURL(attachment) : null,
             created_at: new Date().toISOString(),
           },
         ]);
       }
       setBody("");
+      setAttachment(null);
+      setAttachmentPreview(null);
     } catch {
       toast.error(isBn ? "বার্তা পাঠাতে ব্যর্থ" : "Failed to send message");
     } finally {
       setSending(false);
       inputRef.current?.focus();
     }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(isBn ? "ফাইল ১০MB এর বেশি হতে পারে না" : "File must be under 10MB");
+      return;
+    }
+    setAttachment(file);
+    if (file.type.startsWith("image/")) {
+      const url = URL.createObjectURL(file);
+      setAttachmentPreview(url);
+    } else {
+      setAttachmentPreview(null);
+    }
+  };
+
+  const removeAttachment = () => {
+    setAttachment(null);
+    setAttachmentPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -184,10 +215,31 @@ export default function EmployerConversationPage() {
         ) : (
           messages.map((msg) => {
             const isMine = msg.sender_id === user?.id;
+            const attachmentPath = msg.attachment_path;
+            const attachmentUrl = attachmentPath
+              ? attachmentPath.startsWith("http")
+                ? attachmentPath
+                : `/api/messages/attachment/${encodeURIComponent(attachmentPath)}`
+              : null;
+            const isImage = attachmentUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(attachmentUrl);
+            const attachmentName = attachmentPath ? attachmentPath.split("/").pop() : "";
             return (
               <div key={msg.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${isMine ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                  <p className="text-sm whitespace-pre-wrap break-words">{msg.message || msg.content || msg.body}</p>
+                  {attachmentUrl && isImage && (
+                    <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="block mb-1.5">
+                      <img src={attachmentUrl} alt="attachment" className="rounded-lg max-h-48 object-cover" loading="lazy" />
+                    </a>
+                  )}
+                  {attachmentUrl && !isImage && (
+                    <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 p-2 rounded-lg mb-1.5 ${isMine ? "bg-primary-foreground/10" : "bg-background/50"} hover:opacity-80 transition-opacity`}>
+                      <Paperclip className="h-4 w-4 shrink-0" />
+                      <span className="text-xs truncate">{attachmentName}</span>
+                    </a>
+                  )}
+                  {msg.message || msg.content ? (
+                    <p className="text-sm whitespace-pre-wrap break-words">{msg.message || msg.content}</p>
+                  ) : null}
                   <p className={`text-[10px] mt-1 ${isMine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                     {msg.created_at && formatRelativeTime(msg.created_at)}
                   </p>
@@ -201,7 +253,29 @@ export default function EmployerConversationPage() {
 
       {/* Input */}
       <div className="pt-2 border-t">
+        {attachment && (
+          <div className="mb-2 flex items-center gap-2 p-2 bg-muted rounded-lg">
+            {attachmentPreview ? (
+              <img src={attachmentPreview} alt="preview" className="h-16 w-16 rounded object-cover" />
+            ) : (
+              <div className="h-16 w-16 rounded bg-background flex items-center justify-center">
+                <Paperclip className="h-6 w-6 text-muted-foreground" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium truncate">{attachment.name}</p>
+              <p className="text-[10px] text-muted-foreground">{(attachment.size / 1024).toFixed(1)} KB</p>
+            </div>
+            <button onClick={removeAttachment} className="p-1 rounded-full hover:bg-background">
+              <X className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-2">
+          <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.doc,.docx,.txt,.zip" onChange={handleFileSelect} />
+          <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} title={isBn ? "ফাইল সংযুক্ত করুন" : "Attach file"}>
+            <Paperclip className="h-4 w-4" />
+          </Button>
           <Input
             ref={inputRef}
             placeholder={isBn ? "বার্তা লিখুন..." : "Type a message..."}
@@ -211,7 +285,7 @@ export default function EmployerConversationPage() {
             disabled={sending}
             className="flex-1"
           />
-          <Button size="icon" onClick={handleSend} disabled={!body.trim() || sending}>
+          <Button size="icon" onClick={handleSend} disabled={(!body.trim() && !attachment) || sending}>
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>

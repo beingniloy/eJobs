@@ -196,6 +196,15 @@ export function useEmployerCompany(): UseEmployerCompanyReturn {
 
   useEffect(() => {
     fetchCompany();
+    const handler = () => fetchCompany();
+    if (typeof window !== "undefined") {
+      window.addEventListener("employer-company-saved", handler);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("employer-company-saved", handler);
+      }
+    };
   }, [fetchCompany]);
 
   const updateCompany = useCallback(async (formData: FormData): Promise<boolean> => {

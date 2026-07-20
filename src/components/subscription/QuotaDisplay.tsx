@@ -51,10 +51,20 @@ function formatQuotaName(key: string, isBn: boolean): string {
     ai_chat_messages: { en: "AI Chat Messages", bn: "AI চ্যাট মেসেজ" },
     ai_cover_letters: { en: "AI Cover Letters", bn: "AI কভার লেটার" },
     ai_job_descriptions: { en: "AI Job Descriptions", bn: "AI চাকরি বর্ণনা" },
+    ai_cv_builder: { en: "AI CV Builder", bn: "AI সিভি বিল্ডার" },
+    ai_skill_assessment: { en: "AI Skill Assessment", bn: "AI দক্ষতা মূল্যায়ন" },
+    certificate_generation: { en: "Certificate Generation", bn: "সার্টিফিকেট তৈরি" },
+    ai_interview_prep: { en: "AI Interview Prep", bn: "AI সাক্ষাৎকার প্রস্তুতি" },
     job_applications: { en: "Job Applications", bn: "চাকরি আবেদন" },
     job_posts: { en: "Job Posts", bn: "চাকরি পোস্ট" },
+    job_post_limit: { en: "Job Post Limit", bn: "চাকরি পোস্ট সীমা" },
     resume_downloads: { en: "Resume Downloads", bn: "সিভি ডাউনলোড" },
     ats_score_checks: { en: "ATS Score Checks", bn: "ATS স্কোর চেক" },
+    candidate_database_access: { en: "Candidate Database", bn: "প্রার্থী ডাটাবেস" },
+    job_boosts: { en: "Job Boosts", bn: "চাকরি বুস্ট" },
+    promoted_listings: { en: "Promoted Listings", bn: "প্রমোটেড লিস্টিং" },
+    messages_per_day: { en: "Messages per Day", bn: "দৈনিক মেসেজ" },
+    ai_resume_scoring: { en: "AI Resume Scoring", bn: "AI সিভি স্কোরিং" },
   };
   const names = nameMap[key];
   if (names) return isBn ? names.bn : names.en;
@@ -71,17 +81,17 @@ export default function QuotaDisplay() {
     api
       .get("/subscriptions/my-subscription")
       .then((res) => {
-        const sub = res.data.active_subscription;
+        const sub = res.data.subscription ?? res.data.active_subscription;
         const rawQuotas = res.data.quotas;
         if (sub && sub.plan_name && rawQuotas) {
-          const quotas: QuotaItem[] = Object.entries(rawQuotas).map(
-            ([key, q]: [string, any]) => ({
+          const quotas: QuotaItem[] = Object.entries(rawQuotas)
+            .filter(([, q]: [string, any]) => (q.max_limit ?? 0) > 0)
+            .map(([key, q]: [string, any]) => ({
               name: key,
               used: q.used ?? 0,
               limit: q.max_limit ?? 0,
               remaining: q.remaining ?? Math.max(0, (q.max_limit ?? 0) - (q.used ?? 0)),
-            })
-          );
+            }));
           setData({ plan_name: sub.plan_name, quotas });
         }
       })

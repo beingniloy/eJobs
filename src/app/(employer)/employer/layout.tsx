@@ -12,7 +12,7 @@ import { DefaultAvatar } from "@/components/ui/default-avatar";
 import {
   LayoutDashboard, Briefcase, Users, Plus, CreditCard, Settings,
   Bell, User, MessageSquare, BarChart3, Megaphone, FolderKanban,
-  ShieldCheck, Wallet, Headphones, ShoppingCart, CheckCircle, Building2, Plane, FileText,
+  ShieldCheck, Wallet, Headphones, ShoppingCart, Building2, Plane, FileText,
 } from "lucide-react";
 
 type SidebarGroup = { group: string; groupBn: string; color: string; items: typeof sidebarItems };
@@ -29,7 +29,6 @@ const sidebarItems = [
   { href: "/employer/cv-database", label: "CV Database", labelBn: "সিভি ডাটাবেজ", icon: FileText },
   { href: "/employer/messages", label: "Messages", labelBn: "বার্তা", icon: MessageSquare },
   { href: "/employer/workspace", label: "Workspace", labelBn: "ওয়ার্কস্পেস", icon: FolderKanban },
-  { href: "/employer/accepted-jobs", label: "Accepted Jobs", labelBn: "গৃহীত চাকরি", icon: CheckCircle },
   { href: "/employer/wallet", label: "Wallet", labelBn: "ওয়ালেট", icon: Wallet },
   { href: "/employer/purchases", label: "Purchases", labelBn: "ক্রয়সমূহ", icon: ShoppingCart },
   { href: "/employer/promotions", label: "Promotions", labelBn: "বিজ্ঞাপন প্রচার", icon: Megaphone },
@@ -43,7 +42,7 @@ const sidebarItems = [
 
 const sidebarGroups: SidebarGroup[] = [
   { group: "Overview", groupBn: "সারসংক্ষেপ", color: "text-blue-500", items: sidebarItems.filter(i => ["/employer/dashboard", "/employer/company-overview", "/employer/profile", "/employer/analytics"].includes(i.href)) },
-  { group: "Hiring", groupBn: "নিয়োগ", color: "text-emerald-500", items: sidebarItems.filter(i => ["/employer/post-job", "/employer/manage-jobs", "/employer/applicants", "/employer/candidates", "/employer/deployments", "/employer/cv-database", "/employer/workspace", "/employer/accepted-jobs"].includes(i.href)) },
+  { group: "Hiring", groupBn: "নিয়োগ", color: "text-emerald-500", items: sidebarItems.filter(i => ["/employer/post-job", "/employer/manage-jobs", "/employer/applicants", "/employer/candidates", "/employer/deployments", "/employer/cv-database", "/employer/workspace"].includes(i.href)) },
   { group: "Finance", groupBn: "আর্থিক", color: "text-amber-500", items: sidebarItems.filter(i => ["/employer/wallet", "/employer/purchases", "/employer/promotions", "/employer/subscription"].includes(i.href)) },
   { group: "Account", groupBn: "অ্যাকাউন্ট", color: "text-purple-500", items: sidebarItems.filter(i => ["/employer/messages", "/employer/verify", "/employer/notifications", "/employer/support", "/employer/settings"].includes(i.href)) },
 ];

@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageSquare, Loader2, RefreshCw, Search, Send, ArrowLeft } from "lucide-react";
+import { MessageSquare, Loader2, RefreshCw, Search, Send, ArrowLeft, Paperclip } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 
 function MessagesContent() {
@@ -178,6 +178,14 @@ function MessagesContent() {
                   const mine = msg.sender_id === user?.id;
                   const name = msg.sender?.name || (mine ? (isBn ? "আপনি" : "You") : getName(selectedConv));
                   const avatar = msg.sender?.avatar || msg.sender?.profile?.avatar;
+                  const attachmentPath = msg.attachment_path;
+                  const attachmentUrl = attachmentPath
+                    ? attachmentPath.startsWith("http")
+                      ? attachmentPath
+                      : `/api/messages/attachment/${encodeURIComponent(attachmentPath)}`
+                    : null;
+                  const isImage = attachmentUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(attachmentUrl);
+                  const attachmentName = attachmentPath ? attachmentPath.split("/").pop() : "";
                   return (
                     <div key={msg.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                       <div className={`max-w-[80%] flex flex-col ${mine ? "items-end" : "items-start"}`}>
@@ -188,7 +196,18 @@ function MessagesContent() {
                           </div>
                         )}
                         <div className={`rounded-2xl px-4 py-2 ${mine ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                          <p className="text-sm whitespace-pre-wrap break-words">{msg.message || msg.content || msg.body || (msg.attachment_path ? (isBn ? "📎 ফাইল" : "📎 Attachment") : "")}</p>
+                          {attachmentUrl && isImage && (
+                            <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="block mb-1.5">
+                              <img src={attachmentUrl} alt="attachment" className="rounded-lg max-h-48 object-cover" loading="lazy" />
+                            </a>
+                          )}
+                          {attachmentUrl && !isImage && (
+                            <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 p-2 rounded-lg mb-1.5 ${mine ? "bg-primary-foreground/10" : "bg-background/50"} hover:opacity-80 transition-opacity`}>
+                              <Paperclip className="h-4 w-4 shrink-0" />
+                              <span className="text-xs truncate">{attachmentName}</span>
+                            </a>
+                          )}
+                          <p className="text-sm whitespace-pre-wrap break-words">{msg.message || msg.content || msg.body || ""}</p>
                           <p className={`text-[10px] mt-1 ${mine ? "text-primary-foreground/60" : "text-muted-foreground"}`}>{formatRelativeTime(msg.created_at)}</p>
                         </div>
                       </div>

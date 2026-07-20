@@ -397,6 +397,7 @@ export default function CandidateProfilePage() {
       const fn = SECTION_SAVE_MAP[key];
       if (fn) await fn();
       if (showToast) toast.success(isBn ? "সংরক্ষিত হয়েছে!" : "Saved!");
+      window.dispatchEvent(new Event("candidate-profile-saved"));
       return true;
     } catch (error: any) {
       const data = error.response?.data;

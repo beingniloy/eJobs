@@ -48,6 +48,8 @@ export default function AiCareerClient() {
   const [customPrompt, setCustomPrompt] = useState("");
   const [roadmapError, setRoadmapError] = useState<string | null>(null);
 
+  const isEmployer = role === "employer";
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -62,15 +64,6 @@ export default function AiCareerClient() {
   const chatQuota = quotas.ai_chat_messages;
   const chatLimitReached = chatQuota && chatQuota.max_limit > 0 && chatQuota.remaining <= 0;
 
-  const isPaidSubscription = (subscription: any) => {
-    if (!subscription) return false;
-    const price = Number(subscription.plan_details?.price ?? subscription.plan?.price ?? subscription.price ?? 0);
-    return price > 0;
-  };
-
-  const activeSubscription = (subscriptionService as any).activeSubscription;
-  const canAccessRoadmap = isAuthenticated && isPaidSubscription(activeSubscription);
-
   const loadSavedRoadmap = async () => {
     if (!isAuthenticated) return;
     setRoadmapLoading(true);
@@ -79,7 +72,13 @@ export default function AiCareerClient() {
       const data = await aiService.getCareerRoadmap();
       setRoadmap(data || null);
     } catch (err: any) {
-      setRoadmapError(err?.response?.data?.message || (isBn ? "রোডম্যাপ লোড করতে ব্যর্থ হয়েছে" : "Failed to load roadmap"));
+      const status = err?.response?.status;
+      const message = err?.response?.data?.message;
+      if (status === 403) {
+        setRoadmapError(message || (isBn ? "প্রিমিয়াম প্ল্যান প্রয়োজন" : "Premium or Pro plan required"));
+      } else {
+        setRoadmapError(message || (isBn ? "রোডম্যাপ লোড করতে ব্যর্থ হয়েছে" : "AI career roadmap is temporarily unavailable. Please try again later."));
+      }
     } finally {
       setRoadmapLoading(false);
     }
@@ -100,7 +99,13 @@ export default function AiCareerClient() {
       setRoadmap(data || null);
       setCustomPrompt("");
     } catch (err: any) {
-      setRoadmapError(err?.response?.data?.message || (isBn ? "রোডম্যাপ তৈরি করতে ব্যর্থ হয়েছে" : "Failed to generate roadmap"));
+      const status = err?.response?.status;
+      const message = err?.response?.data?.message;
+      if (status === 403) {
+        setRoadmapError(message || (isBn ? "প্রিমিয়াম প্ল্যান প্রয়োজন" : "Premium or Pro plan required"));
+      } else {
+        setRoadmapError(message || (isBn ? "রোডম্যাপ তৈরি করতে ব্যর্থ হয়েছে" : "AI career roadmap is temporarily unavailable. Please try again later."));
+      }
     } finally {
       setRoadmapLoading(false);
     }
@@ -141,6 +146,25 @@ export default function AiCareerClient() {
     <div className="flex flex-col h-screen bg-background text-foreground">
       <Navbar />
 
+      {isEmployer && (
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
+          <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-950/20 flex items-center justify-center mb-4">
+            <Route className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">{isBn ? "এই ফিচার শুধুমাত্র ক্যান্ডিডেটদের জন্য" : "This feature is for candidates only"}</h2>
+          <p className="text-sm text-muted-foreground max-w-md mb-6">
+            {isBn
+              ? "AI ক্যারিয়ার কোচ শুধুমাত্র ক্যান্ডিডেটদের জন্য উপলব্ধ। আপনি আপনার ড্যাশবোর্ডে ফিরে যেতে পারেন।"
+              : "AI Career Coach is only available for candidates. You can go back to your dashboard."}
+          </p>
+          <Button asChild>
+            <Link href="/employer/dashboard">{isBn ? "ড্যাশবোর্ডে ফিরুন" : "Back to Dashboard"}</Link>
+          </Button>
+        </div>
+      )}
+
+      {!isEmployer && (<>
+
       {/* Tab Bar */}
       <div className="shrink-0 border-b bg-background">
         <div className="container max-w-3xl mx-auto px-3">
@@ -170,27 +194,7 @@ export default function AiCareerClient() {
       {activeTab === "roadmap" && (
         <div className="flex-1 overflow-y-auto">
           <div className="container max-w-3xl mx-auto px-3 py-4 pb-6">
-            {!canAccessRoadmap ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center mb-4">
-                  <Crown className="h-8 w-8 text-amber-500" />
-                </div>
-                <h3 className="font-semibold text-lg mb-1">
-                  {isBn ? "প্রিমিয়াম ফিচার" : "Premium Feature"}
-                </h3>
-                <p className="text-sm text-muted-foreground max-w-sm mb-4">
-                  {isBn
-                    ? "AI ক্যারিয়ার রোডম্যাপ仅供 প্রিমিয়াম এবং প্রো প্ল্যান ব্যবহারকারীর জন্য।"
-                    : "AI Career Roadmap is only available for Premium and Pro plan users."}
-                </p>
-                <Button asChild>
-                  <Link href="/pricing">
-                    <Crown className="h-4 w-4 mr-2" />
-                    {isBn ? "প্ল্যান আপগ্রেড করুন" : "Upgrade Plan"}
-                  </Link>
-                </Button>
-              </div>
-            ) : roadmapLoading ? (
+            {roadmapLoading ? (
               <div className="flex flex-col items-center justify-center py-16">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                   <Route className="h-8 w-8 text-primary animate-pulse" />
@@ -270,27 +274,24 @@ export default function AiCareerClient() {
                 <p className="text-sm text-muted-foreground max-w-sm mb-4">
                   {isBn ? "AI আপনার প্রোফাইল বিশ্লেষণ করে একটি ব্যক্তিগতকৃত ক্যারিয়ার রোডম্যাপ তৈরি করবে।" : "AI analyzes your profile to create a personalized career roadmap."}
                 </p>
-                {!canAccessRoadmap ? (
-                  <Button asChild>
-                    <Link href="/pricing">
-                      <Crown className="h-4 w-4 mr-2" />
-                      {isBn ? "প্রিমিয়াম আপগ্রেড করুন" : "Upgrade to Premium"}
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button onClick={handleGenerateOrRegenerate} disabled={roadmapLoading}>
-                    <Route className="h-4 w-4 mr-2" />
-                    {isBn ? "রোডম্যাপ তৈরি করুন" : "Generate Roadmap"}
-                  </Button>
-                )}
+                <Button onClick={handleGenerateOrRegenerate} disabled={roadmapLoading}>
+                  <Route className="h-4 w-4 mr-2" />
+                  {isBn ? "রোডম্যাপ তৈরি করুন" : "Generate Roadmap"}
+                </Button>
               </div>
             )}
             {roadmapError && (
-              <div className="mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 text-sm text-red-700 dark:text-red-400">
-                {roadmapError}
+              <div className="mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 text-sm text-red-700 dark:text-red-400 space-y-2">
+                <p>{roadmapError}</p>
+                <p className="text-xs opacity-80">
+                  {isBn ? "সমস্যাটি রিপোর্ট করতে" : "To report this issue, please"}{" "}
+                  <Link href="/employer/support" className="underline font-medium hover:text-red-900 dark:hover:text-red-300">
+                    {isBn ? "সাপোর্ট টিকেট খুলুন" : "open a support ticket"}
+                  </Link>
+                </p>
               </div>
             )}
-            {canAccessRoadmap && roadmap && (
+            {roadmap && (
               <div className="mt-4 p-4 rounded-lg border bg-muted/40 space-y-3">
                 <p className="text-sm font-medium">
                   {isBn ? "রোডম্যাপ কাস্টমাইজ করুন" : "Customize your roadmap"}
@@ -388,6 +389,7 @@ export default function AiCareerClient() {
         </div>
       </div>
       )}
+      </>)}
     </div>
   );
 }

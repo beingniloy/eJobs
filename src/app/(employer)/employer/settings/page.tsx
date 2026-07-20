@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Moon, Sun, Globe, LogOut, User, Building2, Shield, Bell, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { TwoFactorSettings } from "@/components/dashboard/two-factor-settings";
 
 export default function EmployerSettingsPage() {
   const { user, logout } = useAuth();
@@ -175,6 +176,8 @@ export default function EmployerSettingsPage() {
           </Button>
         </CardContent>
       </Card>
+
+      <TwoFactorSettings />
     </div>
   );
 }
