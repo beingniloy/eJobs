@@ -1,6 +1,6 @@
 FROM node:22-alpine AS base
 
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl python3 make g++
 
 FROM base AS deps
 WORKDIR /app
@@ -11,7 +11,7 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npx next build --webpack
+RUN npm run build
 
 FROM base AS runner
 WORKDIR /app
