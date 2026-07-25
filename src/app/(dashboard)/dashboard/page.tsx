@@ -73,30 +73,6 @@ export default function CandidateDashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    api
-      .get("/candidate/dashboard")
-      .then((res) => {
-        const d = res.data;
-        setData({
-          applied_jobs_count: d.stats?.applied || 0,
-          saved_jobs_count: 0,
-          profile_views: 0,
-          match_score: 0,
-          recent_applications: (d.applications || []).slice(0, 5).map((app: any) => ({
-            id: app.id,
-            job_title: app.job?.title || "Unknown",
-            company_name: app.job?.company?.name || "Unknown",
-            status: app.status,
-            created_at: app.created_at,
-          })),
-          wallet_balance: 0,
-        });
-      })
-      .catch(() => toast.error("Failed to load dashboard data"))
-      .finally(() => setLoading(false));
-  }, []);
-
   const stats = [
     {
       title: isBn ? "আবেদন" : "Applications",

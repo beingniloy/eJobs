@@ -5,6 +5,7 @@ import PublicLayout from "@/components/layout/PublicLayout";
 import api from "@/lib/api-client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useThemeStore } from "@/store/theme-store";
+import DOMPurify from "isomorphic-dompurify";
 
 export default function AboutClient() {
   const [content, setContent] = useState("");
@@ -34,7 +35,7 @@ export default function AboutClient() {
           ) : content ? (
             <div
               className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground"
-              dangerouslySetInnerHTML={{ __html: content }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
             />
           ) : (
             <div className="prose prose-sm dark:prose-invert max-w-none space-y-6 text-muted-foreground">

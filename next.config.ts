@@ -8,7 +8,7 @@ const apiUrl = `${backendUrl}/api`;
 const nextConfig: NextConfig = {
   output: "standalone",
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   serverExternalPackages: ["laravel-echo", "pusher-js"],
   images: {
@@ -37,6 +37,10 @@ const nextConfig: NextConfig = {
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
+          },
+          {
+            key: "Content-Security-Policy",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: http://127.0.0.1:8000 https://*.ejobs.bd; font-src 'self' data:; connect-src 'self' http://127.0.0.1:8000 http://localhost:3000 wss: ws:; frame-ancestors 'none';",
           },
         ],
       },

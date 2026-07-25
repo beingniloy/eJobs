@@ -6,6 +6,7 @@ import api from "@/lib/api-client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mail, Phone, MapPin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import DOMPurify from "isomorphic-dompurify";
 
 export default function ContactClient() {
   const [content, setContent] = useState("");
@@ -86,7 +87,7 @@ export default function ContactClient() {
               <CardContent className="p-6">
                 <div
                   className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground"
-                  dangerouslySetInnerHTML={{ __html: content }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
                 />
               </CardContent>
             </Card>

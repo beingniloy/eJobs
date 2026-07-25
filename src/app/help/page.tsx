@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import DOMPurify from "isomorphic-dompurify";
 
 interface Faq {
   id: number;
@@ -95,7 +96,7 @@ export default function HelpPage() {
                     <CardContent className="px-6 pb-4 pt-0">
                       <div
                         className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground"
-                        dangerouslySetInnerHTML={{ __html: faq.content }}
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(faq.content) }}
                       />
                     </CardContent>
                   )}
