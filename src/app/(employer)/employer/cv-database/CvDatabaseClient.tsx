@@ -324,7 +324,7 @@ export default function CvDatabaseClient() {
               <SelectItem value="oldest">Oldest First</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={perPage} onValueChange={(v) => { setPerPage(Number(v)); resetPage(); }}>
+          <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); resetPage(); }}>
             <SelectTrigger className="w-24">
               <SelectValue placeholder="Per page" />
             </SelectTrigger>

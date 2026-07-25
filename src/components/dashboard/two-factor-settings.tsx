@@ -66,7 +66,7 @@ export function TwoFactorSettings() {
     }
   };
 
-  const sendOtp = async (ch: Method) => {
+  const sendOtp = async (ch: "sms" | "email") => {
     setSendingOtp(true);
     try {
       const res = await authService.send2faOtp(ch);
@@ -292,7 +292,7 @@ export function TwoFactorSettings() {
             {countdown > 0 ? (
               <p className="text-xs text-muted-foreground">Resend in {countdown}s</p>
             ) : (
-              <Button variant="ghost" size="sm" onClick={() => sendOtp(selectedMethod)}>
+              <Button variant="ghost" size="sm" onClick={() => sendOtp(selectedMethod as "sms" | "email")}>
                 Resend Code
               </Button>
             )}

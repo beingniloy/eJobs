@@ -33,7 +33,7 @@ const ROADMAP_PROMPTS = [
 export default function AiCareerClient() {
   const { language } = useThemeStore();
   const isBn = language === "bn";
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, role } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
