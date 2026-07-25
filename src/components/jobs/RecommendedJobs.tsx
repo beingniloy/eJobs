@@ -37,7 +37,7 @@ export default function RecommendedJobs() {
     }
 
     api
-      .get("/recommended-jobs")
+      .get("/candidate/recommended-jobs")
       .then((res) => {
         const data = res.data.data || res.data;
         setJobs(Array.isArray(data) ? data : data?.data || []);

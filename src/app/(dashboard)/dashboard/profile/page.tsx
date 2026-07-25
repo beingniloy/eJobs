@@ -161,7 +161,7 @@ export default function CandidateProfilePage() {
   useEffect(() => {
     if (!user) return;
     api.get("/candidate/dashboard").then((res) => {
-      const p = res.data.data?.profile || {};
+      const p = res.data.user?.profile || res.data.data?.profile || {};
       setProfile(p);
       setEmail(user.email || "");
       setFullNameEn(user.name || "");

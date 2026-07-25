@@ -10,6 +10,20 @@ const api = axios.create({
   },
 });
 
+// Fetch CSRF cookie before making state-changing requests
+let csrfFetched = false;
+async function ensureCsrfCookie() {
+  if (csrfFetched) return;
+  try {
+    await axios.get("/sanctum/csrf-cookie", {
+      withCredentials: true,
+    });
+    csrfFetched = true;
+  } catch {
+    // CSRF cookie may not be required for all setups
+  }
+}
+
 // Read token from Zustand persist store
 function getStoredToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -34,13 +48,25 @@ function clearAuthStore() {
 }
 
 api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
+  async (config: InternalAxiosRequestConfig) => {
     if (typeof window !== "undefined") {
       const token = getStoredToken();
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
+
+    // Fetch CSRF cookie before state-changing requests
+    if (["post", "put", "patch", "delete"].includes(config.method?.toLowerCase() || "")) {
+      await ensureCsrfCookie();
+      const xsrfToken = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("XSRF-TOKEN="));
+      if (xsrfToken && config.headers) {
+        config.headers["X-XSRF-TOKEN"] = decodeURIComponent(xsrfToken.split("=")[1]);
+      }
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -67,7 +93,10 @@ api.interceptors.response.use(
           const currentPath = window.location.pathname;
           const authPaths = ["/login", "/employer/login", "/register", "/employer/register"];
           if (!authPaths.some((p) => currentPath.startsWith(p))) {
-            window.location.href = "/login";
+            // Defer redirect so React can finish hydration before unmounting
+            setTimeout(() => {
+              window.location.href = "/login";
+            }, 0);
           }
         }
       }

@@ -144,11 +144,11 @@ export default function PostJobPage() {
       const salaryMax = data.salary_max || 0;
       const payload: Record<string, any> = {
         ...data,
+        salary_min: salaryMin || undefined,
+        salary_max: salaryMax || undefined,
         salary_range: salaryMin && salaryMax ? `${salaryMin}-${salaryMax}` : salaryMin ? `${salaryMin}+` : undefined,
         is_remote_project: isRemoteProject,
       };
-      delete payload.salary_min;
-      delete payload.salary_max;
 
       await api.post("/employer/jobs", payload);
       toast.success(isBn ? "চাকরি সফলভাবে পোস্ট হয়েছে!" : "Job posted successfully!");

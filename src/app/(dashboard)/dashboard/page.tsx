@@ -52,16 +52,49 @@ export default function CandidateDashboardPage() {
   useEffect(() => {
     api
       .get("/candidate/dashboard")
-      .then((res) => setData(res.data.data))
+      .then((res) => {
+        const d = res.data;
+        setData({
+          applied_jobs_count: d.stats?.applied ?? d.applications?.length ?? 0,
+          saved_jobs_count: d.user?.profile?.saved_jobs_count ?? 0,
+          profile_views: d.user?.profile?.profile_views ?? 0,
+          match_score: d.user?.profile?.match_score ?? 0,
+          recent_applications: (d.applications ?? []).slice(0, 5).map((app: any) => ({
+            id: app.id,
+            job_title: app.job?.title ?? "Untitled Job",
+            company_name: app.job?.company?.name ?? "Unknown Company",
+            status: app.status,
+            created_at: app.created_at,
+          })),
+          wallet_balance: d.user?.profile?.wallet_balance ?? 0,
+        });
+      })
       .catch(() => toast.error("Failed to load dashboard data"))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     api
-      .get("/verifications/status")
-      .then((res) => setVerification(res.data))
-      .catch(() => toast.error("Failed to load verification status"));
+      .get("/candidate/dashboard")
+      .then((res) => {
+        const d = res.data;
+        setData({
+          applied_jobs_count: d.stats?.applied || 0,
+          saved_jobs_count: 0,
+          profile_views: 0,
+          match_score: 0,
+          recent_applications: (d.applications || []).slice(0, 5).map((app: any) => ({
+            id: app.id,
+            job_title: app.job?.title || "Unknown",
+            company_name: app.job?.company?.name || "Unknown",
+            status: app.status,
+            created_at: app.created_at,
+          })),
+          wallet_balance: 0,
+        });
+      })
+      .catch(() => toast.error("Failed to load dashboard data"))
+      .finally(() => setLoading(false));
   }, []);
 
   const stats = [

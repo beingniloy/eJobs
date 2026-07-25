@@ -37,7 +37,8 @@ import {
   ChevronDown, Sparkles, Briefcase, Globe, Building2, Users,
   FileText, CreditCard, Home, Trophy, GraduationCap, BookOpen, Plus,
   MessageSquare, FolderKanban, Wallet, ShoppingCart,
-  Megaphone, ShieldCheck, BarChart3, Headphones, Plane,
+  Megaphone, ShieldCheck, BarChart3, Headphones, Plane, Send, Calendar, Award, Shield, Receipt,
+  CheckCircle, Bookmark,
 } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import type { Subscription } from "@/types";

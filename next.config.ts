@@ -53,6 +53,10 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/storage/:path*`,
       },
       {
+        source: "/sanctum/:path*",
+        destination: `${backendUrl}/sanctum/:path*`,
+      },
+      {
         source: "/cv/share/:path*",
         destination: `${backendUrl}/cv/share/:path*`,
       },

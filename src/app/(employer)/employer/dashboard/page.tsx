@@ -44,7 +44,17 @@ export default function EmployerDashboardPage() {
   useEffect(() => {
     api
       .get("/employer/dashboard")
-      .then((res) => setData(res.data.data))
+      .then((res) => {
+        const d = res.data;
+        setData({
+          jobs_count: d.stats?.total_jobs || 0,
+          active_jobs: d.stats?.active_jobs || 0,
+          total_applicants: d.stats?.total_applicants || 0,
+          total_views: 0,
+          wallet_balance: 0,
+          recent_applications: [],
+        });
+      })
       .catch(() => toast.error("Failed to load dashboard data"))
       .finally(() => setLoading(false));
   }, []);

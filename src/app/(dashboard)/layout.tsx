@@ -124,7 +124,11 @@ export default function DashboardLayout({
     );
   }
 
-  if (!isAuthenticated || role === "employer" || role === "admin") {
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  if (role === "employer" || role === "admin") {
     return (
       <div className="flex-1 flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">

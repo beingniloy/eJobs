@@ -67,6 +67,7 @@ export default function AiAssistantClient() {
   }, []);
 
   const chatQuota = quotas.ai_chat_messages;
+  const typingIndex = loading ? messages.length - 1 : -1;
   const chatLimitReached =
     chatQuota && chatQuota.max_limit > 0 && chatQuota.remaining <= 0;
 

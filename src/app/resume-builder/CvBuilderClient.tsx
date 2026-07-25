@@ -764,7 +764,7 @@ export default function CvBuilderClient() {
       <PersonalInfoModal open={showPersonalInfoModal} onClose={() => { setShowPersonalInfoModal(false); setPendingTemplateSlug(null); }} onComplete={handlePersonalInfoModalComplete} />
 
       <Dialog open={!!previewSlug} onOpenChange={(v) => { if (!v) { setPreviewSlug(null); setPreviewHtml(""); } }}>
-        <DialogContent className="sm:max-w-4xl w-full sm:max-h-[90vh] max-sm:max-w-full max-sm:h-dvh max-sm:max-h-dvh max-sm:m-0 max-sm:rounded-none p-0 overflow-hidden">
+        <DialogContent className="sm:max-w-4xl w-full sm:max-h-[90vh] max-sm:max-w-full max-sm:h-dvh max-sm:max-h-dvh max-sm:m-0 max-sm:rounded-none p-0 overflow-y-auto">
           <DialogHeader className="px-4 sm:px-6 pt-6 pb-2"><DialogTitle className="flex items-center gap-2"><Eye className="h-5 w-5 text-primary" />{isBn ? "টেমপ্লেট প্রিভিউ" : "Template Preview"}</DialogTitle></DialogHeader>
           <div className="px-4 sm:px-6 pb-6 max-sm:pb-0 max-sm:h-[calc(100dvh-60px)]">
             <div ref={previewContainerRef} className="w-full rounded-lg border overflow-hidden bg-white relative sm:h-[70vh] max-sm:h-full">

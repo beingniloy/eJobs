@@ -42,7 +42,7 @@ export const companiesService = {
       rating_work_life_balance?: number;
     }
   ) => {
-    const res = await api.post(`/candidate/companies/${companyId}/reviews`, data);
+    const res = await api.post(`/companies/${companyId}/reviews`, data);
     return res.data;
   },
 

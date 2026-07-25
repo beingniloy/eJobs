@@ -43,21 +43,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { token, isAuthenticated, setLoading, setAuth, logout } =
     useAuthStore();
   const [rehydrated, setRehydrated] = useState(false);
+  const [verified, setVerified] = useState(false);
 
   // Wait for Zustand persist rehydration before making auth decisions
   useEffect(() => {
-    // The persist middleware rehydrates synchronously from localStorage.
-    // We check if the store has been rehydrated by looking at the persisted state.
     const unsub = useAuthStore.subscribe(
       (state, prevState) => {
-        // Once isLoading transitions from true to false, rehydration is complete
         if (prevState.isLoading && !state.isLoading) {
           setRehydrated(true);
         }
       }
     );
 
-    // If already rehydrated (e.g., fast re-render), set immediately
     if (!useAuthStore.getState().isLoading) {
       setRehydrated(true);
     }
@@ -81,40 +78,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error: { response?: { status?: number } } | unknown) {
         if ((error as { response?: { status?: number } })?.response?.status === 401) {
           logout();
+        } else if (!(error as { response?: { status?: number } })?.response) {
+          logout();
         }
       } finally {
         setLoading(false);
+        setVerified(true);
       }
     };
 
     verifyUser();
   }, [token, setAuth, setLoading, logout]);
 
-  // Only run redirect logic after rehydration is complete
+  // Only run redirect logic after rehydration AND initial verification is complete
   useEffect(() => {
-    if (!rehydrated) return;
+    if (!rehydrated || !verified) return;
     if (typeof window === "undefined") return;
 
-    const isPublic = PUBLIC_ROUTES.some(
-      (route) => pathname === route || pathname.startsWith(route + "/")
-    );
+    const currentAuth = useAuthStore.getState();
     const isGuestOnly = GUEST_ONLY_ROUTES.includes(pathname);
     const isEmployeeAuth = EMPLOYEE_AUTH_ROUTES.includes(pathname);
     const isDashboard = pathname.startsWith("/dashboard") || (pathname.startsWith("/employer") && !isEmployeeAuth) || pathname.startsWith("/admin");
 
-    if (!isAuthenticated && isDashboard) {
+    if (!currentAuth.isAuthenticated && isDashboard) {
       router.push("/login");
     }
 
-    if (isAuthenticated && isGuestOnly) {
-      const role = useAuthStore.getState().role;
+    if (currentAuth.isAuthenticated && isGuestOnly) {
+      const role = currentAuth.role;
       if (role === "employer") {
         router.push("/employer/dashboard");
       } else {
         router.push("/dashboard");
       }
     }
-  }, [rehydrated, isAuthenticated, pathname, router]);
+  }, [rehydrated, verified, isAuthenticated, pathname, router]);
 
   return <>{children}</>;
 }

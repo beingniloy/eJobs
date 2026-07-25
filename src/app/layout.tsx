@@ -80,7 +80,9 @@ export async function generateMetadata(): Promise<Metadata> {
     description,
     keywords,
     authors: [{ name: siteName }],
-    ...(favicon ? { icons: { icon: favicon } } : {}),
+    icons: favicon
+      ? { icon: favicon, apple: favicon }
+      : { icon: "/favicon.svg", apple: "/favicon.svg" },
     openGraph: {
       type: "website",
       locale: "en_US",
@@ -131,9 +133,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-      </head>
       <body className="min-h-screen bg-background antialiased">
         <ClientProviders>
           {children}
