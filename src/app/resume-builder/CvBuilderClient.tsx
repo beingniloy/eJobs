@@ -218,7 +218,12 @@ export default function CvBuilderClient() {
       router.push("/login?redirect=" + encodeURIComponent("/resume-builder"));
       return;
     }
-    const hasProfile = profile && (profile.personal_info?.full_name || profile.personal_info?.email);
+    const hasProfile = profile && (
+      profile.personal_info?.full_name || 
+      profile.personal_info?.email ||
+      (profile.skills && profile.skills.length > 0) ||
+      (profile.experience && profile.experience.length > 0)
+    );
     if (!hasProfile) {
       setPendingTemplateSlug(template.slug);
       setShowPersonalInfoModal(true);

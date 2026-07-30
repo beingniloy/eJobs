@@ -22,7 +22,7 @@ import { useThemeStore } from "@/store/theme-store";
 export default function GuestJobPostClient() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [categories, setCategories] = useState<{ id: string; name_en: string; name_bn: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name_en: string; name_bn: string }[]>([]);
   const [availability, setAvailability] = useState({ enabled: true, max_jobs: 3, requires_review: true });
   const [loadingAvailability, setLoadingAvailability] = useState(true);
   const { settings } = useThemeStore();
@@ -169,11 +169,11 @@ export default function GuestJobPostClient() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Category *</Label>
-                    <Select value={categoryId} onValueChange={setCategoryId}>
+                    <Select value={categoryId} onValueChange={(v) => setCategoryId(String(v))}>
                       <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>
                         {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>{cat.name_en}</SelectItem>
+                          <SelectItem key={cat.id} value={String(cat.id)}>{cat.name_en}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

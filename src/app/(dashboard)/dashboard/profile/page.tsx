@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import api from "@/lib/api-client";
 import { useThemeStore } from "@/store/theme-store";
 import { useAuthStore } from "@/store/auth-store";
@@ -13,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DefaultAvatar } from "@/components/ui/default-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Camera, FileText, Plus, Trash2, Upload, Loader2, User, Briefcase, GraduationCap,
@@ -20,7 +22,7 @@ import {
   FileIcon, X,
 } from "lucide-react";
 import type { CandidateEducationEntry, CandidateExperienceEntry, CandidateTrainingEntry, CandidateCertificationEntry, CandidateDocumentEntry, LanguageProficiency } from "@/types";
-import { DIVISIONS_BN, DIVISIONS_EN, DISTRICTS_BN, DISTRICTS_EN } from "@/lib/bd-data";
+import { DIVISIONS_BN, DIVISIONS_EN, DISTRICTS_BN, DISTRICTS_EN, THANAS_BN, THANAS_EN, UNIONS_BN, POST_OFFICES_BN } from "@/lib/bd-data";
 
 const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"];
 const MARITAL_STATUS = ["Single", "Married", "Divorced", "Widowed"];
@@ -70,6 +72,7 @@ const STEPS = [
 export default function CandidateProfilePage() {
   const { user, setUser } = useAuthStore();
   const { language, settings } = useThemeStore();
+  const router = useRouter();
   const isBn = language === "bn";
   const siteName = settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs";
   const [saving, setSaving] = useState(false);
@@ -80,6 +83,7 @@ export default function CandidateProfilePage() {
   const [savedSteps, setSavedSteps] = useState<Set<number>>(new Set());
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState("");
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
 
   // Section 1: Personal
   const [fullNameBn, setFullNameBn] = useState("");
@@ -101,6 +105,9 @@ export default function CandidateProfilePage() {
   const [permanentAddress, setPermanentAddress] = useState("");
   const [district, setDistrict] = useState("");
   const [division, setDivision] = useState("");
+  const [upazila, setUpazila] = useState("");
+  const [unionName, setUnionName] = useState("");
+  const [postOffice, setPostOffice] = useState("");
   const [postalCode, setPostalCode] = useState("");
 
   // Section 3: Career
@@ -180,6 +187,9 @@ export default function CandidateProfilePage() {
       setPermanentAddress(p.permanent_address || "");
       setDistrict(p.district || "");
       setDivision(p.division || "");
+      setUpazila(p.upazila || "");
+      setUnionName(p.union || "");
+      setPostOffice(p.post_office || "");
       setPostalCode(p.postal_code || "");
       setCareerObjective(p.career_objective || "");
       setCurrentProfession(p.current_profession || "");
@@ -295,6 +305,9 @@ export default function CandidateProfilePage() {
     fd.append("permanent_address", permanentAddress);
     fd.append("district", district);
     fd.append("division", division);
+    fd.append("upazila", upazila);
+    fd.append("union", unionName);
+    fd.append("post_office", postOffice);
     fd.append("postal_code", postalCode);
     fd.append("email", email);
     await api.post("/candidate/profile-update", fd);
@@ -401,13 +414,18 @@ export default function CandidateProfilePage() {
       return true;
     } catch (error: any) {
       const data = error.response?.data;
+      const status = error.response?.status;
       let msg = data?.message || "Failed to save profile";
-      if (data?.errors) {
+      if (status === 413) {
+        msg = isBn ? "ফাইলের সাইজ বড় (সর্বোচ্চ 10MB)" : "File is too large (max 10MB)";
+      } else if (status === 422 && data?.errors) {
         const firstKey = Object.keys(data.errors)[0];
         if (firstKey) {
           const val = data.errors[firstKey];
           msg = Array.isArray(val) ? val[0] : val;
         }
+      } else if (status === 500) {
+        msg = isBn ? "সার্ভার সমস্যা হয়েছে। পরে আবার চেষ্টা করুন।" : "Server error. Please try again later.";
       }
       if (showToast) toast.error(msg);
       return false;
@@ -495,15 +513,35 @@ export default function CandidateProfilePage() {
             <Field label={isBn ? "স্থায়ী ঠিকানা" : "Permanent Address"} required><Textarea value={permanentAddress} onChange={(e) => setPermanentAddress(e.target.value)} rows={2} /></Field>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Field label={isBn ? "বিভাগ" : "Division"}>
-                <Select value={division} onValueChange={(v) => { setDivision(v); setDistrict(""); }}>
+                <Select value={division} onValueChange={(v) => { setDivision(v); setDistrict(""); setUpazila(""); setUnionName(""); setPostOffice(""); }}>
                   <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>{Object.entries(isBn ? DIVISIONS_BN : DIVISIONS_EN).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
               <Field label={isBn ? "জেলা" : "District"}>
-                <Select value={district} onValueChange={setDistrict} disabled={!division}>
+                <Select value={district} onValueChange={(v) => { setDistrict(v); setUpazila(""); setUnionName(""); setPostOffice(""); }} disabled={!division}>
                   <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>{((isBn ? DISTRICTS_BN : DISTRICTS_EN)[division] || []).map((d: string) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                </Select>
+              </Field>
+              <Field label={isBn ? "উপজেলা" : "Upazila"}>
+                <Select value={upazila} onValueChange={(v) => { setUpazila(v); setUnionName(""); setPostOffice(""); }} disabled={!district}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{((isBn ? THANAS_BN : THANAS_EN)[district] || []).map((t: string) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+              </Field>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Field label={isBn ? "ইউনিয়ন" : "Union"}>
+                <Select value={unionName} onValueChange={setUnionName} disabled={!upazila}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{(UNIONS_BN[upazila] || []).map((u: string) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
+                </Select>
+              </Field>
+              <Field label={isBn ? "পোস্ট অফিস" : "Post Office"}>
+                <Select value={postOffice} onValueChange={setPostOffice} disabled={!upazila}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{(POST_OFFICES_BN[upazila] || []).map((p: string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
               <Field label={isBn ? "পোস্টাল কোড" : "Postal Code"}><Input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} /></Field>
@@ -877,7 +915,16 @@ export default function CandidateProfilePage() {
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           ) : (
-            <Button onClick={async () => { const ok = await handleSave(true); if (ok) setSavedSteps((prev) => new Set(prev).add(step)); }} disabled={saving}>
+            <Button onClick={async () => {
+              const ok = await handleSave(true);
+              if (ok) {
+                setSavedSteps((prev) => new Set(prev).add(step));
+                setShowCompletionModal(true);
+                setTimeout(() => {
+                  router.push("/dashboard/profile/overview");
+                }, 2500);
+              }
+            }} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {isBn ? "সম্পূর্ণ সংরক্ষণ করুন" : "Save Complete Profile"}
               <Check className="h-4 w-4 ml-1" />
@@ -885,6 +932,30 @@ export default function CandidateProfilePage() {
           )}
         </div>
       </div>
+
+      {/* Completion Modal */}
+      <Dialog open={showCompletionModal} onOpenChange={setShowCompletionModal}>
+        <DialogContent className="sm:max-w-md text-center">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center justify-center gap-2">
+              <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <Check className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2">
+              {isBn ? "ধন্যবাদ! আপনার প্রোফাইল সম্পন্ন হয়েছে।" : "Thank you! Your profile has been completed."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {isBn ? "আপনাকে এখন প্রোফাইল ওভারভিউ পেজে নিয়ে যাওয়া হবে..." : "Redirecting you to the profile overview page..."}
+            </p>
+            <Button variant="outline" className="w-full" onClick={() => router.push("/dashboard/profile/overview")}>
+              {isBn ? "এখনই যান" : "Go Now"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

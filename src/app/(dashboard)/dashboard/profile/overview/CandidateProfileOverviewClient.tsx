@@ -23,7 +23,7 @@ import {
   Eye, Users, ExternalLink, Edit3, Mail, Phone, LinkIcon, Star, Trophy,
   Shield, Zap, ArrowRight, FileText, Target, TrendingUp, Clock, Loader2,
   BriefcaseBusiness, Briefcase as LinkedinIcon, Globe as GithubIcon, Users as FacebookIcon,
-  Upload, ChevronDown, Check, Copy,
+  Upload, ChevronDown, Check, Copy, BookOpen,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -53,6 +53,8 @@ export default function CandidateProfileOverviewClient() {
   const [cvResumes, setCvResumes] = useState<any[]>([]);
   const [uploadingResume, setUploadingResume] = useState(false);
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
+  const [trainings, setTrainings] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
   const resumeInputRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
@@ -75,6 +77,8 @@ export default function CandidateProfileOverviewClient() {
       setCvData(cvRes.data?.data || {});
       setProfileViews(viewsRes.data?.data || []);
       setIsPublic(d.user?.profile?.is_public !== false);
+      setDocuments(d.user?.profile?.documents || d.documents || []);
+      setTrainings(d.user?.profile?.trainings || []);
     } finally {
       setLoading(false);
     }
@@ -193,6 +197,10 @@ export default function CandidateProfileOverviewClient() {
     { label: "Experience Added", done: experience.length > 0 },
     { label: "Education Added", done: education.length > 0 },
     { label: "Profile Photo", done: !!avatar },
+    { label: "Contact Info", done: !!(p.district && p.division) },
+    { label: "Languages", done: !!(p.language_proficiency?.length) },
+    { label: "Certifications", done: certifications.length > 0 },
+    { label: "Documents", done: !!(documents.length) },
   ];
   const strengthPercent = Math.round((strengthSections.filter((s) => s.done).length / strengthSections.length) * 100);
 
@@ -393,6 +401,85 @@ export default function CandidateProfileOverviewClient() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{cert.name || cert.title}</p>
                         <p className="text-xs text-muted-foreground">{cert.issuer || cert.organization} {cert.year ? `(${cert.year})` : ""}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Languages */}
+          {p.language_proficiency && p.language_proficiency.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2"><Globe className="h-4 w-4" />Languages ({p.language_proficiency.length})</CardTitle>
+                <Button variant="ghost" size="sm" asChild><Link href="/dashboard/profile">Edit</Link></Button>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {p.language_proficiency.map((lang: any, i: number) => (
+                    <div key={i} className="flex items-center gap-2 p-2 rounded-lg border">
+                      <Globe className="h-4 w-4 text-primary shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{lang.name || lang.language}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {[
+                            lang.read && "Read",
+                            lang.write && "Write",
+                            lang.speak && "Speak",
+                          ].filter(Boolean).join(" · ") || lang.proficiency || ""}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Training */}
+          {trainings.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2"><BookOpen className="h-4 w-4" />Training ({trainings.length})</CardTitle>
+                <Button variant="ghost" size="sm" asChild><Link href="/dashboard/profile">Edit</Link></Button>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {trainings.map((training: any, i: number) => (
+                    <div key={i} className="relative pl-6 pb-4 border-l-2 border-primary/20 last:border-0">
+                      <div className="absolute -left-1.5 top-0 h-3 w-3 rounded-full bg-primary" />
+                      <h4 className="font-semibold text-sm">{training.title}</h4>
+                      {training.institute_name && <p className="text-sm text-muted-foreground">{training.institute_name}</p>}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {training.duration && `${training.duration} `}
+                        {training.year && `(${training.year})`}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Documents */}
+          {documents.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />Documents ({documents.length})</CardTitle>
+                <Button variant="ghost" size="sm" asChild><Link href="/dashboard/profile">Edit</Link></Button>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {documents.map((doc: any, i: number) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg border">
+                      <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                        <FileText className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate capitalize">{doc.type?.replace(/_/g, " ") || doc.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{doc.file_path?.split("/").pop() || ""}</p>
                       </div>
                     </div>
                   ))}

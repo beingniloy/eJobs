@@ -42,3 +42,7 @@ next-env.d.ts
 
 # dev-only testing
 api-test.html
+
+.npm-cache
+
+next-dev.log

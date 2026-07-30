@@ -77,7 +77,7 @@ export default function PostJobPage() {
   const [isRemoteProject, setIsRemoteProject] = useState(false);
   const [generatingJD, setGeneratingJD] = useState(false);
   const [aiQuota, setAiQuota] = useState<QuotaInfo | null>(null);
-  const [categories, setCategories] = useState<{ id: string; name_en: string; name_bn: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name_en: string; name_bn: string }[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
 
   useEffect(() => {
@@ -155,7 +155,19 @@ export default function PostJobPage() {
       router.push("/employer/manage-jobs");
     } catch (error: any) {
       const msg = error.response?.data?.message || error.response?.data?.error || "Failed to post job";
-      toast.error(isBn ? "চাকরি পোস্ট করতে ব্যর্থ" : msg);
+      const isVerifyError = error.response?.status === 403 && /not verified/i.test(msg);
+      if (isVerifyError) {
+        toast.warning(isBn ? "আপনার অ্যাকাউন্ট যাচাইকৃত নয়। চাকরি পোস্ট করতে যাচাইকরণ সম্পন্ন করুন।" : "Your account is not verified. Complete verification to post jobs.", {
+          description: isBn ? "অ্যাকাউন্ট যাচাইকরণ পেন্ডিং আছে। সাপোর্ট টিকেট এ যোগাযোগ করুন।" : "Your verification is pending. Please contact support to get verified.",
+          action: {
+            label: isBn ? "সাপোর্ট" : "Contact Support",
+            onClick: () => router.push("/support"),
+          },
+          duration: 10000,
+        });
+      } else {
+        toast.error(isBn ? "চাকরি পোস্ট করতে ব্যর্থ" : msg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -252,7 +264,7 @@ export default function PostJobPage() {
                   <SelectTrigger><SelectValue placeholder={isBn ? "নির্বাচন করুন" : "Select category"} /></SelectTrigger>
                   <SelectContent>
                     {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
+                      <SelectItem key={cat.id} value={String(cat.id)}>
                         {isBn ? cat.name_bn : cat.name_en}
                       </SelectItem>
                     ))}

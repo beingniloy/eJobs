@@ -13,18 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { toast } from "sonner";
-import {
   Check,
   X,
   CreditCard,
-  Zap,
   Calendar,
   Clock,
   AlertTriangle,
@@ -38,17 +29,22 @@ import {
   Crown,
   Wallet,
   Loader2,
-  CheckCircle,
-  Plus,
-  PartyPopper,
 } from "lucide-react";
+import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
+import PricingPlanCard from "@/components/pricing/PricingPlanCard";
+import PricingPurchaseModal from "@/components/pricing/PricingPurchaseModal";
 import type { Plan, Subscription } from "@/types";
 
-/* ─── Quota display config ─── */
 const quotaDisplayConfig: Record<
   string,
-  { icon: React.ElementType; color: string; bg: string; labelEn: string; labelBn: string }
+  {
+    icon: React.ElementType;
+    color: string;
+    bg: string;
+    labelEn: string;
+    labelBn: string;
+  }
 > = {
   job_posts: {
     icon: Briefcase,
@@ -118,7 +114,9 @@ const quotaDisplayConfig: Record<
 function getQuotaLabel(key: string, isBn: boolean): string {
   const config = quotaDisplayConfig[key];
   if (config) return isBn ? config.labelBn : config.labelEn;
-  return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function QuotaCard({
@@ -137,7 +135,12 @@ function QuotaCard({
   };
   const Icon = config.icon;
   const isUnlimited = quota.max_limit >= 9999;
-  const percent = isUnlimited ? 0 : Math.min(100, Math.round((quota.used / Math.max(quota.max_limit, 1)) * 100));
+  const percent = isUnlimited
+    ? 0
+    : Math.min(
+        100,
+        Math.round((quota.used / Math.max(quota.max_limit, 1)) * 100)
+      );
   const isHigh = percent >= 80;
   const isLow = percent >= 50 && percent < 80;
 
@@ -150,10 +153,14 @@ function QuotaCard({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-medium">{getQuotaLabel(quotaKey, isBn)}</p>
+              <p className="text-sm font-medium">
+                {getQuotaLabel(quotaKey, isBn)}
+              </p>
               <p className="text-xs text-muted-foreground">
                 {isUnlimited
-                  ? isBn ? "অসীমিত" : "Unlimited"
+                  ? isBn
+                    ? "অসীমিত"
+                    : "Unlimited"
                   : `${quota.used} / ${quota.max_limit}`}
               </p>
             </div>
@@ -161,11 +168,7 @@ function QuotaCard({
               <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
-                    isHigh
-                      ? "bg-red-500"
-                      : isLow
-                      ? "bg-yellow-500"
-                      : "bg-primary"
+                    isHigh ? "bg-red-500" : isLow ? "bg-yellow-500" : "bg-primary"
                   }`}
                   style={{ width: `${percent}%` }}
                 />
@@ -200,19 +203,9 @@ export default function EmployerSubscriptionPage() {
   const [loading, setLoading] = useState(true);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [walletLoading, setWalletLoading] = useState(true);
-  const [depositMethods, setDepositMethods] = useState<any[]>([]);
 
-  // Purchase modal states
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [purchaseStep, setPurchaseStep] = useState<"confirm" | "add-money">("confirm");
-  const [purchasing, setPurchasing] = useState(false);
-  const [selectedGateway, setSelectedGateway] = useState("");
-  const [depositAmount, setDepositAmount] = useState("");
-  const [depositLoading, setDepositLoading] = useState(false);
-
-  // Thank you modal state
-  const [showThankYou, setShowThankYou] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -229,18 +222,20 @@ export default function EmployerSubscriptionPage() {
       setSubscription(subData.subscription);
       setQuotas(subData.quotas);
     } catch {
-      toast.error(isBn ? "সাবস্ক্রিপশন তথ্য লোড করতে ব্যর্থ" : "Failed to load subscription data");
+      toast.error(
+        isBn
+          ? "সাবস্ক্রিপশন তথ্য লোড করতে ব্যর্থ"
+          : "Failed to load subscription data"
+      );
     } finally {
       setLoading(false);
     }
 
-    // Load wallet balance
     setWalletLoading(true);
     try {
       const walletRes = await api.get("/employer/wallet");
       const d = walletRes.data;
       setWalletBalance(Number(d.wallet?.balance || d.balance || 0));
-      setDepositMethods(d.deposit_methods || []);
     } catch {
       setWalletBalance(0);
     } finally {
@@ -250,67 +245,44 @@ export default function EmployerSubscriptionPage() {
 
   const expiryDate = subscription?.expires_at || subscription?.end_date;
   const daysRemaining = expiryDate
-    ? Math.max(0, Math.ceil((new Date(expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(
+        0,
+        Math.ceil(
+          (new Date(expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+        )
+      )
     : null;
 
-  const CANDIDATE_ONLY_FEATURES = ["Certificate Generation", "AI Interview Prep", "AI Skill Assessment"];
-  const planFeatures = (subscription?.plan?.features || []).filter((f: any) => !CANDIDATE_ONLY_FEATURES.includes(f.name));
-  const planFeaturesMapped = subscription?.plan?.features_mapped || {};
+  const CANDIDATE_ONLY_FEATURES = [
+    "Certificate Generation",
+    "AI Interview Prep",
+    "AI Skill Assessment",
+  ];
+  const planFeatures = (subscription?.plan?.features || []).filter(
+    (f: any) => !CANDIDATE_ONLY_FEATURES.includes(f.name)
+  );
 
   const handlePurchaseClick = (plan: Plan) => {
     setSelectedPlan(plan);
-    setPurchaseStep("confirm");
-    setSelectedGateway("");
-    setDepositAmount("");
     setShowPurchaseModal(true);
   };
 
-  const handlePurchase = async () => {
-    if (!selectedPlan) return;
-    setPurchasing(true);
-    try {
-      await subscriptionService.subscribe(selectedPlan.id);
-      setShowPurchaseModal(false);
-      setShowThankYou(true);
-      await loadData();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || (isBn ? "ক্রয় ব্যর্থ হয়েছে" : "Purchase failed"));
-    } finally {
-      setPurchasing(false);
+  const getButtonState = (plan: Plan) => {
+    if (subscription?.plan?.id === plan.id) {
+      return {
+        label: isBn ? "বর্তমান প্ল্যান" : "Current Plan",
+        disabled: true,
+        variant: "outline" as const,
+        action: "current" as const,
+      };
     }
+    return {
+      label: isBn ? "কিনুন" : "Purchase",
+      disabled: false,
+      variant: plan.is_popular ? ("default" as const) : ("outline" as const),
+      action: "subscribe" as const,
+    };
   };
-
-  const handleDeposit = async () => {
-    if (!selectedGateway || !depositAmount) return;
-    setDepositLoading(true);
-    try {
-      const res = await api.post("/employer/deposit", {
-        gateway_id: Number(selectedGateway),
-        amount: Number(depositAmount),
-      });
-      if (res.data.redirect_url) {
-        window.location.href = res.data.redirect_url;
-        return;
-      }
-      toast.success(isBn ? "ডিপোজিট সফল হয়েছে" : "Deposit submitted successfully");
-      setPurchaseStep("confirm");
-      try {
-        const walletRes = await api.get("/employer/wallet");
-        const d = walletRes.data;
-        setWalletBalance(Number(d.wallet?.balance || d.balance || 0));
-      } catch {
-        // ignore
-      }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Deposit failed");
-    } finally {
-      setDepositLoading(false);
-    }
-  };
-
-  const hasSufficientBalance = selectedPlan && walletBalance !== null
-    ? walletBalance >= selectedPlan.price
-    : false;
 
   return (
     <div className="space-y-6">
@@ -321,10 +293,11 @@ export default function EmployerSubscriptionPage() {
             {isBn ? "সাবস্ক্রিপশন" : "Subscription"}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {isBn ? "আপনার প্ল্যান ও ব্যবহার ট্র্যাক করুন" : "Manage your employer plan and track usage"}
+            {isBn
+              ? "আপনার প্ল্যান ও ব্যবহার ট্র্যাক করুন"
+              : "Manage your employer plan and track usage"}
           </p>
         </div>
-        {/* Wallet Balance Card */}
         <Card className="sm:w-auto w-full">
           <CardContent className="p-3 flex items-center gap-3">
             <div className="flex items-center gap-2">
@@ -332,11 +305,15 @@ export default function EmployerSubscriptionPage() {
                 <Wallet className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">{isBn ? "ওয়ালেট ব্যালেন্স" : "Wallet Balance"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {isBn ? "ওয়ালেট ব্যালেন্স" : "Wallet Balance"}
+                </p>
                 {walletLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <p className="text-lg font-bold leading-tight">{formatCurrency(walletBalance || 0)}</p>
+                  <p className="text-lg font-bold leading-tight">
+                    {formatCurrency(walletBalance || 0)}
+                  </p>
                 )}
               </div>
             </div>
@@ -371,7 +348,9 @@ export default function EmployerSubscriptionPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-semibold text-lg">
-                      {subscription?.plan?.name || subscription?.plan_name || (isBn ? "বিনামূল্যে প্ল্যান" : "Free Plan")}
+                      {subscription?.plan?.name ||
+                        subscription?.plan_name ||
+                        (isBn ? "বিনামূল্যে প্ল্যান" : "Free Plan")}
                     </h3>
                     {subscription && subscription?.plan?.price > 0 && (
                       <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0">
@@ -379,14 +358,19 @@ export default function EmployerSubscriptionPage() {
                         {isBn ? "প্রিমিয়াম" : "Premium"}
                       </Badge>
                     )}
-                    <Badge variant={subscription ? "success" : "secondary"} className="capitalize">
+                    <Badge
+                      variant={subscription ? "success" : "secondary"}
+                      className="capitalize"
+                    >
                       {subscription?.status || "active"}
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {subscription
                       ? `${isBn ? "বৈধ পর্যন্ত" : "Valid until"} ${expiryDate ? new Date(expiryDate).toLocaleDateString() : "—"}`
-                      : (isBn ? "নতুন অ্যাকাউন্টের জন্য ডিফল্ট প্ল্যান" : "Default plan for new accounts")}
+                      : isBn
+                      ? "নতুন অ্যাকাউন্টের জন্য ডিফল্ট প্ল্যান"
+                      : "Default plan for new accounts"}
                   </p>
                 </div>
                 {subscription?.plan?.price != null && (
@@ -402,7 +386,6 @@ export default function EmployerSubscriptionPage() {
                 )}
               </div>
 
-              {/* Expiry & Days Remaining */}
               {expiryDate && daysRemaining !== null && (
                 <>
                   <Separator className="my-4" />
@@ -422,7 +405,13 @@ export default function EmployerSubscriptionPage() {
                         {isBn ? "বাকি দিন" : "Days remaining"}:
                       </span>
                       <Badge
-                        variant={daysRemaining <= 7 ? "destructive" : daysRemaining <= 30 ? "warning" : "success"}
+                        variant={
+                          daysRemaining <= 7
+                            ? "destructive"
+                            : daysRemaining <= 30
+                            ? "warning"
+                            : "success"
+                        }
                       >
                         {daysRemaining} {isBn ? "দিন" : "days"}
                       </Badge>
@@ -439,7 +428,6 @@ export default function EmployerSubscriptionPage() {
                 </>
               )}
 
-              {/* Plan Features (from features_mapped) */}
               {planFeatures.length > 0 && (
                 <>
                   <Separator className="my-4" />
@@ -449,14 +437,31 @@ export default function EmployerSubscriptionPage() {
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {planFeatures.map((feature: any, i: number) => {
-                        const val = planFeaturesMapped[feature.id as string] ?? feature.value;
-                        const isFalse = val === false || val === "false" || val === 0 || val === "0";
+                        const val =
+                          subscription?.plan?.features_mapped?.[
+                            feature.id as string
+                          ] ?? feature.value;
+                        const isFalse =
+                          val === false ||
+                          val === "false" ||
+                          val === 0 ||
+                          val === "0";
                         const isAvailable = !isFalse && val != null;
                         const isUnlimited = Number(val) >= 9999;
-                        const isBoolean = val === true || val === "true" || val === "false";
-                        
+                        const isBoolean =
+                          val === true ||
+                          val === "true" ||
+                          val === "false";
+
                         return (
-                          <div key={i} className={`flex items-center gap-2 text-sm ${isAvailable ? "opacity-100 text-foreground font-medium" : "opacity-50 text-muted-foreground/75"}`}>
+                          <div
+                            key={i}
+                            className={`flex items-center gap-2 text-sm ${
+                              isAvailable
+                                ? "opacity-100 text-foreground font-medium"
+                                : "opacity-50 text-muted-foreground/75"
+                            }`}
+                          >
                             {isAvailable ? (
                               <Check className="h-4 w-4 text-emerald-500 shrink-0" />
                             ) : (
@@ -466,7 +471,9 @@ export default function EmployerSubscriptionPage() {
                             {!isBoolean && isAvailable && (
                               <span className="font-semibold ml-auto text-primary">
                                 {isUnlimited
-                                  ? isBn ? "অসীমিত" : "Unlimited"
+                                  ? isBn
+                                    ? "অসীমিত"
+                                    : "Unlimited"
                                   : val}
                               </span>
                             )}
@@ -488,7 +495,12 @@ export default function EmployerSubscriptionPage() {
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {Object.entries(quotas).map(([key, quota]) => (
-                  <QuotaCard key={key} quotaKey={key} quota={quota} isBn={isBn} />
+                  <QuotaCard
+                    key={key}
+                    quotaKey={key}
+                    quota={quota}
+                    isBn={isBn}
+                  />
                 ))}
               </div>
             </div>
@@ -521,314 +533,55 @@ export default function EmployerSubscriptionPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {plans.map((plan) => (
-              <Card
-                key={plan.id}
-                className={`relative transition-all duration-300 ${
-                  plan.is_popular 
-                    ? "border-primary shadow-lg ring-2 ring-primary/10 scale-[1.02] md:scale-[1.03] z-10 bg-gradient-to-b from-primary/[0.02] to-transparent" 
-                    : "border-border shadow-sm hover:shadow-md"
-                }`}
-              >
-                {plan.is_popular && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground font-semibold px-3 py-0.5">
-                    <Zap className="h-3 w-3 mr-1 fill-current" /> Popular
-                  </Badge>
-                )}
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold">{plan.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <span className="text-3xl font-black tracking-tight">
-                      {plan.currency || "৳"}{plan.price}
-                    </span>
-                    <span className="text-muted-foreground text-sm font-medium">/{plan.billing_cycle}</span>
-                  </div>
-                  <ul className="space-y-2.5 text-sm py-2">
-                    {plan.features?.filter((f: any) => !["Certificate Generation", "AI Interview Prep", "certificate_generation", "ai_interview_prep"].some(k => (f.name || f.id || "").toLowerCase().includes(k.toLowerCase())))?.map((feature, i) => {
-                      const val = plan.features_mapped?.[feature.id as string] ?? feature.value;
-                      const isFalse = val === false || val === "false" || val === 0 || val === "0";
-                      const isAvailable = !isFalse && val != null;
-                      const isUnlimited = Number(val) >= 9999;
-                      const isBoolean = val === true || val === "true" || val === "false";
-                      
-                      return (
-                        <li key={i} className={`flex items-center gap-2 ${isAvailable ? "opacity-100 text-foreground font-medium" : "opacity-45 text-muted-foreground/70"}`}>
-                          {isAvailable ? (
-                            <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                          ) : (
-                            <X className="h-4 w-4 text-muted-foreground/60 shrink-0" />
-                          )}
-                          <span className="flex-1">{feature.name}</span>
-                          {!isBoolean && isAvailable && (
-                            <span className="text-primary font-semibold">
-                              {isUnlimited ? (isBn ? "অসীমিত" : "Unlimited") : val}
-                            </span>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  <Button
-                    className="w-full"
-                    variant={plan.is_popular ? "default" : "outline"}
-                    disabled={subscription?.plan?.id === plan.id}
-                    onClick={() => {
-                      if (subscription?.plan?.id !== plan.id) {
+              {plans.map((plan) => {
+                const btnState = getButtonState(plan);
+                const isCurrentPlan = subscription?.plan?.id === plan.id;
+
+                return (
+                  <PricingPlanCard
+                    key={plan.id}
+                    plan={plan}
+                    isCurrentPlan={isCurrentPlan}
+                    isBn={isBn}
+                    buttonLabel={btnState.label}
+                    buttonDisabled={btnState.disabled}
+                    buttonVariant={btnState.variant}
+                    buttonAction={btnState.action}
+                    onAction={() => {
+                      if (!isCurrentPlan) {
                         handlePurchaseClick(plan);
                       }
                     }}
                   >
-                    {subscription?.plan?.id === plan.id ? (
-                      <span>{isBn ? "বর্তমান প্ল্যান" : "Current Plan"}</span>
-                    ) : (
-                      <>
-                        <CreditCard className="h-4 w-4 mr-1" />
-                        {isBn ? "কিনুন" : "Purchase"}
-                      </>
+                    {!isCurrentPlan && (
+                      <Button
+                        variant="link"
+                        className="w-full mt-1 p-0 h-auto"
+                        asChild
+                      >
+                        <Link href={`/employer/subscription/details/${plan.id}`}>
+                          {isBn ? "বিস্তারিত দেখুন" : "View Details"}
+                          <ArrowRight className="h-4 w-4 ml-1" />
+                        </Link>
+                      </Button>
                     )}
-                  </Button>
-                  {subscription?.plan?.id !== plan.id && (
-                    <Button
-                      variant="link"
-                      className="w-full mt-1"
-                      asChild
-                    >
-                      <Link href={`/employer/subscription/details/${plan.id}`}>
-                        {isBn ? "বিস্তারিত দেখুন" : "View Details"}
-                        <ArrowRight className="h-4 w-4 ml-1" />
-                      </Link>
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                  </PricingPlanCard>
+                );
+              })}
           </div>
         )}
       </div>
 
-      {/* Purchase Modal */}
-      <Dialog open={showPurchaseModal} onOpenChange={(v) => !v && setShowPurchaseModal(false)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {isBn ? "প্ল্যান কিনুন" : "Purchase Plan"}
-            </DialogTitle>
-            <DialogDescription>
-              {isBn
-                ? `প্ল্যানটি কিনতে আপনার ওয়ালেট থেকে পেমেন্ট করুন`
-                : `Pay from your wallet to purchase the ${selectedPlan?.name} plan`}
-            </DialogDescription>
-          </DialogHeader>
-
-          {purchaseStep === "confirm" && selectedPlan && (
-            <div className="space-y-4">
-              {/* Plan Info */}
-              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                <div>
-                  <p className="font-medium">{selectedPlan.name}</p>
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {selectedPlan.billing_cycle}
-                  </p>
-                </div>
-                <p className="text-lg font-bold">{formatCurrency(selectedPlan.price)}</p>
-              </div>
-
-              <Separator />
-
-              {/* Wallet Balance */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Wallet className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    {isBn ? "ওয়ালেট ব্যালেন্স" : "Wallet Balance"}
-                  </span>
-                </div>
-                {walletLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <span className="font-semibold">
-                    {formatCurrency(walletBalance || 0)}
-                  </span>
-                )}
-              </div>
-
-              {hasSufficientBalance ? (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <p className="text-sm text-green-700 dark:text-green-400">
-                    {isBn
-                      ? "পর্যাপ্ত ব্যালেন্স আছে"
-                      : "Sufficient balance available"}
-                  </p>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-950/20">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                  <p className="text-sm text-red-700 dark:text-red-400">
-                    {isBn
-                      ? "পর্যাপ্ত ব্যালেন্স নেই। আরো দরকার"
-                      : `Insufficient balance. Need ${formatCurrency(selectedPlan.price - (walletBalance || 0))} more`}
-                  </p>
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowPurchaseModal(false)}
-                  className="flex-1"
-                >
-                  {isBn ? "বাতিল" : "Cancel"}
-                </Button>
-                {hasSufficientBalance ? (
-                  <Button
-                    onClick={handlePurchase}
-                    disabled={purchasing || walletLoading}
-                    className="flex-1"
-                  >
-                    {purchasing && (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    )}
-                    {isBn ? "কিনুন" : "Purchase"}
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => setPurchaseStep("add-money")}
-                    className="flex-1"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    {isBn ? "অর্থ যোগ করুন" : "Add Money"}
-                  </Button>
-                )}
-              </div>
-
-              {!hasSufficientBalance && (
-                <Button variant="link" size="sm" className="w-full mt-1" asChild>
-                  <Link href="/employer/wallet">
-                    <Wallet className="h-4 w-4 mr-2" />
-                    {isBn ? "ওয়ালেট পৃষ্ঠায় যান" : "Go to Wallet Page"}
-                  </Link>
-                </Button>
-              )}
-            </div>
-          )}
-
-          {purchaseStep === "add-money" && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CreditCard className="h-4 w-4" />
-                <span>{isBn ? "অর্থ যোগ করুন" : "Add Money to Wallet"}</span>
-              </div>
-
-              {depositMethods.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  {isBn ? "কোনো পেমেন্ট মেথড পাওয়া যায়নি" : "No payment methods available"}
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">{isBn ? "পেমেন্ট মেথড" : "Payment Method"}</label>
-                    <select
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-                      value={selectedGateway}
-                      onChange={(e) => setSelectedGateway(e.target.value)}
-                    >
-                      <option value="">{isBn ? "মেথড নির্বাচন করুন" : "Select method"}</option>
-                      {depositMethods.map((g: any) => (
-                        <option key={g.id} value={g.id}>
-                          {g.display_name || g.name}
-                          {Number(g.percent_charge) > 0 ? ` (${g.percent_charge}% fee)` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">
-                      {isBn ? "পরিমাণ (BDT)" : "Amount (BDT)"}
-                    </label>
-                    <input
-                      type="number"
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      placeholder={isBn ? "পরিমাণ লিখুন" : "Enter amount"}
-                      value={depositAmount}
-                      onChange={(e) => setDepositAmount(e.target.value)}
-                      min="10"
-                    />
-                  </div>
-
-                  <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => setPurchaseStep("confirm")}
-                      className="flex-1"
-                    >
-                      {isBn ? "পেছনে" : "Back"}
-                    </Button>
-                    <Button
-                      onClick={handleDeposit}
-                      disabled={!selectedGateway || !depositAmount || depositLoading}
-                      className="flex-1"
-                    >
-                      {depositLoading && (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      )}
-                      {isBn ? "ডিপোজিট করুন" : "Deposit"}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Thank You Modal */}
-      <Dialog open={showThankYou} onOpenChange={(v) => !v && setShowThankYou(false)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <PartyPopper className="h-5 w-5 text-primary" />
-              {isBn ? "ধন্যবাদ!" : "Thank You!"}
-            </DialogTitle>
-            <DialogDescription>
-              {isBn
-                ? "আপনার সাবস্ক্রিপশন সফলভাবে সম্পন্ন হয়েছে"
-                : "Your subscription has been successfully completed"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="flex items-center justify-center p-6 rounded-lg bg-green-50 dark:bg-green-950/20">
-              <div className="text-center">
-                <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-2" />
-                <p className="font-medium text-green-700 dark:text-green-400">
-                  {isBn ? "সাবস্ক্রিপশন সক্রিয়!" : "Subscription Active!"}
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowThankYou(false)}
-                className="flex-1"
-              >
-                {isBn ? "বন্ধ করুন" : "Close"}
-              </Button>
-              <Button
-                onClick={() => {
-                  setShowThankYou(false);
-                  loadData();
-                }}
-                className="flex-1"
-              >
-                {isBn ? "রিফ্রেশ করুন" : "Refresh"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PricingPurchaseModal
+        open={showPurchaseModal}
+        onOpenChange={setShowPurchaseModal}
+        plan={selectedPlan}
+        isBn={isBn}
+        walletBalance={walletBalance}
+        walletLoading={walletLoading}
+        taxSettings={[]}
+        onSuccess={loadData}
+      />
     </div>
   );
 }
