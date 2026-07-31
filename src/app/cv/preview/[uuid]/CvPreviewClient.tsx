@@ -31,10 +31,37 @@ export default function CvPreviewClient() {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/cv/preview/${uuid}`, { headers: { Accept: "text/html" } })
+    // Get auth token from localStorage
+    let authToken: string | null = null;
+    try {
+      const raw = localStorage.getItem("auth-storage");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        authToken = parsed?.state?.token || null;
+      }
+    } catch { /* ignore */ }
+
+    const headers: Record<string, string> = { Accept: "text/html" };
+    if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+
+    fetch(`/api/cv/preview/${uuid}`, { headers })
       .then(async (res) => {
+        const contentType = res.headers.get("content-type") || "";
+        const text = await res.text();
+
+        // If response is JSON (error), throw with message
+        if (contentType.includes("application/json")) {
+          try {
+            const json = JSON.parse(text);
+            throw new Error(json.message || `Preview failed (${res.status})`);
+          } catch (parseErr) {
+            if (parseErr instanceof SyntaxError) throw new Error(`Preview failed (${res.status})`);
+            throw parseErr;
+          }
+        }
+
         if (!res.ok) throw new Error(`Preview failed (${res.status})`);
-        return res.text();
+        return text;
       })
       .then((data) => {
         setHtml(data);
@@ -104,15 +131,26 @@ export default function CvPreviewClient() {
     );
   }
 
-  if (error) {
+  if (error || !html) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-3">
-          <p className="text-lg font-semibold text-destructive">Preview Unavailable</p>
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <Button variant="outline" size="sm" onClick={() => router.push("/resume-builder")}>
-            <ArrowLeft className="h-4 w-4 mr-1" />{isBn ? "ফিরে যান" : "Go Back"}
-          </Button>
+        <div className="text-center space-y-4 max-w-md">
+          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto">
+            <Lock className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <p className="text-lg font-semibold">Preview Unavailable</p>
+          <p className="text-sm text-muted-foreground">
+            {error || (isBn ? "সিভির প্রিভিউ লোড করা যায়নি" : "Could not load CV preview")}
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button variant="outline" size="sm" onClick={() => router.push("/resume-builder")}>
+              <ArrowLeft className="h-4 w-4 mr-1" />{isBn ? "ফিরে যান" : "Go Back"}
+            </Button>
+            <Button size="sm" onClick={handleDownloadPdf} disabled={downloading}>
+              {downloading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
+              {isBn ? "PDF ডাউনলোড" : "Download PDF"}
+            </Button>
+          </div>
         </div>
       </div>
     );
