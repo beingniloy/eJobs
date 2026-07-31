@@ -1,32 +1,105 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import type { useResumeWizard } from "@/hooks/use-resume-wizard";
 import { useThemeStore } from "@/store/theme-store";
+import { useAuth } from "@/hooks/use-auth";
+import api from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, ChevronDown, ChevronUp, User, Upload } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronUp, User } from "lucide-react";
 import { toast } from "sonner";
 
 const MAX_CHARS = { full_name: 80, email: 80, phone: 30, address: 100, zip_code: 20, city: 50 };
 const GENDERS = ["Male", "Female", "Other"];
 const MARITAL = ["Single", "Married", "Divorced", "Widowed"];
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://127.0.0.1:8000";
+function getStorageUrl(path: string): string {
+  if (!path) return "";
+  if (path.startsWith("http") || path.startsWith("blob:")) return path;
+  return `${API_BASE}/storage/${path}`;
+}
+
 export default function PersonalStep({ wizard }: { wizard: ReturnType<typeof useResumeWizard> }) {
   const { language } = useThemeStore();
   const isBn = language === "bn";
-  const { data, setStep } = wizard;
+  const { user } = useAuth();
+  const { data, setStep, updatePersonal } = wizard;
   const p = data.personal;
   const [showMore, setShowMore] = useState(false);
+  const [showExtra, setShowExtra] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const importedRef = useRef(false);
+
+  // Auto-import from logged-in profile on mount
+  useEffect(() => {
+    if (!user || importedRef.current) return;
+    importedRef.current = true;
+
+    const p = wizard.data.personal;
+    // Only import if fields are empty (don't overwrite localStorage draft)
+    if (p.first_name && p.email) return;
+
+    const updates: Record<string, string> = {};
+
+    if (user.name) {
+      const parts = user.name.split(" ");
+      updates.first_name = parts[0] || "";
+      updates.last_name = parts.slice(1).join(" ") || "";
+      updates.full_name = user.name;
+    }
+    if (user.email) updates.email = user.email;
+
+    // Fetch full profile for extra fields
+    api.get("/candidate/dashboard").then((res) => {
+      const prof = res.data?.user?.profile || {};
+      if (prof.phone) updates.phone = prof.phone;
+      if (prof.city) updates.city = prof.city;
+      if (prof.current_position) updates.additional_info = prof.current_position;
+      if (prof.date_of_birth) updates.dob = prof.date_of_birth;
+      if (prof.gender) updates.gender = prof.gender;
+      if (prof.nationality) updates.nationality = prof.nationality;
+      if (prof.linkedin_url) updates.linkedin = prof.linkedin_url;
+      if (prof.github_url) updates.website = prof.github_url;
+      if (prof.avatar) updates.photo_url = getStorageUrl(prof.avatar);
+      if (prof.present_address || prof.address) updates.address = prof.present_address || prof.address;
+      if (prof.marital_status) updates.marital_status = prof.marital_status;
+
+      updatePersonal(updates);
+    }).catch(() => {
+      // Still import what we have from user object
+      if (Object.keys(updates).length > 0) updatePersonal(updates);
+    });
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (key: string, val: string, max?: number) => {
     if (max && val.length > max) return;
-    wizard.updatePersonal({ [key]: val });
+    updatePersonal({ [key]: val });
   };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error(isBn ? "শুধুমাত্র ছবি দিন" : "Only image files allowed");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error(isBn ? "২MB এর কম হতে হবে" : "Max 2MB");
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    updatePersonal({ photo_url: url });
+  };
+
+  const photoDisplay = p.photo_url
+    ? (p.photo_url.startsWith("http") || p.photo_url.startsWith("blob:")) ? p.photo_url : getStorageUrl(p.photo_url)
+    : null;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -36,12 +109,27 @@ export default function PersonalStep({ wizard }: { wizard: ReturnType<typeof use
 
         {/* Photo */}
         <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-lg bg-muted border-2 border-dashed flex items-center justify-center overflow-hidden">
-            {p.photo_url ? <img src={p.photo_url} alt="Photo" className="w-full h-full object-cover rounded-lg" /> : <User className="h-8 w-8 text-muted-foreground/40" />}
-          </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-20 h-20 rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden hover:border-primary/50 transition-colors cursor-pointer shrink-0"
+          >
+            {photoDisplay ? (
+              <img src={photoDisplay} alt="Photo" className="w-full h-full object-cover rounded-lg" />
+            ) : (
+              <User className="h-8 w-8 text-muted-foreground/40" />
+            )}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handlePhotoChange}
+          />
           <div className="text-sm">
             <p className="font-medium">Add photo (optional)</p>
-            <p className="text-muted-foreground text-xs">JPEG/PNG/WebP — max 2MB. Auto-compressed to WebP.</p>
+            <p className="text-muted-foreground text-xs">JPEG/PNG/WebP — max 2MB.</p>
           </div>
         </div>
 
@@ -94,22 +182,18 @@ export default function PersonalStep({ wizard }: { wizard: ReturnType<typeof use
 
         {showMore && (
           <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-            {/* DOB */}
             <div className="space-y-1.5">
               <Label>Date of birth</Label>
               <Input type="date" value={p.dob} onChange={(e) => set("dob", e.target.value)} />
             </div>
-            {/* Place of Birth */}
             <div className="space-y-1.5">
               <Label>Place of birth</Label>
               <Input value={p.place_of_birth} onChange={(e) => set("place_of_birth", e.target.value)} />
             </div>
-            {/* Driving License */}
             <div className="space-y-1.5">
               <Label>Driving license</Label>
               <Input value={p.driving_license} onChange={(e) => set("driving_license", e.target.value)} placeholder="e.g. A, B" />
             </div>
-            {/* Gender */}
             <div className="space-y-1.5">
               <Label>Gender</Label>
               <Select value={p.gender} onValueChange={(v) => set("gender", v)}>
@@ -117,12 +201,10 @@ export default function PersonalStep({ wizard }: { wizard: ReturnType<typeof use
                 <SelectContent>{GENDERS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            {/* Nationality */}
             <div className="space-y-1.5">
               <Label>Nationality</Label>
               <Input value={p.nationality} onChange={(e) => set("nationality", e.target.value)} />
             </div>
-            {/* Marital Status */}
             <div className="space-y-1.5">
               <Label>Marital status</Label>
               <Select value={p.marital_status} onValueChange={(v) => set("marital_status", v)}>
@@ -130,17 +212,14 @@ export default function PersonalStep({ wizard }: { wizard: ReturnType<typeof use
                 <SelectContent>{MARITAL.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            {/* LinkedIn */}
             <div className="space-y-1.5">
               <Label>LinkedIn</Label>
               <Input value={p.linkedin} onChange={(e) => set("linkedin", e.target.value)} placeholder="https://linkedin.com/in/..." />
             </div>
-            {/* Website */}
             <div className="space-y-1.5">
               <Label>Website</Label>
               <Input value={p.website} onChange={(e) => set("website", e.target.value)} placeholder="https://..." />
             </div>
-            {/* Additional Info */}
             <div className="space-y-1.5">
               <Label>Additional information</Label>
               <Textarea value={p.additional_info} onChange={(e) => set("additional_info", e.target.value)} rows={3} />
