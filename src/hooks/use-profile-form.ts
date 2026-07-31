@@ -236,14 +236,24 @@ export function useProfileForm() {
           await api.post("/candidate/profile/certifications", fd); break;
         }
         case "documents": {
-          const uploads = documents.filter((d) => d._file).map((d) => {
-            const fd = new FormData();
-            fd.append("type", d.type);
-            fd.append("file", d._file!);
-            return api.post("/candidate/profile/documents", fd);
-          });
-          if (uploads.length > 0) await Promise.all(uploads);
-          else if (documents.length === 0) throw new Error(isBn ? "কোনো ফাইল নেই" : "No files to upload");
+          const toUpload = documents.filter((d) => d._file);
+          if (toUpload.length > 0) {
+            const results = await Promise.all(toUpload.map(async (d) => {
+              const fd = new FormData();
+              fd.append("type", d.type);
+              fd.append("file", d._file!);
+              const res = await api.post("/candidate/profile/documents", fd);
+              return { type: d.type, path: res.data.path, url: res.data.url };
+            }));
+            const updatedDocs = documents.map((d) => {
+              const r = results.find((x) => x.type === d.type);
+              if (r) return { ...d, file_path: r.path, url: r.url, _file: undefined };
+              return { ...d, _file: undefined };
+            });
+            setDocuments(updatedDocs);
+          } else if (documents.length === 0) {
+            throw new Error(isBn ? "কোনো ফাইল নেই" : "No files to upload");
+          }
           break;
         }
         case "social": {

@@ -159,9 +159,9 @@ function CandidateCard({ candidate: c }: { candidate: Candidate }) {
 
           {c.skills && c.skills.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-3">
-              {c.skills.slice(0, 5).map((s) => (
+              {c.skills.slice(0, 5).map((s, i) => (
                 <span
-                  key={s}
+                  key={`${s}-${i}`}
                   className="inline-flex items-center rounded-md bg-primary/8 text-primary px-2 py-0.5 text-[11px] font-medium"
                 >
                   {s}

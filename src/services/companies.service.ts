@@ -26,7 +26,8 @@ export const companiesService = {
 
   getCompanyReviews: async (companyId: number) => {
     const res = await api.get(`/companies/${companyId}/reviews`);
-    return res.data;
+    // Laravel returns { status, data: { reviews: [...], averages: {...}, ... } }
+    return res.data?.data ?? res.data;
   },
 
   submitReview: async (

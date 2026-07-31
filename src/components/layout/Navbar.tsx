@@ -346,6 +346,12 @@ export default function Navbar() {
             </>
           ) : (
             <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="hover:bg-black/5 dark:hover:bg-white/10" onClick={() => setTheme(activeTheme === "dark" ? "light" : "dark")}>
+                {mounted ? (activeTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />) : <Moon className="h-4 w-4" />}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={toggleLanguage} className="text-xs font-medium hover:bg-black/5 dark:hover:bg-white/10">
+                {isBn ? "EN" : "বাং"}
+              </Button>
               <Button variant="ghost" size="sm" onClick={() => router.push("/login")} className="hover:bg-black/5 dark:hover:bg-white/10" style={{ color: settings.nav_text_color || undefined }}>{isBn ? "লগইন" : "Login"}</Button>
               <Button size="sm" onClick={() => router.push("/register")} style={{ color: settings.nav_text_color || undefined, backgroundColor: `${settings.nav_text_color || '#076938'}22` }}>{isBn ? "নিবন্ধন" : "Register"}</Button>
             </div>
@@ -355,6 +361,9 @@ export default function Navbar() {
         {/* Mobile: Login/Register + Hamburger */}
         {!isAuthenticated && (
           <div className="flex items-center gap-1.5 md:hidden">
+            <Button variant="ghost" size="icon" className="hover:bg-black/5 dark:hover:bg-white/10" onClick={() => setTheme(activeTheme === "dark" ? "light" : "dark")}>
+              {mounted ? (activeTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />) : <Moon className="h-4 w-4" />}
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => router.push("/login")} className="text-sm hover:bg-black/5 dark:hover:bg-white/10" style={{ color: settings.nav_text_color || undefined }}>{isBn ? "লগইন" : "Login"}</Button>
             <Button size="sm" onClick={() => router.push("/register")} className="text-sm" style={{ color: settings.nav_text_color || undefined, backgroundColor: `${settings.nav_text_color || '#076938'}22` }}>{isBn ? "নিবন্ধন" : "Register"}</Button>
           </div>
@@ -485,13 +494,25 @@ export default function Navbar() {
                     {isBn ? "লগআউট" : "Logout"}
                   </Button>
                 ) : (
-                  <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => { setMobileOpen(false); router.push("/login"); }}>
-                      {isBn ? "লগইন" : "Login"}
-                    </Button>
-                    <Button className="flex-1" onClick={() => { setMobileOpen(false); router.push("/register"); }}>
-                      {isBn ? "নিবন্ধন" : "Register"}
-                    </Button>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={toggleLanguage} className="flex-1 gap-1.5">
+                        <Globe className="h-3.5 w-3.5" />
+                        {isBn ? "English" : "বাংলা"}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setTheme(activeTheme === "dark" ? "light" : "dark")} className="flex-1 gap-1.5">
+                        {mounted ? (activeTheme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />) : <Moon className="h-3.5 w-3.5" />}
+                        {mounted ? (activeTheme === "dark" ? "Light" : "Dark") : "Theme"}
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="flex-1" onClick={() => { setMobileOpen(false); router.push("/login"); }}>
+                        {isBn ? "লগইন" : "Login"}
+                      </Button>
+                      <Button className="flex-1" onClick={() => { setMobileOpen(false); router.push("/register"); }}>
+                        {isBn ? "নিবন্ধন" : "Register"}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

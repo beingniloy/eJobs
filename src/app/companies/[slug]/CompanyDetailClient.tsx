@@ -20,7 +20,7 @@ import {
   Building2, MapPin, Globe, Mail, ExternalLink, Star, Users, Briefcase,
   Eye, ThumbsUp, Calendar, ArrowRight, ArrowLeft, CheckCircle2,
   Heart, Share2, Camera, Newspaper, Award, Download, Loader2,
-  Link2, AtSign, Hash, Send, Rss, MessageSquare,
+  Link2, AtSign, Hash, Send, Rss, MessageSquare, CheckCircle,
 } from "lucide-react";
 import type { Company, CompanyReview } from "@/types";
 import { CompanyLogo } from "@/components/ui/default-avatar";
@@ -33,12 +33,10 @@ function getStorageUrl(path: string | null | undefined): string | null {
   return `${API_BASE}/storage/${path.replace(/^\/?storage\//, "")}`;
 }
 
-/* ─── Format job type: "full_time" → "Full Time" ─── */
 function formatJobType(t: string) {
   return t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-/* ─── Empty state helper ─── */
 function EmptyState({ text }: { text: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
@@ -58,6 +56,7 @@ interface ReviewResponse {
   reviews?: CompanyReview[];
   averages?: { overall?: number; average_rating?: number };
   total_reviews?: number;
+  user_has_reviewed?: boolean;
 }
 
 interface Props {
@@ -78,13 +77,12 @@ export default function CompanyDetailClient({ slug }: Props) {
   useClickPatternTracking();
   useSessionEngagementTracking();
 
-  // Reviews
   const [reviews, setReviews] = useState<CompanyReview[]>([]);
   const [reviewMeta, setReviewMeta] = useState({ average_rating: 0, total_reviews: 0 });
   const [ratingBreakdown, setRatingBreakdown] = useState<{ stars: number; count: number; percent: number }[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [userHasReviewed, setUserHasReviewed] = useState(false);
 
-  // Review form
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewHoverRating, setReviewHoverRating] = useState(0);
   const [reviewComment, setReviewComment] = useState("");
@@ -94,7 +92,6 @@ export default function CompanyDetailClient({ slug }: Props) {
     work_culture: 0, salary: 0, management: 0, growth: 0, work_life_balance: 0,
   });
 
-  // Brochures
   const [brochures, setBrochures] = useState<Brochure[]>([]);
 
   useEffect(() => {
@@ -105,33 +102,33 @@ export default function CompanyDetailClient({ slug }: Props) {
         setCompany(data);
         if (data.followers_count != null) setFollowersCount(data.followers_count);
         trackBehavior("company_visit", { targetId: data.id, metaData: { name: data.name, slug } });
-        companiesService.getCompanyBrochures(data.id).then((r) => setBrochures(r.data || [])).catch(() => { /* brochures - non-critical */ });
+        companiesService.getCompanyBrochures(data.id).then((r) => setBrochures(r.data || [])).catch(() => {});
       })
       .catch(() => { toast.error("Failed to load company details"); })
       .finally(() => setLoading(false));
   }, [slug]);
 
-  // Check follow status
   useEffect(() => {
     if (!company || !isAuthenticated) return;
     api.get(`/candidate/companies/${company.id}/followers/check`)
       .then((res: any) => { setFollowing(res.data.following ?? res.data.data?.following ?? false); })
-      .catch(() => { /* follow status check - non-critical */ });
+      .catch(() => {});
   }, [company, isAuthenticated]);
 
-  // Load reviews
   const loadReviews = async () => {
     if (!company) return;
     setReviewsLoading(true);
     try {
-      const res = await companiesService.getCompanyReviews(company.id);
-      const d = (res as ReviewResponse) || {};
-      const rv = d?.reviews || [];
+      const payload = await companiesService.getCompanyReviews(company.id);
+      const rv = (payload as any)?.reviews || [];
       setReviews(rv);
       setReviewMeta({
-        average_rating: Number(d?.averages?.overall || d?.averages?.average_rating) || 0,
-        total_reviews: d?.total_reviews || 0,
+        average_rating: Number((payload as any)?.averages?.overall || (payload as any)?.averages?.average_rating) || 0,
+        total_reviews: (payload as any)?.total_reviews || 0,
       });
+      if ((payload as any)?.user_has_reviewed) {
+        setUserHasReviewed(true);
+      }
       const total = rv.length;
       if (total > 0) {
         const counts = [0, 0, 0, 0, 0];
@@ -176,9 +173,16 @@ export default function CompanyDetailClient({ slug }: Props) {
       });
       toast.success("Review submitted");
       setReviewRating(0); setReviewComment(""); setReviewAnonymous(false);
+      setUserHasReviewed(true);
       setCategoryRatings({ work_culture: 0, salary: 0, management: 0, growth: 0, work_life_balance: 0 });
       loadReviews();
-    } catch { toast.error("Failed to submit review"); }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || "Failed to submit review";
+      toast.error(msg);
+      if (err?.response?.data?.message?.includes("already")) {
+        setUserHasReviewed(true);
+      }
+    }
     finally { setReviewSubmitting(false); }
   };
 
@@ -219,7 +223,6 @@ export default function CompanyDetailClient({ slug }: Props) {
   const coverRaw = company.cover_image || company.cover_photo;
   const cover = getStorageUrl(coverRaw);
 
-  // Social links
   const socialLinks = [
     company.facebook && { icon: AtSign, href: company.facebook, label: "Facebook" },
     company.linkedin && { icon: Link2, href: company.linkedin, label: "LinkedIn" },
@@ -355,7 +358,6 @@ export default function CompanyDetailClient({ slug }: Props) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Sidebar */}
           <div className="lg:col-span-3 space-y-4">
-            {/* Company Snapshot */}
             <Card>
               <CardHeader className="pb-3"><CardTitle className="text-sm">Company Snapshot</CardTitle></CardHeader>
               <CardContent className="space-y-3 text-sm">
@@ -378,7 +380,6 @@ export default function CompanyDetailClient({ slug }: Props) {
               </CardContent>
             </Card>
 
-            {/* Why Join Us */}
             {whyJoinUs.length > 0 && (
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-sm">Why Join Us?</CardTitle></CardHeader>
@@ -393,7 +394,6 @@ export default function CompanyDetailClient({ slug }: Props) {
               </Card>
             )}
 
-            {/* Company Brochure */}
             {brochures.length > 0 && (
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-sm">Company Brochure</CardTitle></CardHeader>
@@ -414,7 +414,6 @@ export default function CompanyDetailClient({ slug }: Props) {
               </Card>
             )}
 
-            {/* Top Skills */}
             {topSkills.length > 0 && (
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-sm">Top Skills</CardTitle></CardHeader>
@@ -432,7 +431,6 @@ export default function CompanyDetailClient({ slug }: Props) {
             {/* ── Overview Tab ── */}
             {activeTab === "overview" && (
               <>
-                {/* About + Rating */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="md:col-span-2">
                     <h2 className="text-lg font-bold mb-2">About {company.name}</h2>
@@ -464,7 +462,6 @@ export default function CompanyDetailClient({ slug }: Props) {
                   </div>
                 </div>
 
-                {/* Mission & Vision */}
                 {(mission || vision) && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {mission && (
@@ -486,7 +483,6 @@ export default function CompanyDetailClient({ slug }: Props) {
                   </div>
                 )}
 
-                {/* Open Jobs */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="text-lg font-bold">Open Jobs ({activeJobsCount})</h2>
@@ -516,7 +512,6 @@ export default function CompanyDetailClient({ slug }: Props) {
                   ) : <EmptyState text="No active jobs posted yet" />}
                 </div>
 
-                {/* Highlights */}
                 {highlights.length > 0 && (
                   <Card>
                     <CardHeader className="pb-3"><CardTitle className="text-sm">Company Highlights</CardTitle></CardHeader>
@@ -530,7 +525,6 @@ export default function CompanyDetailClient({ slug }: Props) {
                   </Card>
                 )}
 
-                {/* Testimonials */}
                 <div>
                   <h3 className="font-bold text-sm mb-3">What Our Employees Say</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -557,7 +551,6 @@ export default function CompanyDetailClient({ slug }: Props) {
                   </div>
                 </div>
 
-                {/* CTA */}
                 <Card className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border-primary/20">
                   <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div>
@@ -570,7 +563,6 @@ export default function CompanyDetailClient({ slug }: Props) {
               </>
             )}
 
-            {/* ── Jobs Tab ── */}
             {activeTab === "jobs" && (
               <div>
                 <h2 className="text-lg font-bold mb-3">All Jobs ({activeJobsCount})</h2>
@@ -599,7 +591,6 @@ export default function CompanyDetailClient({ slug }: Props) {
               </div>
             )}
 
-            {/* ── About Tab ── */}
             {activeTab === "about" && (
               <div className="space-y-6">
                 <div>
@@ -632,7 +623,6 @@ export default function CompanyDetailClient({ slug }: Props) {
               </div>
             )}
 
-            {/* ── Reviews Tab ── */}
             {activeTab === "reviews" && (
               <div className="space-y-6">
                 <h2 className="text-lg font-bold">Company Reviews</h2>
@@ -658,8 +648,7 @@ export default function CompanyDetailClient({ slug }: Props) {
                   </div>
                 )}
 
-                {/* Review Form */}
-                {isAuthenticated && (
+                {isAuthenticated && !userHasReviewed && (
                   <Card className="mt-6">
                     <CardHeader><CardTitle className="text-base">Write a Review</CardTitle></CardHeader>
                     <CardContent className="space-y-5">
@@ -711,6 +700,13 @@ export default function CompanyDetailClient({ slug }: Props) {
                   </Card>
                 )}
 
+                {isAuthenticated && userHasReviewed && (
+                  <div className="p-4 rounded-lg bg-muted/50 text-center">
+                    <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                    <p className="text-sm font-medium">{isBn ? "আপনি ইতিমধ্যে রিভিউ দিয়েছেন" : "You have already reviewed this company"}</p>
+                  </div>
+                )}
+
                 {reviewsLoading ? (
                   <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}</div>
                 ) : reviews.length > 0 ? (
@@ -740,7 +736,6 @@ export default function CompanyDetailClient({ slug }: Props) {
               </div>
             )}
 
-            {/* ── Benefits Tab ── */}
             {activeTab === "benefits" && (
               <div className="space-y-4">
                 <h2 className="text-lg font-bold">Benefits & Perks</h2>
@@ -759,7 +754,6 @@ export default function CompanyDetailClient({ slug }: Props) {
               </div>
             )}
 
-            {/* ── Followers Tab ── */}
             {activeTab === "followers" && (
               <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Followers ({followersCount})</CardTitle></CardHeader>

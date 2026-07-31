@@ -77,16 +77,10 @@ export default function ProfileSectionContact({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Field label={isBn ? "ইউনিয়ন" : "Union"}>
-          <Select value={unionName} onValueChange={setUnionName} disabled={!upazila}>
-            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-            <SelectContent>{((unions as any)[upazila] || []).map((u: string) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
-          </Select>
+          <Input value={unionName} onChange={(e) => setUnionName(e.target.value)} disabled={!upazila} placeholder={isBn ? "ইউনিয়ন লিখুন" : "Type union name"} />
         </Field>
         <Field label={isBn ? "পোস্ট অফিস" : "Post Office"}>
-          <Select value={postOffice} onValueChange={setPostOffice} disabled={!upazila}>
-            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-            <SelectContent>{((postOffices as any)[upazila] || []).map((p: string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-          </Select>
+          <Input value={postOffice} onChange={(e) => setPostOffice(e.target.value)} disabled={!upazila} placeholder={isBn ? "পোস্ট অফিস লিখুন" : "Type post office"} />
         </Field>
         <Field label={isBn ? "পোস্টাল কোড" : "Postal Code"}>
           <Input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />

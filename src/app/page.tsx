@@ -1012,7 +1012,7 @@ export default function HomePage() {
             ))}
           </div>
         ) : companies.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
             {companies.map((company, i) => {
               const cardColors = [
                 "bg-pink-50 dark:bg-pink-950/40 border-pink-200 dark:border-pink-800",

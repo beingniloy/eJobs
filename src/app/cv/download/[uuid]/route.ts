@@ -7,47 +7,67 @@ export async function GET(
   { params }: { params: Promise<{ uuid: string }> }
 ) {
   const { uuid } = await params;
-  const url = `${backendBase}/api/cv/${uuid}/download-pdf`;
 
-  // Forward auth from cookie or header
+  // Next.js strips Authorization headers from client requests,
+  // so the token is passed as a query param and forwarded as Bearer.
+  const token = req.nextUrl.searchParams.get("token") || "";
   const cookieHeader = req.headers.get("cookie") || "";
-  const authHeader = req.headers.get("authorization") || "";
 
-  const headers: Record<string, string> = {
+  const authHeaders: Record<string, string> = {
     Accept: "application/pdf",
   };
-  if (cookieHeader) headers["Cookie"] = cookieHeader;
-  if (authHeader) headers["Authorization"] = authHeader;
+  if (token) authHeaders["Authorization"] = `Bearer ${token}`;
+  if (cookieHeader) authHeaders["Cookie"] = cookieHeader;
 
+  // 1. Try auth-protected download (owner's private resume)
   try {
-    const res = await fetch(url, {
-      headers,
+    const res = await fetch(`${backendBase}/api/candidate/cv/resumes/${uuid}/download`, {
+      headers: authHeaders,
+      cache: "no-store",
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (res.ok) {
+      const ct = res.headers.get("content-type") || "";
+      if (ct.includes("pdf") || ct.includes("octet-stream")) {
+        const buffer = await res.arrayBuffer();
+        return new NextResponse(buffer, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="resume-${uuid}.pdf"`,
+            "Cache-Control": "no-cache",
+          },
+        });
+      }
+    }
+  } catch { /* proxy failed */ }
+
+  // 2. Try public download (shared resume)
+  try {
+    const res = await fetch(`${backendBase}/api/candidate/cv/${uuid}/download-pdf`, {
+      headers: authHeaders,
       cache: "no-store",
     });
 
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      return new NextResponse(
-        JSON.stringify({ error: `Backend ${res.status}`, body }),
-        { status: res.status, headers: { "Content-Type": "application/json" } }
-      );
+    if (res.ok) {
+      const ct = res.headers.get("content-type") || "";
+      if (ct.includes("pdf") || ct.includes("octet-stream")) {
+        const buffer = await res.arrayBuffer();
+        return new NextResponse(buffer, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="resume-${uuid}.pdf"`,
+            "Cache-Control": "no-cache",
+          },
+        });
+      }
     }
+  } catch { /* public endpoint failed */ }
 
-    const contentType = res.headers.get("content-type") || "application/pdf";
-    const buffer = await res.arrayBuffer();
-
-    return new NextResponse(buffer, {
-      status: 200,
-      headers: {
-        "Content-Type": contentType,
-        "Content-Disposition": `attachment; filename="resume-${uuid}.pdf"`,
-        "Cache-Control": "no-cache",
-      },
-    });
-  } catch (err: any) {
-    return new NextResponse(
-      JSON.stringify({ error: err?.message || "Download failed" }),
-      { status: 502, headers: { "Content-Type": "application/json" } }
-    );
-  }
+  return new NextResponse(
+    JSON.stringify({ error: "PDF generation failed. Please try again." }),
+    { status: 500, headers: { "Content-Type": "application/json" } }
+  );
 }

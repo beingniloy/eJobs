@@ -109,44 +109,27 @@ export const resumeService = {
     return (res.data.data ?? res.data) as { share_url: string; uuid: string; is_public: boolean };
   },
 
-  // Download PDF — proxy route with auth forwarded
+  // Download PDF — server-side proxy handles auth + PDF generation
   downloadPdf: async (uuid: string): Promise<Blob> => {
     const token = getToken();
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const url = token
+      ? `/cv/download/${uuid}?token=${encodeURIComponent(token)}`
+      : `/cv/download/${uuid}`;
 
-    // Try server-side proxy (passes auth + cookie)
-    try {
-      const proxyRes = await fetch(`/cv/download/${uuid}`, { headers });
-      if (proxyRes.ok) {
-        const ct = proxyRes.headers.get("content-type") || "";
-        const blob = await proxyRes.blob();
-        if (blob.size > 100 && (ct.includes("pdf") || ct.includes("octet-stream"))) {
-          return blob;
-        }
+    const proxyRes = await fetch(url, {
+      signal: AbortSignal.timeout(45000),
+    });
+
+    if (proxyRes.ok) {
+      const ct = proxyRes.headers.get("content-type") || "";
+      const blob = await proxyRes.blob();
+      if (blob.size > 100 && (ct.includes("pdf") || ct.includes("octet-stream"))) {
+        return blob;
       }
-    } catch { /* proxy failed */ }
+    }
 
-    // Fallback: try authenticated axios endpoint
-    try {
-      const res = await api.get(`/cv/${uuid}/download-pdf`, {
-        responseType: "blob",
-      });
-      if (res.data && res.data.size > 100) return res.data;
-    } catch { /* auth endpoint failed */ }
-
-    // Final fallback: try public share endpoint
-    try {
-      const res = await fetch(`/api/cv/share/${uuid}/download`, {
-        headers,
-      });
-      if (res.ok) {
-        const blob = await res.blob();
-        if (blob.size > 100) return blob;
-      }
-    } catch { /* share endpoint failed */ }
-
-    throw new Error("PDF download failed");
+    const errorBody = await proxyRes.json().catch(() => null);
+    throw new Error(errorBody?.error || "PDF download failed");
   },
 
   // Upload PDF CV
