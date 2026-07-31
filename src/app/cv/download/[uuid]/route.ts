@@ -3,21 +3,32 @@ import { NextRequest, NextResponse } from "next/server";
 const backendBase = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api").replace(/\/api\/?$/, "");
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ uuid: string }> }
 ) {
   const { uuid } = await params;
   const url = `${backendBase}/api/cv/${uuid}/download-pdf`;
 
+  // Forward auth from cookie or header
+  const cookieHeader = req.headers.get("cookie") || "";
+  const authHeader = req.headers.get("authorization") || "";
+
+  const headers: Record<string, string> = {
+    Accept: "application/pdf",
+  };
+  if (cookieHeader) headers["Cookie"] = cookieHeader;
+  if (authHeader) headers["Authorization"] = authHeader;
+
   try {
     const res = await fetch(url, {
-      headers: { Accept: "application/pdf" },
+      headers,
       cache: "no-store",
     });
 
     if (!res.ok) {
+      const body = await res.text().catch(() => "");
       return new NextResponse(
-        JSON.stringify({ error: `Backend returned ${res.status}` }),
+        JSON.stringify({ error: `Backend ${res.status}`, body }),
         { status: res.status, headers: { "Content-Type": "application/json" } }
       );
     }

@@ -1,6 +1,15 @@
 import api from "@/lib/api-client";
 import type { CvProfile, CvTemplate, Resume, ApiResponse } from "@/types";
 
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("auth-storage");
+    if (!raw) return null;
+    return JSON.parse(raw)?.state?.token || null;
+  } catch { return null; }
+}
+
 export const resumeService = {
   // Profile
   getProfile: async () => {
@@ -100,28 +109,42 @@ export const resumeService = {
     return (res.data.data ?? res.data) as { share_url: string; uuid: string; is_public: boolean };
   },
 
-  // Download PDF by UUID — uses server proxy for public, authenticated for private
+  // Download PDF — proxy route with auth forwarded
   downloadPdf: async (uuid: string): Promise<Blob> => {
-    // Try server-side proxy first (works for both public and private)
-    try {
-      const proxyRes = await fetch(`/cv/download/${uuid}`);
-      if (proxyRes.ok) {
-        const blob = await proxyRes.blob();
-        if (blob.size > 100) return blob;
-      }
-    } catch {
-      // Proxy failed, try direct
-    }
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    // Fallback: authenticated endpoint via axios
+    // Try server-side proxy (passes auth + cookie)
+    try {
+      const proxyRes = await fetch(`/cv/download/${uuid}`, { headers });
+      if (proxyRes.ok) {
+        const ct = proxyRes.headers.get("content-type") || "";
+        const blob = await proxyRes.blob();
+        if (blob.size > 100 && (ct.includes("pdf") || ct.includes("octet-stream"))) {
+          return blob;
+        }
+      }
+    } catch { /* proxy failed */ }
+
+    // Fallback: try authenticated axios endpoint
     try {
       const res = await api.get(`/cv/${uuid}/download-pdf`, {
         responseType: "blob",
       });
-      return res.data;
-    } catch {
-      // Final fallback
-    }
+      if (res.data && res.data.size > 100) return res.data;
+    } catch { /* auth endpoint failed */ }
+
+    // Final fallback: try public share endpoint
+    try {
+      const res = await fetch(`/api/cv/share/${uuid}/download`, {
+        headers,
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        if (blob.size > 100) return blob;
+      }
+    } catch { /* share endpoint failed */ }
 
     throw new Error("PDF download failed");
   },
