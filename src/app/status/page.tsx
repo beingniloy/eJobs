@@ -61,13 +61,7 @@ export default function StatusPage() {
     setLoading(true);
     setError(null);
     try {
-      const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
-      const cleanApiUrl = rawApiUrl.replace(/\/$/, "");
-      const apiUrl = cleanApiUrl.endsWith("/api") ? cleanApiUrl : `${cleanApiUrl}/api`;
-      const res = await fetch(
-        `${apiUrl}/health`,
-        { cache: "no-store" }
-      );
+      const res = await fetch("/api/health", { cache: "no-store" });
       const json = await res.json();
       setData(json);
     } catch (e: any) {
