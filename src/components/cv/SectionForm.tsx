@@ -31,7 +31,7 @@ export default function SectionForm({ section, data, onChange, isBn }: { section
   }
 }
 
-/* ─── Image compressor (toDataURL, guaranteed under limit) ─── */
+/* ─── Image compressor ─── */
 async function compressToWebp(file: File): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
   const url = URL.createObjectURL(file);
@@ -42,7 +42,6 @@ async function compressToWebp(file: File): Promise<File> {
       el.onerror = reject;
       el.src = url;
     });
-
     const attempts = [
       { maxDim: 500, quality: 0.55 },
       { maxDim: 400, quality: 0.50 },
@@ -50,7 +49,6 @@ async function compressToWebp(file: File): Promise<File> {
       { maxDim: 300, quality: 0.40 },
       { maxDim: 250, quality: 0.35 },
     ];
-
     for (const { maxDim, quality } of attempts) {
       const canvas = document.createElement("canvas");
       const scale = Math.min(maxDim / img.width, maxDim / img.height, 1);
@@ -59,19 +57,16 @@ async function compressToWebp(file: File): Promise<File> {
       const ctx = canvas.getContext("2d");
       if (!ctx) continue;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
       const dataUrl = canvas.toDataURL("image/webp", quality);
       const base64 = dataUrl.split(",")[1];
       const binary = atob(base64);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       const blob = new Blob([bytes], { type: "image/webp" });
-
       if (blob.size <= MAX_PHOTO_BYTES) {
         return new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" });
       }
     }
-
     /* last resort */
     const canvas = document.createElement("canvas");
     canvas.width = 200; canvas.height = 200;
@@ -148,9 +143,10 @@ function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, an
       </div>
       {field("Full Name", "পূর্ণ নাম", "full_name", "text", isBn ? "আপনার পূর্ণ নাম" : "John Doe")}
       {field("Professional Title", "পেশাদার উপাধি", "title", "text", isBn ? "যেমন: সফটওয়্যার ইঞ্জিনিয়ার" : "e.g. Software Engineer")}
-      {field("Email", "ইমেইল", "email", "email", isBn ? "আপনা@উদাহরণ.কম" : "you@example.com", (v) => v.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? (isBn ? "সঠিক ইমেইল দিন" : "Invalid email") : null)}
+      {field("Email", "ইমেইল", "email", "email", isBn ? "আপনা@উদাহরণ.com" : "you@example.com", (v) => v.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? (isBn ? "সঠিক ইমেইল দিন" : "Invalid email") : null)}
       {field("Phone", "ফোন", "phone", "tel", isBn ? "০১XXXXXXXXX" : "01XXXXXXXXX", (v) => v.trim() && !/^[+]?[\d\s()-]{7,20}$/.test(v) ? (isBn ? "সঠিক ফোন" : "Invalid phone") : null)}
       {field("Location", "অবস্থান", "location", "text", isBn ? "ঢাকা, বাংলাদেশ" : "Dhaka, Bangladesh")}
+      {field("Address", "ঠিকানা", "address", "text", isBn ? "পুরো ঠিকানা" : "Full address")}
       {field("Website", "ওয়েবসাইট", "website", "url", "https://...", (v) => v.trim() && !/^https?:\/\//i.test(v) ? (isBn ? "https:// দিয়ে শুরু করুন" : "Must start with http(s)") : null)}
       {field("LinkedIn", "LinkedIn", "linkedin", "url", "https://linkedin.com/in/...", (v) => v.trim() && !/^https?:\/\//i.test(v) ? (isBn ? "https:// দিয়ে শুরু করুন" : "Must start with http(s)") : null)}
       <div className="space-y-1.5">
@@ -162,12 +158,12 @@ function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, an
 }
 
 /* ═══════════════════════════════════════════════════
-   Work Experience  (dates → type="date")
+   Work Experience
    ═══════════════════════════════════════════════════ */
 
 function ExperienceSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
-  const addEntry = () => onChange([...data, { company: "", position: "", start_date: "", end_date: "", description: "" }]);
-  const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
+  const addEntry = () => onChange([...data, { company: "", position: "", location: "", start_date: "", end_date: "", is_current: false, description: "" }]);
+  const update = (i: number, key: string, val: any) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
   const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
 
   return (
@@ -175,19 +171,20 @@ function ExperienceSectionForm({ data, onChange, isBn }: { data: any[]; onChange
       {data.map((exp, i) => (
         <div key={i} className="p-3 border rounded-lg space-y-2 relative">
           <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => remove(i)}><X className="h-3 w-3" /></Button>
-          <Input value={exp.position || ""} onChange={(e) => update(i, "position", e.target.value)} placeholder={isBn ? "পদবি" : "Position"} className="h-8 text-sm" />
-          <Input value={exp.company || ""} onChange={(e) => update(i, "company", e.target.value)} placeholder={isBn ? "কোম্পানি" : "Company"} className="h-8 text-sm" />
+          <Input value={exp.position || exp.job_title || ""} onChange={(e) => update(i, "position", e.target.value)} placeholder={isBn ? "পদবি / শিরোনাম" : "Job Title / Position"} className="h-8 text-sm" />
+          <Input value={exp.company || exp.company_name || ""} onChange={(e) => update(i, "company", e.target.value)} placeholder={isBn ? "কোম্পানি / প্রতিষ্ঠান" : "Company / Organization"} className="h-8 text-sm" />
+          <Input value={exp.location || ""} onChange={(e) => update(i, "location", e.target.value)} placeholder={isBn ? "স্থান (ঐচ্ছিক)" : "Location (optional)"} className="h-8 text-sm" />
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label className="text-[10px] text-muted-foreground">{isBn ? "শুরুর তারিখ" : "Start Date"}</Label>
+              <Label className="text-[10px] text-muted-foreground">{isBn ? "শুরু" : "Start"}</Label>
               <Input type="date" value={exp.start_date || ""} onChange={(e) => update(i, "start_date", e.target.value)} className="h-8 text-sm" />
             </div>
             <div>
-              <Label className="text-[10px] text-muted-foreground">{isBn ? "শেষ তারিখ" : "End Date"}</Label>
+              <Label className="text-[10px] text-muted-foreground">{isBn ? "শেষ" : "End"}</Label>
               <Input type="date" value={exp.end_date || ""} onChange={(e) => update(i, "end_date", e.target.value)} className="h-8 text-sm" />
             </div>
           </div>
-          <Textarea value={exp.description || ""} onChange={(e) => update(i, "description", e.target.value)} placeholder={isBn ? "দায়িত্ব..." : "Responsibilities..."} className="min-h-[60px] text-sm" />
+          <Textarea value={exp.description || ""} onChange={(e) => update(i, "description", e.target.value)} placeholder={isBn ? "দায়িত্ব / অর্জন..." : "Responsibilities / Achievements..."} className="min-h-[60px] text-sm" />
         </div>
       ))}
       <Button variant="outline" size="sm" onClick={addEntry} className="w-full"><Plus className="h-3.5 w-3.5 mr-1" />{isBn ? "অভিজ্ঞতা যোগ" : "Add Experience"}</Button>
@@ -196,27 +193,159 @@ function ExperienceSectionForm({ data, onChange, isBn }: { data: any[]; onChange
 }
 
 /* ═══════════════════════════════════════════════════
-   Education
+   Education — ALL fields templates render
    ═══════════════════════════════════════════════════ */
 
 function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
-  const addEntry = () => onChange([...data, { degree: "", institution: "", year: "", field: "" }]);
-  const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
+  const addEntry = () => onChange([...data, {
+    degree: "", institution: "", board: "", field: "",
+    group_or_subject: "", start_date: "", end_date: "",
+    year: "", result: "", gpa_or_cgpa: "", description: "",
+  }]);
+  const update = (i: number, key: string, val: any) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
   const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
+  const EDUCATION_LEVELS = [
+    { value: "ssc", label: "SSC / O-Level" },
+    { value: "hsc", label: "HSC / A-Level" },
+    { value: "graduation", label: "Bachelor's / Graduation" },
+    { value: "post_graduation", label: "Master's / Post Graduation" },
+    { value: "diploma", label: "Diploma" },
+    { value: "phd", label: "PhD" },
+  ];
 
   return (
     <div className="space-y-4">
-      {data.map((edu, i) => (
-        <div key={i} className="p-3 border rounded-lg space-y-2 relative">
-          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => remove(i)}><X className="h-3 w-3" /></Button>
-          <Input value={edu.degree || ""} onChange={(e) => update(i, "degree", e.target.value)} placeholder={isBn ? "ডিগ্রি" : "Degree"} className="h-8 text-sm" />
-          <Input value={edu.institution || ""} onChange={(e) => update(i, "institution", e.target.value)} placeholder={isBn ? "প্রতিষ্ঠান" : "Institution"} className="h-8 text-sm" />
-          <div className="grid grid-cols-2 gap-2">
-            <Input value={edu.field || ""} onChange={(e) => update(i, "field", e.target.value)} placeholder={isBn ? "বিষয়" : "Field"} className="h-8 text-sm" />
-            <Input type="number" value={edu.year || ""} onChange={(e) => update(i, "year", e.target.value)} placeholder={isBn ? "বছর (যেমন ২০২০)" : "Year (e.g. 2020)"} className="h-8 text-sm" min="1950" max="2099" />
+      {data.map((edu, i) => {
+        const level = edu.degree || edu.level || "";
+        const isHigherEdu = level === "graduation" || level === "post_graduation" || level === "phd";
+        const levelLabel = isHigherEdu ? (isBn ? "ডিগ্রি" : "Degree") : (isBn ? "পর্যায়" : "Level");
+
+        return (
+          <div key={i} className="p-3 border rounded-lg space-y-3 relative">
+            <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => remove(i)}><X className="h-3 w-3" /></Button>
+
+            {/* Level / Degree Type */}
+            <div>
+              <Label className="text-[10px] text-muted-foreground">{levelLabel} *</Label>
+              <Input
+                value={edu.degree || ""}
+                onChange={(e) => update(i, "degree", e.target.value)}
+                placeholder={isBn ? "যেমন: SSC, HSC, B.Sc, M.Sc" : "e.g. SSC, HSC, B.Sc, M.Sc"}
+                className="h-8 text-sm"
+              />
+            </div>
+
+            {/* Board (for SSC/HSC) */}
+            {!isHigherEdu && (
+              <div>
+                <Label className="text-[10px] text-muted-foreground">{isBn ? "বোর্ড" : "Board"}</Label>
+                <Input
+                  value={edu.board || ""}
+                  onChange={(e) => update(i, "board", e.target.value)}
+                  placeholder={isBn ? "যেমন: ঢাকা শিক্ষা বোর্ড" : "e.g. Dhaka Board"}
+                  className="h-8 text-sm"
+                />
+              </div>
+            )}
+
+            {/* Institution */}
+            <div>
+              <Label className="text-[10px] text-muted-foreground">{isBn ? "প্রতিষ্ঠান" : "Institution"} *</Label>
+              <Input
+                value={edu.institution || edu.school_name || ""}
+                onChange={(e) => update(i, "institution", e.target.value)}
+                placeholder={isBn ? "প্রতিষ্ঠানের নাম" : "School / College / University name"}
+                className="h-8 text-sm"
+              />
+            </div>
+
+            {/* Location */}
+            <div>
+              <Label className="text-[10px] text-muted-foreground">{isBn ? "স্থান" : "Location"}</Label>
+              <Input
+                value={edu.location || ""}
+                onChange={(e) => update(i, "location", e.target.value)}
+                placeholder={isBn ? "যেমন: ঢাকা" : "e.g. Dhaka"}
+                className="h-8 text-sm"
+              />
+            </div>
+
+            {/* Group / Subject / Field */}
+            <div>
+              <Label className="text-[10px] text-muted-foreground">{isBn ? "বিষয় / গ্রুপ" : "Group / Subject / Field"}</Label>
+              <Input
+                value={edu.field || edu.group_or_subject || ""}
+                onChange={(e) => { update(i, "field", e.target.value); update(i, "group_or_subject", e.target.value); }}
+                placeholder={isHigherEdu
+                  ? (isBn ? "বিষয় (যেমন: CSE)" : "Subject (e.g. CSE)")
+                  : (isBn ? "গ্রুপ (যেমন: বিজ্ঞান)" : "Group (e.g. Science)")}
+                className="h-8 text-sm"
+              />
+            </div>
+
+            {/* Year / Dates */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-[10px] text-muted-foreground">{isBn ? "পাশের সাল" : "Passing Year"}</Label>
+                <Input
+                  type="number"
+                  value={edu.year || edu.passing_year || ""}
+                  onChange={(e) => { const v = e.target.value; update(i, "year", v); update(i, "passing_year", v); }}
+                  placeholder={isBn ? "২০২২" : "2022"}
+                  className="h-8 text-sm"
+                  min="1950" max="2099"
+                />
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">{isBn ? "বছর" : "Duration (Year)"}</Label>
+                <Input
+                  value={edu.duration || ""}
+                  onChange={(e) => update(i, "duration", e.target.value)}
+                  placeholder={isBn ? "যেমন: ২০২০-২০২২" : "e.g. 2020-2022"}
+                  className="h-8 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* GPA / CGPA / Result */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-[10px] text-muted-foreground">{isHigherEdu ? "CGPA" : "GPA"}</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  max="5"
+                  value={edu.gpa_or_cgpa || edu.gpa || edu.cgpa || edu.result || ""}
+                  onChange={(e) => { const v = e.target.value; update(i, "gpa_or_cgpa", v); update(i, "gpa", v); update(i, "result", v); }}
+                  placeholder={isHigherEdu ? "CGPA (e.g. 3.80)" : "GPA (e.g. 5.00)"}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">{isBn ? "গ্রেড / ফলাফল" : "Grade / Result"}</Label>
+                <Input
+                  value={edu.grade || ""}
+                  onChange={(e) => update(i, "grade", e.target.value)}
+                  placeholder={isBn ? "যেমন: A+" : "e.g. A+, First Class"}
+                  className="h-8 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <Label className="text-[10px] text-muted-foreground">{isBn ? "অতিরিক্ত তথ্য" : "Additional Info"}</Label>
+              <Textarea
+                value={edu.description || ""}
+                onChange={(e) => update(i, "description", e.target.value)}
+                placeholder={isBn ? "অতিরিক্ত তথ্য (ঐচ্ছিক)" : "Any extra info (optional)"}
+                className="min-h-[40px] text-sm"
+              />
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       <Button variant="outline" size="sm" onClick={addEntry} className="w-full"><Plus className="h-3.5 w-3.5 mr-1" />{isBn ? "শিক্ষা যোগ" : "Add Education"}</Button>
     </div>
   );
@@ -260,7 +389,7 @@ function SkillsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d
 }
 
 /* ═══════════════════════════════════════════════════
-   Certifications  (date → type="date")
+   Certifications
    ═══════════════════════════════════════════════════ */
 
 function CertificationsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
@@ -325,7 +454,7 @@ function LanguagesSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
    ═══════════════════════════════════════════════════ */
 
 function ProjectsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
-  const addEntry = () => onChange([...data, { name: "", description: "", url: "" }]);
+  const addEntry = () => onChange([...data, { name: "", description: "", url: "", technologies: "" }]);
   const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
   const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
 
@@ -334,8 +463,9 @@ function ProjectsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: 
       {data.map((proj, i) => (
         <div key={i} className="p-3 border rounded-lg space-y-2 relative">
           <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => remove(i)}><X className="h-3 w-3" /></Button>
-          <Input value={proj.name || ""} onChange={(e) => update(i, "name", e.target.value)} placeholder={isBn ? "প্রকল্পের নাম" : "Project Name"} className="h-8 text-sm" />
+          <Input value={proj.name || proj.project_name || ""} onChange={(e) => update(i, "name", e.target.value)} placeholder={isBn ? "প্রকল্পের নাম" : "Project Name"} className="h-8 text-sm" />
           <Input value={proj.url || ""} onChange={(e) => update(i, "url", e.target.value)} placeholder={isBn ? "লিঙ্ক (ঐচ্ছিক)" : "URL (optional)"} className="h-8 text-sm" />
+          <Input value={proj.technologies || ""} onChange={(e) => update(i, "technologies", e.target.value)} placeholder={isBn ? "প্রযুক্তি (কমা দিয়ে)" : "Technologies (comma-separated)"} className="h-8 text-sm" />
           <Textarea value={proj.description || ""} onChange={(e) => update(i, "description", e.target.value)} placeholder={isBn ? "বিবরণ..." : "Description..."} className="min-h-[60px] text-sm" />
         </div>
       ))}
@@ -345,7 +475,7 @@ function ProjectsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: 
 }
 
 /* ═══════════════════════════════════════════════════
-   Awards & Honors  (date → type="date")
+   Awards & Honors
    ═══════════════════════════════════════════════════ */
 
 function AwardsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
