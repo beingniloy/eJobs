@@ -26,8 +26,9 @@ export default function InlineEditor({ template, data, onChange, previewHtml, pr
   const [showMobilePreview, setShowMobilePreview] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="border-b bg-background sticky top-0 z-40">
+    <div className="h-screen flex flex-col overflow-hidden">
+      {/* ── Sticky Top Bar ── */}
+      <div className="border-b bg-background shrink-0 z-40">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
             <Button variant="ghost" size="sm" onClick={onBack} className="shrink-0"><ArrowLeft className="h-4 w-4 mr-1" />{isBn ? "ফিরে যান" : "Back"}</Button>
@@ -40,9 +41,7 @@ export default function InlineEditor({ template, data, onChange, previewHtml, pr
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <Button variant="outline" size="sm" onClick={onRefreshPreview}><RotateCcw className="h-3.5 w-3.5 sm:mr-1" /><span className="sm:inline">{isBn ? "রিফ্রেশ" : "Refresh"}</span></Button>
-            <Button variant="outline" size="sm" className="lg:hidden" onClick={() => setShowMobilePreview(!showMobilePreview)}>
-              <Eye className="h-4 w-4" />
-            </Button>
+            <Button variant="outline" size="sm" className="lg:hidden" onClick={() => setShowMobilePreview(!showMobilePreview)}><Eye className="h-4 w-4" /></Button>
             <Button size="sm" onClick={onSaveAndCreate} disabled={savingCreating}>
               {savingCreating ? <Loader2 className="h-4 w-4 animate-spin sm:mr-1.5" /> : <FileText className="h-4 w-4 sm:mr-1.5" />}
               <span className="sm:inline">{isBn ? "সেভ ও সিভি তৈরি" : "Save & Create"}</span>
@@ -51,9 +50,11 @@ export default function InlineEditor({ template, data, onChange, previewHtml, pr
         </div>
       </div>
 
+      {/* ── Two-Panel Layout: both independently scrollable ── */}
       <div className="flex-1 flex overflow-hidden">
+        {/* LEFT: Editor Panel — dedicated vertical scrollbar */}
         <div className={`${showMobilePreview ? 'hidden' : 'w-full'} lg:block lg:w-[45%] border-r overflow-y-auto`}>
-          <div className="p-4 space-y-2">
+          <div className="p-4 space-y-2 pb-8">
             {CV_SECTIONS.map((section) => {
               const Icon = section.icon;
               const isActive = activeSection === section.key;
@@ -78,25 +79,30 @@ export default function InlineEditor({ template, data, onChange, previewHtml, pr
           </div>
         </div>
 
-        <div className={`${showMobilePreview ? 'w-full' : 'hidden'} lg:block lg:w-[55%] bg-muted/30 overflow-y-auto`}>
-          <div className="sticky top-0 bg-muted/80 backdrop-blur p-2 flex items-center justify-between lg:hidden border-b">
+        {/* RIGHT: Preview Panel — sticky in viewport */}
+        <div className={`${showMobilePreview ? 'w-full' : 'hidden'} lg:block lg:w-[55%] bg-muted/30 overflow-hidden`}>
+          {/* Sticky header */}
+          <div className="sticky top-0 z-10 bg-muted/80 backdrop-blur p-2 flex items-center justify-between lg:hidden border-b">
             <span className="text-xs font-medium">{isBn ? "প্রিভিউ" : "Preview"}</span>
             <Button variant="ghost" size="sm" className="h-7 w-7" onClick={() => setShowMobilePreview(false)}><X className="h-3.5 w-3.5" /></Button>
           </div>
-          <div className="p-3 sm:p-6 flex items-start justify-center">
-            <div className="bg-white rounded-lg shadow-2xl w-full max-w-[600px] min-h-[600px] sm:min-h-[800px] overflow-hidden">
-              {previewLoading ? (
-                <div className="flex items-center justify-center h-[400px] sm:h-[600px]">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : previewHtml ? (
-                <iframe srcDoc={previewHtml} title={isBn ? "CV প্রিভিউ" : "CV Preview"} className="w-full border-0" style={{ minHeight: "600px" }} sandbox="allow-same-origin" />
-              ) : (
-                <div className="flex flex-col items-center justify-center h-[400px] sm:h-[600px] text-muted-foreground">
-                  <FileText className="h-16 w-16 mb-4" />
-                  <p>{isBn ? "প্রিভিউ লোড হচ্ছে..." : "Loading preview..."}</p>
-                </div>
-              )}
+          {/* Scrollable preview content */}
+          <div className="overflow-y-auto h-full p-3 sm:p-6">
+            <div className="flex items-start justify-center">
+              <div className="bg-white rounded-lg shadow-2xl w-full max-w-[600px] min-h-[600px] sm:min-h-[800px] overflow-hidden">
+                {previewLoading ? (
+                  <div className="flex items-center justify-center h-[400px] sm:h-[600px]">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : previewHtml ? (
+                  <iframe srcDoc={previewHtml} title={isBn ? "CV প্রিভিউ" : "CV Preview"} className="w-full border-0" style={{ minHeight: "600px" }} sandbox="allow-same-origin" />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-[400px] sm:h-[600px] text-muted-foreground">
+                    <FileText className="h-16 w-16 mb-4" />
+                    <p>{isBn ? "প্রিভিউ লোড হচ্ছে..." : "Loading preview..."}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
