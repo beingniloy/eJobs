@@ -55,6 +55,59 @@ function Field({ label, required, children, className = "" }: { label: string; r
   );
 }
 
+/**
+ * Compress an image file to webp, keeping max dimension 1920px, quality 0.82.
+ * Returns a File if input is an image, otherwise returns the original.
+ */
+async function compressImageToWebP(file: File, maxKb = 2000): Promise<File> {
+  if (!file.type.startsWith("image/")) return file;
+
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new window.Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      let w = img.width;
+      let h = img.height;
+      const maxDim = 1920;
+      if (w > maxDim || h > maxDim) {
+        const ratio = Math.min(maxDim / w, maxDim / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { URL.revokeObjectURL(url); return resolve(file); }
+      ctx.drawImage(img, 0, 0, w, h);
+
+      let quality = 0.82;
+      canvas.toBlob((blob) => {
+        URL.revokeObjectURL(url);
+        if (!blob) return resolve(file);
+
+        // If still too big, try lower quality
+        if (blob.size > maxKb * 1024 && quality > 0.3) {
+          canvas.toBlob((blob2) => {
+            URL.revokeObjectURL(url);
+            if (!blob2) return resolve(file);
+            const ext = ".webp";
+            const name = file.name.replace(/\.[^.]+$/, ext);
+            resolve(new File([blob2], name, { type: "image/webp" }));
+          }, "image/webp", 0.5);
+          return;
+        }
+
+        const ext = ".webp";
+        const name = file.name.replace(/\.[^.]+$/, ext);
+        resolve(new File([blob], name, { type: "image/webp" }));
+      }, "image/webp", quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 const STEPS = [
   { key: "personal", icon: User, labelEn: "Personal", labelBn: "ব্যক্তিগত" },
   { key: "contact", icon: Briefcase, labelEn: "Contact", labelBn: "যোগাযোগ" },
@@ -223,6 +276,26 @@ export default function CandidateProfilePage() {
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [user]);
+
+  // ─── Avatar change with webp compression ───
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    toast.info(isBn ? "ছবি প্রক্রিয়াকরণ হচ্ছে..." : "Processing image...");
+
+    const compressed = await compressImageToWebP(file);
+
+    if (compressed.size > 2 * 1024 * 1024) {
+      toast.error(isBn ? "ছবির সাইজ ২MB এর বেশি হতে পারে না। ছোট ছবি ব্যবহার করুন।" : "Image must be under 2MB. Use a smaller image.");
+      return;
+    }
+
+    const sizeKb = Math.round(compressed.size / 1024);
+    setAvatarFile(compressed);
+    setAvatarPreview(URL.createObjectURL(compressed));
+    toast.success(isBn ? `ছবি ${sizeKb}KB তে সংকুচিত হয়েছে` : `Image compressed to ${sizeKb}KB`);
+  };
 
   // ─── Education helpers ───
   const addEducation = () => setEducations([...educations, { level: "", board: "", group_or_subject: "", institute_name: "", passing_year: undefined, gpa_or_cgpa: undefined }]);
@@ -417,7 +490,7 @@ export default function CandidateProfilePage() {
       const status = error.response?.status;
       let msg = data?.message || "Failed to save profile";
       if (status === 413) {
-        msg = isBn ? "ফাইলের সাইজ বড় (সর্বোচ্চ 10MB)" : "File is too large (max 10MB)";
+        msg = isBn ? "ফাইলের সাইজ বড় (সর্বোচ্চ 2MB)" : "File is too large (max 2MB)";
       } else if (status === 422 && data?.errors) {
         const firstKey = Object.keys(data.errors)[0];
         if (firstKey) {
@@ -469,12 +542,14 @@ export default function CandidateProfilePage() {
                 <DefaultAvatar src={avatarPreview || null} name={fullNameEn || user?.name} className="h-20 w-20" />
                 <label className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer">
                   <Camera className="h-3.5 w-3.5" />
-                  <input type="file" className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setAvatarFile(f); setAvatarPreview(URL.createObjectURL(f)); } }} />
+                  <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp" onChange={handleAvatarChange} />
                 </label>
               </div>
               <div>
                 <p className="text-sm font-medium">{isBn ? "প্রোফাইল ফটো" : "Profile Photo"}</p>
-                <p className="text-xs text-muted-foreground">PNG, JPG, max 2MB</p>
+                <p className="text-xs text-muted-foreground">
+                  {isBn ? "JPEG, PNG — সর্বোচ্চ ২MB (স্বয়ংক্রিয়ভাবে WebP-তে রূপান্তরিত)" : "JPEG, PNG — max 2MB (auto-converted to WebP)"}
+                </p>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
