@@ -100,12 +100,30 @@ export const resumeService = {
     return (res.data.data ?? res.data) as { share_url: string; uuid: string; is_public: boolean };
   },
 
-  // Download PDF by UUID (public)
+  // Download PDF by UUID — uses server proxy for public, authenticated for private
   downloadPdf: async (uuid: string): Promise<Blob> => {
-    const res = await api.get(`/cv/${uuid}/download-pdf`, {
-      responseType: "blob",
-    });
-    return res.data;
+    // Try server-side proxy first (works for both public and private)
+    try {
+      const proxyRes = await fetch(`/cv/download/${uuid}`);
+      if (proxyRes.ok) {
+        const blob = await proxyRes.blob();
+        if (blob.size > 100) return blob;
+      }
+    } catch {
+      // Proxy failed, try direct
+    }
+
+    // Fallback: authenticated endpoint via axios
+    try {
+      const res = await api.get(`/cv/${uuid}/download-pdf`, {
+        responseType: "blob",
+      });
+      return res.data;
+    } catch {
+      // Final fallback
+    }
+
+    throw new Error("PDF download failed");
   },
 
   // Upload PDF CV

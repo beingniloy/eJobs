@@ -84,26 +84,28 @@ export default function CvPreviewClient() {
           "Failed to load resume preview"
         );
       })
-      .finally(() => setLoading(false));
+      .finally(() => setLoading(false);
   }, [uuid]);
 
   const handleDownloadPdf = async () => {
     setDownloading(true);
     try {
-      const blob = isPublic
-        ? await resumeService.downloadPdf(uuid)
-        : await resumeService.downloadResume(uuid);
+      const blob = await resumeService.downloadPdf(uuid);
+      if (!blob || blob.size < 100) {
+        throw new Error("Empty or invalid PDF");
+      }
       const url = URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
       const a = document.createElement("a");
       a.href = url;
-      a.download = "resume.pdf";
+      a.download = `resume-${uuid}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
       toast.success(isBn ? "PDF ডাউনলোড শুরু হয়েছে" : "PDF download started");
-    } catch {
-      toast.error(isBn ? "ডাউনলোড ব্যর্থ" : "Download failed");
+    } catch (err: any) {
+      console.error("Download error:", err);
+      toast.error(isBn ? "ডাউনলোড ব্যর্থ হয়েছে" : "Download failed. Please try again.");
     } finally {
       setDownloading(false);
     }
