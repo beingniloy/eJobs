@@ -5,14 +5,15 @@ import type { useResumeWizard } from "@/hooks/use-resume-wizard";
 import { useThemeStore } from "@/store/theme-store";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api-client";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, ChevronDown, ChevronUp, User } from "lucide-react";
-import { toast } from "sonner";
+import { ArrowRight, ChevronDown, ChevronUp, User, Loader2 } from "lucide-react";
+import { compressToWebp } from "@/components/cv/sections/utils";
 
 const MAX_CHARS = { full_name: 80, email: 80, phone: 30, address: 100, zip_code: 20, city: 50 };
 const GENDERS = ["Male", "Female", "Other"];
@@ -34,6 +35,7 @@ export default function PersonalStep({ wizard, onNext }: { wizard: ReturnType<ty
   const [showMore, setShowMore] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importedRef = useRef(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   // Auto-import from logged-in profile on mount
   useEffect(() => {
@@ -76,12 +78,32 @@ export default function PersonalStep({ wizard, onNext }: { wizard: ReturnType<ty
     updatePersonal({ [key]: val });
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) { toast.error(isBn ? "শুধুমাত্র ছবি" : "Only images"); return; }
     if (file.size > 2 * 1024 * 1024) { toast.error(isBn ? "২MB এর কম" : "Max 2MB"); return; }
-    updatePersonal({ photo_url: URL.createObjectURL(file) });
+    setUploadingPhoto(true);
+    try {
+      const compressed = await compressToWebp(file);
+      const formData = new FormData();
+      formData.append("photo", compressed);
+      const res = await api.post("/candidate/cv/profile/upload-photo", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const photoUrl = res.data?.data?.photo_url || res.data?.photo_url;
+      if (photoUrl) {
+        updatePersonal({ photo_url: photoUrl });
+        toast.success(isBn ? "ছবি আপলোড হয়েছে" : "Photo uploaded");
+      } else {
+        toast.error(isBn ? "ছবি আপলোড ব্যর্থ" : "Upload failed");
+      }
+    } catch {
+      toast.error(isBn ? "ছবি আপলোড ব্যর্থ" : "Upload failed");
+    } finally {
+      setUploadingPhoto(false);
+    }
+    e.target.value = "";
   };
 
   const photoDisplay = p.photo_url
@@ -95,9 +117,15 @@ export default function PersonalStep({ wizard, onNext }: { wizard: ReturnType<ty
         <p className="text-sm text-muted-foreground">Resume language: English</p>
 
         <div className="flex items-center gap-4">
-          <button type="button" onClick={() => fileInputRef.current?.click()}
+          <button type="button" onClick={() => !uploadingPhoto && fileInputRef.current?.click()}
             className="w-20 h-20 rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden hover:border-primary/50 transition-colors cursor-pointer shrink-0">
-            {photoDisplay ? <img src={photoDisplay} alt="Photo" className="w-full h-full object-cover rounded-lg" /> : <User className="h-8 w-8 text-muted-foreground/40" />}
+            {uploadingPhoto ? (
+              <Loader2 className="h-6 w-6 text-primary animate-spin" />
+            ) : photoDisplay ? (
+              <img src={photoDisplay} alt="Photo" className="w-full h-full object-cover rounded-lg" />
+            ) : (
+              <User className="h-8 w-8 text-muted-foreground/40" />
+            )}
           </button>
           <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoChange} />
           <div className="text-sm">
