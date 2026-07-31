@@ -44,8 +44,13 @@ export default function SectionForm({ section, data, onChange, isBn }: { section
   }
 }
 
-async function compressToWebp(file: File, maxBytes = 2 * 1024 * 1024): Promise<File> {
+/**
+ * Aggressively compress an image to WebP, guaranteed under maxBytes.
+ * Iterates: smaller dimensions + lower quality until size fits.
+ */
+async function compressToWebp(file: File, maxBytes = 1900 * 1024): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
+
   const url = URL.createObjectURL(file);
   const img = await new Promise<HTMLImageElement>((res, rej) => {
     const i = new window.Image();
@@ -53,19 +58,64 @@ async function compressToWebp(file: File, maxBytes = 2 * 1024 * 1024): Promise<F
     i.onerror = rej;
     i.src = url;
   });
-  for (const maxDim of [1280, 960, 640]) {
+
+  const attempts = [
+    { maxDim: 800, quality: 0.65 },
+    { maxDim: 640, quality: 0.60 },
+    { maxDim: 512, quality: 0.55 },
+    { maxDim: 400, quality: 0.50 },
+  ];
+
+  for (const { maxDim, quality } of attempts) {
     const canvas = document.createElement("canvas");
-    let w = img.width, h = img.height;
-    if (w > maxDim || h > maxDim) { const r = Math.min(maxDim / w, maxDim / h); w = Math.round(w * r); h = Math.round(h * r); }
-    canvas.width = w; canvas.height = h;
-    canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
-    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/webp", 0.82));
-    URL.revokeObjectURL(url);
-    if (!blob || blob.size > maxBytes) continue;
-    return new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" });
+    let w = img.width;
+    let h = img.height;
+
+    // Always resize — force downscale to maxDim
+    const ratio = Math.min(maxDim / w, maxDim / h, 1);
+    w = Math.round(w * ratio);
+    h = Math.round(h * ratio);
+
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) continue;
+
+    ctx.drawImage(img, 0, 0, w, h);
+
+    const blob = await new Promise<Blob | null>((r) =>
+      canvas.toBlob(r, "image/webp", quality)
+    );
+
+    if (blob && blob.size <= maxBytes) {
+      URL.revokeObjectURL(url);
+      return new File(
+        [blob],
+        file.name.replace(/\.[^.]+$/, ".webp"),
+        { type: "image/webp" }
+      );
+    }
   }
+
+  // Last resort: force smallest size
+  const canvas = document.createElement("canvas");
+  const smallest = 320;
+  const ratio = Math.min(smallest / img.width, smallest / img.height, 1);
+  canvas.width = Math.round(img.width * ratio);
+  canvas.height = Math.round(img.height * ratio);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) { URL.revokeObjectURL(url); return file; }
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  const blob = await new Promise<Blob | null>((r) =>
+    canvas.toBlob(r, "image/webp", 0.40)
+  );
+
   URL.revokeObjectURL(url);
-  return file;
+
+  if (!blob) return file;
+  const name = file.name.replace(/\.[^.]+$/, ".webp");
+  return new File([blob], name, { type: "image/webp" });
 }
 
 function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, any>; onChange: (d: any) => void; isBn: boolean }) {
@@ -75,13 +125,8 @@ function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, an
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
-      toast.error(isBn ? "শুধুমাত্র JPG, PNG এবং WebP ছবি অনুমোদিত" : "Only JPG, PNG and WebP images are allowed");
-      e.target.value = "";
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error(isBn ? "ছবির সাইজ ৫MB এর কম হতে হবে" : "Image size must be under 5MB");
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) {
+      toast.error(isBn ? "শুধুমাত্র JPG, PNG, WebP এবং GIF ছবি অনুমোদিত" : "Only JPG, PNG, WebP and GIF images are allowed");
       e.target.value = "";
       return;
     }
@@ -140,8 +185,8 @@ function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, an
         </div>
         <div className="flex-1 min-w-0">
           <Label className="text-xs font-medium">{isBn ? "প্রোফাইল ছবি" : "Profile Photo"}</Label>
-          <Input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploading} className="h-8 text-sm mt-1" />
-          {uploading && <p className="text-xs text-muted-foreground mt-1">{isBn ? "আপলোড হচ্ছে..." : "Uploading..."}</p>}
+          <Input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handlePhotoUpload} disabled={uploading} className="h-8 text-sm mt-1" />
+          {uploading && <p className="text-xs text-muted-foreground mt-1">{isBn ? "কম্প্রেস ও আপলোড হচ্ছে..." : "Compressing & uploading..."}</p>}
         </div>
       </div>
       {field("Full Name", "পূর্ণ নাম", "full_name", "text", isBn ? "আপনার পূর্ণ নাম" : "John Doe")}
