@@ -41,7 +41,7 @@ export default function WalletPage() {
       setWithdrawalMethods(d.withdrawal_methods || []);
       setTransactions(d.transactions || []);
       setWithdrawals(d.withdrawals || []);
-    }).catch(() => toast.error("Failed to load wallet")).finally(() => setLoading(false));
+    }).catch((err) => toast.error(err?.response?.data?.message || "Failed to load wallet")).finally(() => setLoading(false));
     api.get("/settings/financial").then((r) => {
       setFinancialSettings(r.data?.data || r.data || {});
     }).catch(() => toast.error("Failed to load financial settings"));
