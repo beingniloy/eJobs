@@ -1,0 +1,69 @@
+"use client";
+
+import React from "react";
+import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+
+interface TimelineItem {
+  title: string;
+  subtitle: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
+  extra?: string;
+  description?: string;
+}
+
+interface Props {
+  icon: React.ElementType;
+  title: string;
+  items: TimelineItem[];
+  editHref: string;
+  isBn: boolean;
+}
+
+export default function ProfileTimeline({ icon: Icon, title, items, editHref, isBn }: Props) {
+  if (!items.length) return null;
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <Icon className="h-5 w-5 text-muted-foreground" />
+            {title}
+          </h2>
+          <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
+            <Link href={editHref}><Plus className="h-3.5 w-3.5" /></Link>
+          </Button>
+        </div>
+        <div className="space-y-0">
+          {items.map((item, i) => (
+            <div key={i} className="relative pl-8 pb-6 last:pb-0">
+              <div className="absolute left-0 top-1.5 w-[18px] flex flex-col items-center">
+                <div className="h-[18px] w-[18px] rounded-full bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-400 dark:border-blue-500 flex items-center justify-center">
+                  <div className="h-2 w-2 rounded-full bg-blue-500" />
+                </div>
+                {i < items.length - 1 && <div className="w-px flex-1 bg-border mt-1" />}
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm">{item.title}</h3>
+                <p className="text-sm text-foreground">{item.subtitle}</p>
+                {item.location && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{item.location}</p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  {item.startDate}{item.endDate ? ` - ${item.endDate}` : ""}
+                  {item.extra ? ` · ${item.extra}` : ""}
+                </p>
+                {item.description && <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{item.description}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
