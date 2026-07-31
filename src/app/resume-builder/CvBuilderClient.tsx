@@ -23,7 +23,7 @@ import PersonalInfoModal from "@/components/cv/PersonalInfoModal";
 import TemplateCard from "@/components/cv/TemplateCard";
 import {
   FileText, Download, Sparkles, Plus, Loader2, Copy, Share2,
-  Trash2, Clock, Eye, Crown, Zap,
+  Trash2, Clock, Eye, Crown, Zap, Shield,
   ArrowRight, Wallet, Bot, ChevronDown, ChevronUp,
   Briefcase, BookOpen, Languages, PenTool,
   Check, X,
@@ -160,7 +160,6 @@ export default function CvBuilderClient() {
       setShowPersonalInfoModal(true);
       return;
     }
-    // Navigate to the edit page with the template slug in the URL
     router.push(`/resume-builder/edit/${template.slug}`);
   };
 
@@ -227,7 +226,6 @@ export default function CvBuilderClient() {
     finally { setDeleting(false); setDeleteTarget(null); }
   };
 
-  // Navigate to /resume-builder/edit/{slug} for editing
   const handleEditTemplate = (template: CvTemplate) => {
     router.push(`/resume-builder/edit/${template.slug}`);
   };
