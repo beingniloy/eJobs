@@ -1,20 +1,19 @@
 "use client";
 
-import { FileText, Crown, Check, Eye, Shield, PenTool, CreditCard, ArrowRight } from "lucide-react";
+import { FileText, Crown, Check, Shield, PenTool, CreditCard, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TEMPLATE_GRADIENTS } from "@/constants/cv-builder";
 import { formatCurrency } from "@/lib/utils";
 import type { CvTemplate } from "@/types";
 
-export default function TemplateCard({ template, index, isBn, isPurchased, creating, onUse, onPreview, onStartEdit }: {
+export default function TemplateCard({ template, index, isBn, isPurchased, creating, onUse, onStartEdit }: {
   template: CvTemplate;
   index: number;
   isBn: boolean;
   isPurchased: boolean;
   creating: boolean;
   onUse: (t: CvTemplate) => void;
-  onPreview: (t: CvTemplate) => void;
   onStartEdit: (t: CvTemplate) => void;
 }) {
   const previewSrc = template.preview_image_path
@@ -41,11 +40,6 @@ export default function TemplateCard({ template, index, isBn, isPurchased, creat
             <Check className="h-3 w-3 mr-1" />{isBn ? "কিনেছেন" : "Owned"}
           </Badge>
         )}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-          <Button size="sm" variant="secondary" className="shadow-lg" onClick={() => onPreview(template)}>
-            <Eye className="h-4 w-4 mr-1.5" />{isBn ? "প্রিভিউ" : "Preview"}
-          </Button>
-        </div>
       </div>
       <div className="p-4 space-y-3">
         <div>

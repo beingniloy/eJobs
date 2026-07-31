@@ -22,7 +22,6 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TemplatePurchaseDialog from "@/components/cv/TemplatePurchaseDialog";
 import PersonalInfoModal from "@/components/cv/PersonalInfoModal";
 import TemplateCard from "@/components/cv/TemplateCard";
@@ -31,10 +30,10 @@ import {
   FileText, Download, Sparkles, Plus, Loader2, Copy, Share2,
   Trash2, Clock, CheckCircle, LinkIcon, Eye, Crown, Zap,
   ArrowRight, Wallet, AlertCircle, CreditCard, Shield, Bot,
-  ArrowLeft, ChevronDown, ChevronRight, MapPin, Building2,
+  ChevronDown, ChevronUp, MapPin, Building2,
   GraduationCap, Star, Phone, Mail, Globe, User, Award,
   Briefcase, BookOpen, Code, Languages, Heart, PenTool,
-  Check, X, ChevronUp, RotateCcw, Image, Settings,
+  Check, X, RotateCcw, Settings,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -72,27 +71,6 @@ export default function CvBuilderClient() {
   const [showPersonalInfoModal, setShowPersonalInfoModal] = useState(false);
   const [pendingTemplateSlug, setPendingTemplateSlug] = useState<string | null>(null);
 
-  const preloadPreviews = async (templates: CvTemplate[]) => {
-    const cached = sessionStorage.getItem("cv_preview_cache");
-    const existing: Record<string, string> = cached ? JSON.parse(cached) : {};
-    previewCache.current = existing;
-    templates.forEach((t) => {
-      if (existing[t.slug]) return;
-      resumeService.getPreviewDemo(t.slug).then((html) => {
-        previewCache.current[t.slug] = html;
-        try { sessionStorage.setItem("cv_preview_cache", JSON.stringify(previewCache.current)); } catch {}
-      }).catch(() => {});
-    });
-  };
-
-  const previewContainerRef = useRef<HTMLDivElement>(null);
-  const [previewHtml, setPreviewHtml] = useState<string>("");
-  const [previewScale, setPreviewScale] = useState(1);
-  const [previewSlug, setPreviewSlug] = useState<string | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewError, setPreviewError] = useState<string | null>(null);
-  const previewCache = useRef<Record<string, string>>({});
-
   const [activeView, setActiveView] = useState<"landing" | "editor">("landing");
   const [editorTemplate, setEditorTemplate] = useState<CvTemplate | null>(null);
   const [editorData, setEditorData] = useState<Record<string, any>>({});
@@ -126,10 +104,6 @@ export default function CvBuilderClient() {
       const merged = [...apiMap.values(), ...stored.filter((r) => !apiMap.has(r.uuid))];
       setResumes(merged);
       storeResumes(merged);
-
-      if (templatesData.length > 0) {
-        preloadPreviews(templatesData);
-      }
     } catch {} finally { setLoading(false); }
   }, []);
 
@@ -338,32 +312,6 @@ export default function CvBuilderClient() {
     finally { setDeleting(false); setDeleteTarget(null); }
   };
 
-  useEffect(() => {
-    if (!previewHtml || !previewContainerRef.current) { setPreviewScale(1); return; }
-    const el = previewContainerRef.current;
-    const ro = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-      const s = Math.min(width / 800, height / 1130, 1);
-      setPreviewScale(s);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [previewHtml]);
-
-  const handlePreviewDemo = async (template: CvTemplate) => {
-    setPreviewSlug(template.slug); setPreviewError(null);
-    const cached = previewCache.current[template.slug];
-    if (cached) { setPreviewHtml(cached); return; }
-    setPreviewHtml(""); setPreviewLoading(true);
-    try {
-      const html = await resumeService.getPreviewDemo(template.slug);
-      previewCache.current[template.slug] = html;
-      try { sessionStorage.setItem("cv_preview_cache", JSON.stringify(previewCache.current)); } catch {}
-      setPreviewHtml(html);
-    } catch (err: any) { setPreviewError(err.message || "Failed"); }
-    finally { setPreviewLoading(false); }
-  };
-
   const startEditor = (template: CvTemplate) => {
     editorInitialized.current = false;
     setEditorTemplate(template);
@@ -489,7 +437,7 @@ export default function CvBuilderClient() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
                 {[
-                  { step: "1", icon: FileText, title_en: "Choose Template", title_bn: "টেমপ্লেট বাছুন", desc_en: "Pick from 8 professionally designed, ATS-friendly templates", desc_bn: "৮টি পেশাদার, ATS-বান্ধব টেমপ্লেট থেকে বাছুন" },
+                  { step: "1", icon: FileText, title_en: "Choose Template", title_bn: "টেমপ্লেট বাছুন", desc_en: "Pick from professionally designed, ATS-friendly templates", desc_bn: "পেশাদার, ATS-বান্ধব টেমপ্লেট থেকে বাছুন" },
                   { step: "2", icon: PenTool, title_en: "Fill Your Details", title_bn: "তথ্য পূরণ করুন", desc_en: "Use our smart form or AI assistant to add your information", desc_bn: "আমাদের স্মার্ট ফর্ম বা AI সহকারী ব্যবহার করে তথ্য যোগ করুন" },
                   { step: "3", icon: Download, title_en: "Download & Share", title_bn: "ডাউনলোড ও শেয়ার", desc_en: "Export as PDF or get a shareable link to send to employers", desc_bn: "PDF হিসেবে এক্সপোর্ট করুন বা নিয়োগদাতাকে পাঠানোর জন্য লিঙ্ক পান" },
                 ].map((item, i) => (
@@ -512,7 +460,7 @@ export default function CvBuilderClient() {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center mb-12">
                 <h2 className="text-2xl md:text-3xl font-bold mb-3">
-                  {isBn ? "প্রিমিয়াম টেমপ্লেট বাছাই করুন" : "Choose a Premium Template"}
+                  {isBn ? "টেমপ্লেট বাছাই করুন" : "Choose a Template"}
                 </h2>
                 <p className="text-muted-foreground max-w-xl mx-auto">
                   {isBn ? "সকল টেমপ্লেট ATS-বান্ধব এবং প্রিন্ট-অপ্টিমাইজড" : "All templates are ATS-friendly and print-optimized"}
@@ -535,7 +483,6 @@ export default function CvBuilderClient() {
                       isPurchased={purchasedTemplateSlugs.has(template.slug)}
                       creating={creating}
                       onUse={handleUseTemplate}
-                      onPreview={handlePreviewDemo}
                       onStartEdit={startEditor}
                     />
                   ))}
@@ -555,10 +502,10 @@ export default function CvBuilderClient() {
                 {[
                   { icon: Sparkles, title_en: "AI-Powered", title_bn: "AI-চালিত", desc_en: "Generate your CV content with AI. Just describe your experience and let AI build your profile.", desc_bn: "AI দিয়ে আপনার CV তৈরি করুন। শুধু আপনার অভিজ্ঞতা লিখুন।" },
                   { icon: Shield, title_en: "ATS-Friendly", title_bn: "ATS-বান্ধব", desc_en: "Our templates are designed to pass Applicant Tracking Systems used by top companies.", desc_bn: "আমাদের টেমপ্লেট শীর্ষ কোম্পানির ATS পাস করতে ডিজাইন করা।" },
-                  { icon: Eye, title_en: "Live Preview", title_bn: "লাইভ প্রিভিউ", desc_en: "See your changes in real-time as you fill in your details. No guessing what the final result looks like.", desc_bn: "তথ্য পূরণ করার সাথে সাথে পরিবর্তন দেখুন।" },
-                  { icon: Download, title_en: "PDF Export", title_bn: "PDF এক্সপোর্ট", desc_en: "Download your resume as a high-quality, print-ready PDF file in seconds.", desc_bn: "সেকেন্ডের মধ্যে উচ্চ মানের PDF ফাইল ডাউনলোড করুন।" },
-                  { icon: Share2, title_en: "Shareable Links", title_bn: "শেয়ারযোগ্য লিঙ্ক", desc_en: "Generate a public link to share your CV with recruiters or on social media.", desc_bn: "রিক্রুটারদের সাথে শেয়ার করতে পাবলিক লিঙ্ক তৈরি করুন।" },
-                  { icon: Languages, title_en: "Bilingual Support", title_bn: "দ্বিভাষিক", desc_en: "Create your CV in both English and Bengali with full bilingual UI support.", desc_bn: "ইংরেজি ও বাংলায় CV তৈরি করুন।" },
+                  { icon: Eye, title_en: "Live Preview", title_bn: "লাইভ প্রিভিউ", desc_en: "See your changes in real-time as you fill in your details.", desc_bn: "তথ্য পূরণ করার সাথে সাথে পরিবর্তন দেখুন।" },
+                  { icon: Download, title_en: "PDF Export", title_bn: "PDF এক্সপোর্ট", desc_en: "Download your resume as a high-quality, print-ready PDF file.", desc_bn: "সেকেন্ডের মধ্যে উচ্চ মানের PDF ফাইল ডাউনলোড করুন।" },
+                  { icon: Share2, title_en: "Shareable Links", title_bn: "শেয়ারযোগ্য লিঙ্ক", desc_en: "Generate a public link to share your CV with recruiters.", desc_bn: "রিক্রুটারদের সাথে শেয়ার করতে পাবলিক লিঙ্ক তৈরি করুন।" },
+                  { icon: Languages, title_en: "Bilingual Support", title_bn: "দ্বিভাষিক", desc_en: "Create your CV in both English and Bengali.", desc_bn: "ইংরেজি ও বাংলায় CV তৈরি করুন।" },
                 ].map((item, i) => (
                   <div key={i} className="p-6 rounded-xl bg-background border hover:shadow-md transition-shadow">
                     <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
@@ -590,7 +537,7 @@ export default function CvBuilderClient() {
                       </div>
                     )}
                     <p className="text-sm text-muted-foreground">
-                      {isBn ? "আপনার অভিজ্ঞতা, দক্ষতা এবং শিক্ষার সংক্ষিপ্ত বিবরণ লিখুন। AI আপনার জন্য একটি পেশাদার CV প্রোফাইল তৈরি করবে۔"
+                      {isBn ? "আপনার অভিজ্ঞতা, দক্ষতা এবং শিক্ষার সংক্ষিপ্ত বিবরণ লিখুন। AI আপনার জন্য একটি পেশাদার CV প্রোফাইল তৈরি করবে।"
                         : "Describe your experience, skills, and education. AI will create a professional CV profile for you."}
                     </p>
                     <Textarea
@@ -659,7 +606,7 @@ export default function CvBuilderClient() {
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Clock className="h-3 w-3" />{formatDate(resume.created_at)}</div>
                         <div className="flex items-center gap-1 pt-1 border-t">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.push(`/cv/preview/${resume.uuid}`)} title="Edit/Preview"><Eye className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.push(`/cv/preview/${resume.uuid}`)} title="View"><Eye className="h-3.5 w-3.5" /></Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownloadPdf(resume.uuid)} title="PDF"><Download className="h-3.5 w-3.5" /></Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleGetShareLink(resume)} title="Share"><Share2 className={`h-3.5 w-3.5 ${resume.is_public ? "text-primary" : ""}`} /></Button>
                           {resume.is_public && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopyLink(resume)} title="Copy"><LinkIcon className="h-3.5 w-3.5" /></Button>}
@@ -690,13 +637,12 @@ export default function CvBuilderClient() {
                         className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
                         onClick={() => setOpenFaq(openFaq === i ? null : i)}
                         aria-expanded={isOpen}
-                        aria-controls={`faq-panel-${i}`}
                       >
                         <span className="font-medium text-sm pr-4">{isBn ? item.q_bn : item.q_en}</span>
                         {isOpen ? <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
                       </button>
                       {isOpen && (
-                        <div id={`faq-panel-${i}`} role="region" aria-labelledby={`faq-question-${i}`} className="px-4 pb-4 text-sm text-muted-foreground border-t">
+                        <div className="px-4 pb-4 text-sm text-muted-foreground border-t">
                           <p className="pt-3">{isBn ? item.a_bn : item.a_en}</p>
                         </div>
                       )}
@@ -767,19 +713,6 @@ export default function CvBuilderClient() {
       {purchaseTemplate && <TemplatePurchaseDialog template={purchaseTemplate} open={!!purchaseTemplate} onClose={() => setPurchaseTemplate(null)} onSuccess={loadData} />}
 
       <PersonalInfoModal open={showPersonalInfoModal} onClose={() => { setShowPersonalInfoModal(false); setPendingTemplateSlug(null); }} onComplete={handlePersonalInfoModalComplete} />
-
-      <Dialog open={!!previewSlug} onOpenChange={(v) => { if (!v) { setPreviewSlug(null); setPreviewHtml(""); } }}>
-        <DialogContent className="sm:max-w-4xl w-full sm:max-h-[90vh] max-sm:max-w-full max-sm:h-dvh max-sm:max-h-dvh max-sm:m-0 max-sm:rounded-none p-0 overflow-y-auto">
-          <DialogHeader className="px-4 sm:px-6 pt-6 pb-2"><DialogTitle className="flex items-center gap-2"><Eye className="h-5 w-5 text-primary" />{isBn ? "টেমপ্লেট প্রিভিউ" : "Template Preview"}</DialogTitle></DialogHeader>
-          <div className="px-4 sm:px-6 pb-6 max-sm:pb-0 max-sm:h-[calc(100dvh-60px)]">
-            <div ref={previewContainerRef} className="w-full rounded-lg border overflow-y-auto overflow-x-hidden bg-white relative sm:h-[70vh] max-sm:h-full">
-              {previewLoading ? <div className="flex items-center justify-center h-full inset-0 absolute"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-              : previewError ? <div className="flex items-center justify-center h-full inset-0 absolute px-4"><p className="text-sm text-destructive text-center">{previewError}</p></div>
-              : previewHtml ? <div className="w-full flex justify-center py-4"><div style={{ width: 800, flexShrink: 0 }}><iframe srcDoc={previewHtml} title={isBn ? "টেমপ্লেট প্রিভিউ" : "Template Preview"} className="w-full border-0" style={{ minHeight: "1130px" }} sandbox="allow-same-origin" /></div></div> : null}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </PublicLayout>
   );
 }
