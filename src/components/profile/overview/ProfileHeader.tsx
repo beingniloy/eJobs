@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DefaultAvatar } from "@/components/ui/default-avatar";
-import { MapPin, Globe, Shield, Zap, ExternalLink, Edit3 } from "lucide-react";
+import { MapPin, Globe, Shield, Zap, ExternalLink, Edit3, CheckCircle } from "lucide-react";
 
 interface Props {
   profile: any;
@@ -83,5 +83,3 @@ export default function ProfileHeader({ profile, user, isPublic, activeBadges, i
     </Card>
   );
 }
-
-import { CheckCircle } from "lucide-react";
