@@ -16,57 +16,32 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import TemplatePurchaseDialog from "@/components/cv/TemplatePurchaseDialog";
 import PersonalInfoModal from "@/components/cv/PersonalInfoModal";
 import TemplateCard from "@/components/cv/TemplateCard";
-import InlineEditor from "@/components/cv/InlineEditor";
 import {
   FileText, Download, Sparkles, Plus, Loader2, Copy, Share2,
-  Trash2, Clock, CheckCircle, LinkIcon, Eye, Crown, Zap,
-  ArrowRight, Wallet, AlertCircle, CreditCard, Shield, Bot,
-  ChevronDown, ChevronUp, MapPin, Building2,
-  GraduationCap, Star, Phone, Mail, Globe, User, Award,
-  Briefcase, BookOpen, Code, Languages, Heart, PenTool,
-  Check, X, RotateCcw, Settings,
+  Trash2, Clock, Eye, Crown, Zap,
+  ArrowRight, Wallet, Bot, ChevronDown, ChevronUp,
+  Briefcase, BookOpen, Languages, PenTool,
+  Check, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { CvProfile, CvTemplate, Resume, Subscription } from "@/types";
-import { TEMPLATE_GRADIENTS, CV_SECTIONS, FAQ_ITEMS } from "@/constants/cv-builder";
-import { getStoredResumes, storeResumes, profileDataToEditorData, editorDataToProfile } from "@/lib/cv-builder-utils";
-
-const EDITOR_STORAGE_KEY = "cv_editor_state";
-
-function getStoredEditorState(): { slug: string | null; data: Record<string, any>; section: string } | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(EDITOR_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-
-function setStoredEditorState(state: { slug: string | null; data: Record<string, any>; section: string }) {
-  try { localStorage.setItem(EDITOR_STORAGE_KEY, JSON.stringify(state)); } catch {}
-}
-
-function clearStoredEditorState() {
-  try { localStorage.removeItem(EDITOR_STORAGE_KEY); } catch {}
-}
+import { TEMPLATE_GRADIENTS, FAQ_ITEMS } from "@/constants/cv-builder";
+import { getStoredResumes, storeResumes, profileDataToEditorData } from "@/lib/cv-builder-utils";
 
 export default function CvBuilderClient() {
   const { language } = useThemeStore();
   const isBn = language === "bn";
+  const router = useRouter();
 
   useEffect(() => {
     document.title = isBn ? "CV বিল্ডার | জব পোর্টাল" : "CV Builder | Job Portal";
   }, [isBn]);
-  const router = useRouter();
 
   const [templates, setTemplates] = useState<CvTemplate[]>([]);
   const [resumes, setResumes] = useState<Resume[]>([]);
@@ -88,27 +63,7 @@ export default function CvBuilderClient() {
   const [creating, setCreating] = useState(false);
   const [showPersonalInfoModal, setShowPersonalInfoModal] = useState(false);
   const [pendingTemplateSlug, setPendingTemplateSlug] = useState<string | null>(null);
-
-  const [activeView, setActiveView] = useState<"landing" | "editor">(() => {
-    const stored = getStoredEditorState();
-    return stored?.slug ? "editor" : "landing";
-  });
-  const [editorTemplate, setEditorTemplate] = useState<CvTemplate | null>(() => null);
-  const [editorData, setEditorData] = useState<Record<string, any>>(() => {
-    const stored = getStoredEditorState();
-    return stored?.data || {};
-  });
-  const [activeSection, setActiveSection] = useState(() => {
-    const stored = getStoredEditorState();
-    return stored?.section || "personal";
-  });
-  const [previewHtmlEditor, setPreviewHtmlEditor] = useState("");
-  const [previewLoadingEditor, setPreviewLoadingEditor] = useState(false);
-  const previewDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-
-  // Restore editor template from localStorage on mount
-  const editorRestoredRef = useRef(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -118,14 +73,7 @@ export default function CvBuilderClient() {
         resumeService.getProfile().catch(() => null),
       ]);
       setTemplates(templatesData);
-      if (profileData) {
-        setProfile(profileData);
-        // Only set editorData from profile if editor is empty (first load)
-        setEditorData((prev) => {
-          if (prev && Object.keys(prev).length > 0) return prev;
-          return profileDataToEditorData(profileData);
-        });
-      }
+      if (profileData) setProfile(profileData);
 
       let apiResumes: any[] = [];
       try {
@@ -156,65 +104,6 @@ export default function CvBuilderClient() {
 
   useEffect(() => { loadData(); loadSubscription(); }, [loadData, loadSubscription]);
 
-  // Restore editor from localStorage
-  useEffect(() => {
-    if (editorRestoredRef.current) return;
-    editorRestoredRef.current = true;
-    const stored = getStoredEditorState();
-    if (!stored?.slug) return;
-
-    // Find the template
-    if (templates.length > 0) {
-      const tmpl = templates.find((t) => t.slug === stored.slug);
-      if (tmpl) {
-        setEditorTemplate(tmpl);
-        setActiveView("editor");
-        setEditorData(stored.data || {});
-        setActiveSection(stored.section || "personal");
-      } else {
-        // Template not found, clear stored state
-        clearStoredEditorState();
-        setActiveView("landing");
-      }
-    }
-  }, [templates]);
-
-  // Sync editor state to localStorage on every change
-  useEffect(() => {
-    if (activeView === "editor" && editorTemplate) {
-      setStoredEditorState({
-        slug: editorTemplate.slug,
-        data: editorData,
-        section: activeSection,
-      });
-    }
-  }, [activeView, editorTemplate, editorData, activeSection]);
-
-  const [savingCreating, setSavingCreating] = useState(false);
-
-  const handleSaveAndCreate = async (template: CvTemplate) => {
-    setSavingCreating(true);
-    try {
-      const profileData = editorDataToProfile(editorData);
-      await resumeService.updateProfile(profileData);
-      const resume = await resumeService.createResume({
-        title: template.name + " " + (isBn ? "সিভি" : "CV"),
-        template_slug: template.slug,
-      });
-      const resumeData = resume?.data || resume;
-      setResumes((prev) => {
-        const updated = [resumeData, ...prev];
-        storeResumes(updated);
-        return updated;
-      });
-      clearStoredEditorState();
-      toast.success(isBn ? "সিভি তৈরি হয়েছে!" : "Resume created!");
-      router.push(`/cv/preview/${resumeData.uuid}`);
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || (isBn ? "ব্যর্থ" : "Failed"));
-    } finally { setSavingCreating(false); }
-  };
-
   const handleAiGenerate = async () => {
     if (!aiPrompt.trim()) return;
     setGenerating(true);
@@ -238,8 +127,6 @@ export default function CvBuilderClient() {
     try {
       await resumeService.updateProfile(profileToSave);
       setProfile(profileToSave);
-      const newEditorData = profileDataToEditorData(profileToSave);
-      setEditorData(newEditorData);
       setAiResult(null);
       toast.success(isBn ? "প্রোফাইল সংরক্ষিত হয়েছে" : "Profile saved!");
     } catch { toast.error(isBn ? "সংরক্ষণ ব্যর্থ" : "Save failed"); }
@@ -273,55 +160,20 @@ export default function CvBuilderClient() {
       setShowPersonalInfoModal(true);
       return;
     }
-    setCreating(true);
-    try {
-      const resume = await resumeService.createResume({
-        title: template.name + " " + (isBn ? "সিভি" : "CV"),
-        template_slug: template.slug,
-      });
-      const resumeData = resume?.data || resume;
-      setResumes((prev) => { const updated = [resumeData, ...prev]; storeResumes(updated); return updated; });
-      clearStoredEditorState();
-      toast.success(isBn ? "সিভি তৈরি হয়েছে!" : "Resume created!");
-      setShowTemplateModal(false);
-      if (resumeData?.uuid) router.push(`/cv/preview/${resumeData.uuid}`);
-    } catch (e: any) {
-      if (e.response?.data?.action === 'redirect_to_builder') {
-        setPendingTemplateSlug(template.slug);
-        setShowPersonalInfoModal(true);
-        return;
-      }
-      toast.error(e.response?.data?.message || (isBn ? "ব্যর্থ" : "Failed"));
-    } finally { setCreating(false); }
+    // Navigate to the edit page with the template slug in the URL
+    router.push(`/resume-builder/edit/${template.slug}`);
   };
 
   const handlePersonalInfoModalComplete = async () => {
     setShowPersonalInfoModal(false);
     try {
       const profileData = await resumeService.getProfile();
-      if (profileData) {
-        setProfile(profileData);
-        setEditorData(profileDataToEditorData(profileData));
-      }
+      if (profileData) setProfile(profileData);
     } catch {}
     if (pendingTemplateSlug) {
-      const template = templates.find((t) => t.slug === pendingTemplateSlug);
+      const slug = pendingTemplateSlug;
       setPendingTemplateSlug(null);
-      if (template) {
-        setCreating(true);
-        try {
-          const resume = await resumeService.createResume({
-            title: template.name + " " + (isBn ? "সিভি" : "CV"),
-            template_slug: template.slug,
-          });
-          const resumeData = resume?.data || resume;
-          setResumes((prev) => { const updated = [resumeData, ...prev]; storeResumes(updated); return updated; });
-          toast.success(isBn ? "সিভি তৈরি হয়েছে!" : "Resume created!");
-          clearStoredEditorState();
-          if (resumeData?.uuid) router.push(`/cv/preview/${resumeData.uuid}`);
-        } catch { toast.error(isBn ? "ব্যর্থ" : "Failed"); }
-        finally { setCreating(false); }
-      }
+      router.push(`/resume-builder/edit/${slug}`);
     }
   };
 
@@ -375,271 +227,207 @@ export default function CvBuilderClient() {
     finally { setDeleting(false); setDeleteTarget(null); }
   };
 
-  const startEditor = (template: CvTemplate) => {
-    editorInitialized.current = false;
-    setEditorTemplate(template);
-    setActiveView("editor");
-    setActiveSection("personal");
-    // If editor data is empty, load from profile
-    if (!editorData || Object.keys(editorData).length === 0) {
-      if (profile) {
-        setEditorData(profileDataToEditorData(profile));
-      }
-    }
-    loadEditorPreview(template.slug);
+  // Navigate to /resume-builder/edit/{slug} for editing
+  const handleEditTemplate = (template: CvTemplate) => {
+    router.push(`/resume-builder/edit/${template.slug}`);
   };
-
-  const loadEditorPreview = async (slug: string) => {
-    setPreviewLoadingEditor(true);
-    try {
-      const html = await resumeService.getLivePreview(slug);
-      setPreviewHtmlEditor(html);
-    } catch {
-      try {
-        const html = await resumeService.getPreviewDemo(slug);
-        setPreviewHtmlEditor(html);
-      } catch { setPreviewHtmlEditor(""); }
-    }
-    finally { setPreviewLoadingEditor(false); }
-  };
-
-  const handleEditorDataChange = (section: string, data: any) => {
-    setEditorData((prev) => ({ ...prev, [section]: data }));
-  };
-
-  const refreshEditorPreviewWithData = useCallback(async (data: Record<string, any>) => {
-    if (!editorTemplate) return;
-    setPreviewLoadingEditor(true);
-    try {
-      const html = await resumeService.getLivePreviewWithData(editorTemplate.slug, data);
-      setPreviewHtmlEditor(html);
-    } catch {
-      try {
-        const html = await resumeService.getPreviewDemo(editorTemplate.slug);
-        setPreviewHtmlEditor(html);
-      } catch { setPreviewHtmlEditor(""); }
-    }
-    finally { setPreviewLoadingEditor(false); }
-  }, [editorTemplate]);
-
-  const editorInitialized = useRef(false);
-
-  useEffect(() => {
-    if (!editorTemplate || editorData && Object.keys(editorData).length === 0) return;
-    if (!editorInitialized.current) { editorInitialized.current = true; return; }
-    if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
-    previewDebounceRef.current = setTimeout(() => {
-      refreshEditorPreviewWithData(editorData);
-    }, 600);
-    return () => {
-      if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
-    };
-  }, [editorData, editorTemplate, refreshEditorPreviewWithData]);
 
   const quotaReached = quota && quota.max_limit > 0 && quota.remaining <= 0;
 
   return (
     <PublicLayout>
-      {activeView === "editor" && editorTemplate ? (
-        <InlineEditor
-          template={editorTemplate}
-          data={editorData}
-          onChange={handleEditorDataChange}
-          previewHtml={previewHtmlEditor}
-          previewLoading={previewLoadingEditor}
-          onRefreshPreview={() => loadEditorPreview(editorTemplate.slug)}
-          onBack={() => { clearStoredEditorState(); setActiveView("landing"); setEditorTemplate(null); setEditorData({}); setActiveSection("personal"); }}
-          onSaveAndCreate={() => handleSaveAndCreate(editorTemplate)}
-          savingCreating={savingCreating}
-          isBn={isBn}
-          activeSection={activeSection}
-          setActiveSection={setActiveSection}
-        />
-      ) : (
-        <div className="min-h-screen bg-background">
-          <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-primary/10 to-background border-b">
-            <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.03]" />
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 relative">
-              <div className="max-w-3xl mx-auto text-center">
-                <Badge variant="secondary" className="mb-4 px-4 py-1.5 text-sm">
-                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                  {isBn ? "AI-চালিত সিভি বিল্ডার" : "AI-Powered CV Builder"}
-                </Badge>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-                  {isBn ? "তৈরি করুন একটি" : "Build a"}{" "}
-                  <span className="text-primary">{isBn ? "পেশাদার" : "Professional"}</span>{" "}
-                  {isBn ? "সিভি মিনিটে" : "Resume in Minutes"}
-                </h1>
-                <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-                  {isBn ? "আমাদের প্রিমিয়াম টেমপ্লেট, AI-চালিত টুলস এবং সহজ ইনলাইন এডিটর দিয়ে ATS-বান্ধব CV তৈরি করুন।" : "Create an ATS-friendly resume using our premium templates, AI-powered tools, and easy inline editor."}
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Button size="lg" className="px-8 text-base" onClick={() => { document.getElementById("templates-section")?.scrollIntoView({ behavior: "smooth" }); }}>
-                    <FileText className="h-5 w-5 mr-2" />{isBn ? "এখনই শুরু করুন" : "Start Building"}<ArrowRight className="h-5 w-5 ml-2" />
-                  </Button>
-                  <Button size="lg" variant="outline" className="px-8 text-base" onClick={() => { document.getElementById("my-cvs-section")?.scrollIntoView({ behavior: "smooth" }); }}>
-                    <Eye className="h-5 w-5 mr-2" />{isBn ? "আমার সিভি" : "My CVs"} ({resumes.length})
-                  </Button>
-                </div>
+      <div className="min-h-screen bg-background">
+        {/* Hero */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-primary/10 to-background border-b">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.03]" />
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 relative">
+            <div className="max-w-3xl mx-auto text-center">
+              <Badge variant="secondary" className="mb-4 px-4 py-1.5 text-sm">
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                {isBn ? "AI-চালিত সিভি বিল্ডার" : "AI-Powered CV Builder"}
+              </Badge>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
+                {isBn ? "তৈরি করুন একটি" : "Build a"}{" "}
+                <span className="text-primary">{isBn ? "পেশাদার" : "Professional"}</span>{" "}
+                {isBn ? "সিভি মিনিটে" : "Resume in Minutes"}
+              </h1>
+              <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+                {isBn ? "আমাদের প্রিমিয়াম টেমপ্লেট, AI-চালিত টুলস এবং সহজ ইনলাইন এডিটর দিয়ে ATS-বান্ধব CV তৈরি করুন।" : "Create an ATS-friendly resume using our premium templates, AI-powered tools, and easy inline editor."}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button size="lg" className="px-8 text-base" onClick={() => { document.getElementById("templates-section")?.scrollIntoView({ behavior: "smooth" }); }}>
+                  <FileText className="h-5 w-5 mr-2" />{isBn ? "এখনই শুরু করুন" : "Start Building"}<ArrowRight className="h-5 w-5 ml-2" />
+                </Button>
+                <Button size="lg" variant="outline" className="px-8 text-base" onClick={() => { document.getElementById("my-cvs-section")?.scrollIntoView({ behavior: "smooth" }); }}>
+                  <Eye className="h-5 w-5 mr-2" />{isBn ? "আমার সিভি" : "My CVs"} ({resumes.length})
+                </Button>
               </div>
             </div>
-          </section>
+          </div>
+        </section>
 
-          <section className="py-16 border-b bg-muted/30">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="text-center mb-12">
-                <h2 className="text-2xl md:text-3xl font-bold mb-3">{isBn ? "কিভাবে কাজ করে" : "How It Works"}</h2>
-                <p className="text-muted-foreground max-w-xl mx-auto">{isBn ? "মাত্র ৩টি সহজ ধাপে আপনার পেশাদার CV তৈরি করুন" : "Create your professional CV in just 3 simple steps"}</p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-                {[
-                  { step: "1", icon: FileText, title_en: "Choose Template", title_bn: "টেমপ্লেট বাছুন", desc_en: "Pick from professionally designed, ATS-friendly templates", desc_bn: "পেশাদার, ATS-বান্ধব টেমপ্লেট থেকে বাছুন" },
-                  { step: "2", icon: PenTool, title_en: "Fill Your Details", title_bn: "তথ্য পূরণ করুন", desc_en: "Use our smart form or AI assistant to add your information", desc_bn: "আমাদের স্মার্ট ফর্ম বা AI সহকারী ব্যবহার করে তথ্য যোগ করুন" },
-                  { step: "3", icon: Download, title_en: "Download & Share", title_bn: "ডাউনলোড ও শেয়ার", desc_en: "Export as PDF or get a shareable link to send to employers", desc_bn: "PDF হিসেবে এক্সপোর্ট করুন বা শেয়ারযোগ্য লিঙ্ক পান" },
-                ].map((item, i) => (
-                  <div key={i} className="relative text-center p-6">
-                    <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4"><item.icon className="h-7 w-7 text-primary" /></div>
-                    <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center">{item.step}</div>
-                    <h3 className="font-semibold text-lg mb-2">{isBn ? item.title_bn : item.title_en}</h3>
-                    <p className="text-sm text-muted-foreground">{isBn ? item.desc_bn : item.desc_en}</p>
-                  </div>
+        {/* How It Works */}
+        <section className="py-16 border-b bg-muted/30">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="text-2xl md:text-3xl font-bold mb-3">{isBn ? "কিভাবে কাজ করে" : "How It Works"}</h2>
+              <p className="text-muted-foreground max-w-xl mx-auto">{isBn ? "মাত্র ৩টি সহজ ধাপে আপনার পেশাদার CV তৈরি করুন" : "Create your professional CV in just 3 simple steps"}</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              {[
+                { step: "1", icon: FileText, t_en: "Choose Template", t_bn: "টেমপ্লেট বাছুন", d_en: "Pick from ATS-friendly templates", d_bn: "পেশাদার, ATS-বান্ধব টেমপ্লেট থেকে বাছুন" },
+                { step: "2", icon: PenTool, t_en: "Fill Your Details", t_bn: "তথ্য পূরণ করুন", d_en: "Use the smart form or AI assistant", d_bn: "আমাদের স্মার্ট ফর্ম বা AI সহকারী ব্যবহার করে তথ্য যোগ করুন" },
+                { step: "3", icon: Download, t_en: "Download & Share", t_bn: "ডাউনলোড ও শেয়ার", d_en: "Export as PDF or get a shareable link", d_bn: "PDF হিসেবে এক্সপোর্ট করুন বা শেয়ারযোগ্য লিঙ্ক পান" },
+              ].map((item, i) => (
+                <div key={i} className="relative text-center p-6">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4"><item.icon className="h-7 w-7 text-primary" /></div>
+                  <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center">{item.step}</div>
+                  <h3 className="font-semibold text-lg mb-2">{isBn ? item.t_bn : item.t_en}</h3>
+                  <p className="text-sm text-muted-foreground">{isBn ? item.d_bn : item.d_en}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Templates */}
+        <section id="templates-section" className="py-16">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="text-2xl md:text-3xl font-bold mb-3">{isBn ? "টেমপ্লেট বাছাই করুন" : "Choose a Template"}</h2>
+              <p className="text-muted-foreground max-w-xl mx-auto">{isBn ? "সকল টেমপ্লেট ATS-বান্ধব" : "All templates are ATS-friendly"}</p>
+            </div>
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">{[...Array(8)].map((_, i) => <Skeleton key={i} className="h-72 rounded-xl" />)}</div>
+            ) : templates.length === 0 ? (
+              <Card><CardContent className="p-12 text-center"><FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" /><p className="text-muted-foreground text-lg">{isBn ? "কোনো টেমপ্লেট পাওয়া যায়নি" : "No templates found"}</p></CardContent></Card>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {templates.map((template, idx) => (
+                  <TemplateCard key={template.id} template={template} index={idx} isBn={isBn} isPurchased={purchasedTemplateSlugs.has(template.slug)} creating={creating} onUse={handleUseTemplate} onStartEdit={handleEditTemplate} />
                 ))}
               </div>
-            </div>
-          </section>
+            )}
+          </div>
+        </section>
 
-          <section id="templates-section" className="py-16">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="text-center mb-12">
-                <h2 className="text-2xl md:text-3xl font-bold mb-3">{isBn ? "টেমপ্লেট বাছাই করুন" : "Choose a Template"}</h2>
-                <p className="text-muted-foreground max-w-xl mx-auto">{isBn ? "সকল টেমপ্লেট ATS-বান্ধব" : "All templates are ATS-friendly"}</p>
-              </div>
-              {loading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">{[...Array(8)].map((_, i) => <Skeleton key={i} className="h-72 rounded-xl" />)}</div>
-              ) : templates.length === 0 ? (
-                <Card><CardContent className="p-12 text-center"><FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" /><p className="text-muted-foreground text-lg">{isBn ? "কোনো টেমপ্লেট পাওয়া যায়নি" : "No templates found"}</p></CardContent></Card>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {templates.map((template, idx) => (
-                    <TemplateCard key={template.id} template={template} index={idx} isBn={isBn} isPurchased={purchasedTemplateSlugs.has(template.slug)} creating={creating} onUse={handleUseTemplate} onStartEdit={startEditor} />
-                  ))}
+        {/* Why Use */}
+        <section className="py-16 bg-muted/30 border-y">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12"><h2 className="text-2xl md:text-3xl font-bold mb-3">{isBn ? "কেন আমাদের CV বিল্ডার" : "Why Use Our CV Builder"}</h2></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              {[
+                { icon: Sparkles, t: isBn ? "AI-চালিত" : "AI-Powered", d: isBn ? "AI দিয়ে CV তৈরি করুন।" : "Generate CV content with AI." },
+                { icon: Shield, t: isBn ? "ATS-বান্ধব" : "ATS-Friendly", d: isBn ? "টেমপ্লেট ATS পাস করে।" : "Templates pass ATS." },
+                { icon: Eye, t: isBn ? "লাইভ প্রিভিউ" : "Live Preview", d: isBn ? "রিয়েল-টাইমে পরিবর্তন দেখুন।" : "See changes in real-time." },
+                { icon: Download, t: isBn ? "PDF এক্সপোর্ট" : "PDF Export", d: isBn ? "PDF ডাউনলোড করুন।" : "Download as print-ready PDF." },
+                { icon: Share2, t: isBn ? "শেয়ারযোগ্য লিঙ্ক" : "Shareable Links", d: isBn ? "রিক্রুটারদের সাথে শেয়ার করুন।" : "Share CV with recruiters." },
+                { icon: Languages, t: isBn ? "দ্বিভাষিক" : "Bilingual", d: isBn ? "ইংরেজি ও বাংলায়।" : "English & Bengali CV." },
+              ].map((item, i) => (
+                <div key={i} className="p-6 rounded-xl bg-background border hover:shadow-md transition-shadow">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4"><item.icon className="h-6 w-6 text-primary" /></div>
+                  <h3 className="font-semibold text-lg mb-2">{item.t}</h3>
+                  <p className="text-sm text-muted-foreground">{item.d}</p>
                 </div>
-              )}
+              ))}
             </div>
-          </section>
+          </div>
+        </section>
 
-          <section className="py-16 bg-muted/30 border-y">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="text-center mb-12"><h2 className="text-2xl md:text-3xl font-bold mb-3">{isBn ? "কেন আমাদের CV বিল্ডার" : "Why Use Our CV Builder"}</h2></div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-                {[
-                  { icon: Sparkles, t_en: "AI-Powered", t_bn: "AI-চালিত", d_en: "Generate CV content with AI.", d_bn: "AI দিয়ে CV তৈরি করুন।" },
-                  { icon: Shield, t_en: "ATS-Friendly", t_bn: "ATS-বান্ধব", d_en: "Templates pass Applicant Tracking Systems.", d_bn: "টেমপ্লেট ATS পাস করে।" },
-                  { icon: Eye, t_en: "Live Preview", t_bn: "লাইভ প্রিভিউ", d_en: "See changes in real-time.", d_bn: "রিয়েল-টাইমে পরিবর্তন দেখুন।" },
-                  { icon: Download, t_en: "PDF Export", t_bn: "PDF এক্সপোর্ট", d_en: "Download as print-ready PDF.", d_bn: "PDF ডাউনলোড করুন।" },
-                  { icon: Share2, t_en: "Shareable Links", t_bn: "শেয়ারযোগ্য লিঙ্ক", d_en: "Share CV with recruiters.", d_bn: "রিক্রুটারদের সাথে শেয়ার করুন।" },
-                  { icon: Languages, t_en: "Bilingual", t_bn: "দ্বিভাষিক", d_en: "English & Bengali CV.", d_bn: "ইংরেজি ও বাংলায়।" },
-                ].map((item, i) => (
-                  <div key={i} className="p-6 rounded-xl bg-background border hover:shadow-md transition-shadow">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4"><item.icon className="h-6 w-6 text-primary" /></div>
-                    <h3 className="font-semibold text-lg mb-2">{isBn ? item.t_bn : item.t_en}</h3>
-                    <p className="text-sm text-muted-foreground">{isBn ? item.d_bn : item.d_en}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="py-16">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="max-w-2xl mx-auto">
-                <Card className="border-primary/20 shadow-lg">
-                  <CardHeader><CardTitle className="flex items-center gap-2 text-xl"><Bot className="h-6 w-6 text-primary" />{isBn ? "AI দিয়ে CV তৈরি করুন" : "Generate CV with AI"}</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    {quota && <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"><div className="flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /><span className="text-sm font-medium">{isBn ? "AI ব্যবহার" : "AI Usage"}</span></div><div className="text-sm text-muted-foreground">{quota.used}/{quota.max_limit} {isBn ? "ব্যবহৃত" : "used"}</div></div>}
-                    <p className="text-sm text-muted-foreground">{isBn ? "আপনার অভিজ্ঞতা লিখুন। AI CV তৈরি করবে।" : "Describe your experience. AI will build your CV."}</p>
-                    <Textarea className="min-h-[120px]" placeholder={isBn ? "আমি ৩ বছরের React Developer..." : "I'm a React developer with 3 years experience..."} value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} disabled={generating} />
-                    <Button onClick={handleAiGenerate} disabled={generating || !aiPrompt.trim() || !!quotaReached} className="w-full" size="lg">
-                      {generating ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" />{isBn ? "তৈরি হচ্ছে..." : "Generating..."}</> : <><Sparkles className="h-5 w-5 mr-2" />{isBn ? "সিভি তৈরি করুন" : "Generate CV"}</>}
-                    </Button>
-                    {generating && <div className="flex flex-col items-center py-8"><div className="relative"><div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center"><Sparkles className="h-8 w-8 text-primary animate-pulse" /></div><div className="absolute inset-0 rounded-full border-2 border-primary/20 border-t-primary animate-spin" /></div><p className="text-sm text-muted-foreground mt-3">{isBn ? "AI তৈরি করছে..." : "AI generating..."}</p></div>}
-                    {aiResult && (
-                      <Card className="border-green-200 dark:border-green-800">
-                        <CardHeader><CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-400"><CheckCircle className="h-5 w-5" />{isBn ? "জেনারেটেড প্রোফাইল" : "Generated Profile"}</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                          {aiResult.personal_info && <div><h3 className="font-semibold text-lg">{aiResult.personal_info.full_name}</h3><p className="text-sm text-muted-foreground">{aiResult.personal_info.title}</p></div>}
-                          <div className="flex gap-2"><Button onClick={handleSaveProfile}><Check className="h-4 w-4 mr-2" />{isBn ? "সংরক্ষণ ও এডিট" : "Save & Edit"}</Button><Button variant="outline" onClick={() => setAiResult(null)}><X className="h-4 w-4 mr-2" />{isBn ? "বাতিল" : "Discard"}</Button></div>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </section>
-
-          {resumes.length > 0 && (
-            <section id="my-cvs-section" className="py-16 bg-muted/30 border-y">
-              <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between mb-8"><h2 className="text-2xl font-bold">{isBn ? `আমার সিভি (${resumes.length})` : `My CVs (${resumes.length})`}</h2></div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {resumes.map((resume, idx) => (
-                    <Card key={resume.uuid} className="group hover:shadow-lg transition-all duration-200">
-                      <CardContent className="p-4 space-y-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${TEMPLATE_GRADIENTS[idx % TEMPLATE_GRADIENTS.length]} flex items-center justify-center shrink-0`}><FileText className="h-5 w-5 text-white" /></div>
-                            <div className="min-w-0"><h3 className="font-medium text-sm truncate">{resume.title}</h3><p className="text-xs text-muted-foreground capitalize">{resume.template_name || resume.template_slug || "Template"}</p></div>
-                          </div>
-                          {resume.is_public && <Badge variant="secondary" className="text-[10px] shrink-0"><Eye className="h-2.5 w-2.5 mr-0.5" />{isBn ? "পাবলিক" : "Public"}</Badge>}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Clock className="h-3 w-3" />{formatDate(resume.created_at)}</div>
-                        <div className="flex items-center gap-1 pt-1 border-t">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.push(`/cv/preview/${resume.uuid}`)} title="View"><Eye className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownloadPdf(resume.uuid)} title="PDF"><Download className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleGetShareLink(resume)} title="Share"><Share2 className={`h-3.5 w-3.5 ${resume.is_public ? "text-primary" : ""}`} /></Button>
-                          {resume.is_public && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopyLink(resume)} title="Copy"><LinkIcon className="h-3.5 w-3.5" /></Button>}
-                          <div className="flex-1" />
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(resume)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                        </div>
+        {/* AI Generate */}
+        <section className="py-16">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-2xl mx-auto">
+              <Card className="border-primary/20 shadow-lg">
+                <CardHeader><CardTitle className="flex items-center gap-2 text-xl"><Bot className="h-6 w-6 text-primary" />{isBn ? "AI দিয়ে CV তৈরি করুন" : "Generate CV with AI"}</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  {quota && <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"><div className="flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /><span className="text-sm font-medium">{isBn ? "AI ব্যবহার" : "AI Usage"}</span></div><div className="text-sm text-muted-foreground">{quota.used}/{quota.max_limit} {isBn ? "ব্যবহৃত" : "used"}</div></div>}
+                  <p className="text-sm text-muted-foreground">{isBn ? "আপনার অভিজ্ঞতা লিখুন। AI CV তৈরি করবে।" : "Describe your experience. AI will build your CV."}</p>
+                  <Textarea className="min-h-[120px]" placeholder={isBn ? "আমি ৩ বছরের React Developer..." : "I'm a React developer with 3 years experience..."} value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} disabled={generating} />
+                  <Button onClick={handleAiGenerate} disabled={generating || !aiPrompt.trim() || !!quotaReached} className="w-full" size="lg">
+                    {generating ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" />{isBn ? "তৈরি হচ্ছে..." : "Generating..."}</> : <><Sparkles className="h-5 w-5 mr-2" />{isBn ? "সিভি তৈরি করুন" : "Generate CV"}</>}
+                  </Button>
+                  {generating && <div className="flex flex-col items-center py-8"><div className="relative"><div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center"><Sparkles className="h-8 w-8 text-primary animate-pulse" /></div><div className="absolute inset-0 rounded-full border-2 border-primary/20 border-t-primary animate-spin" /></div><p className="text-sm text-muted-foreground mt-3">{isBn ? "AI তৈরি করছে..." : "AI generating..."}</p></div>}
+                  {aiResult && (
+                    <Card className="border-green-200 dark:border-green-800">
+                      <CardHeader><CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-400"><Check className="h-5 w-5" />{isBn ? "জেনারেটেড প্রোফাইল" : "Generated Profile"}</CardTitle></CardHeader>
+                      <CardContent className="space-y-4">
+                        {aiResult.personal_info && <div><h3 className="font-semibold text-lg">{aiResult.personal_info.full_name}</h3><p className="text-sm text-muted-foreground">{aiResult.personal_info.title}</p></div>}
+                        <div className="flex gap-2"><Button onClick={handleSaveProfile}><Check className="h-4 w-4 mr-2" />{isBn ? "সংরক্ষণ ও এডিট" : "Save & Edit"}</Button><Button variant="outline" onClick={() => setAiResult(null)}><X className="h-4 w-4 mr-2" />{isBn ? "বাতিল" : "Discard"}</Button></div>
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
-              </div>
-            </section>
-          )}
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
 
-          <section className="py-16">
+        {/* My CVs */}
+        {resumes.length > 0 && (
+          <section id="my-cvs-section" className="py-16 bg-muted/30 border-y">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="text-center mb-12"><h2 className="text-2xl md:text-3xl font-bold mb-3">{isBn ? "সচরাচর জিজ্ঞাসা" : "FAQ"}</h2></div>
-              <div className="max-w-2xl mx-auto space-y-3">
-                {FAQ_ITEMS.map((item, i) => {
-                  const isOpen = openFaq === i;
-                  return (
-                    <div key={i} className="border rounded-xl overflow-hidden">
-                      <button className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors" onClick={() => setOpenFaq(openFaq === i ? null : i)} aria-expanded={isOpen}>
-                        <span className="font-medium text-sm pr-4">{isBn ? item.q_bn : item.q_en}</span>
-                        {isOpen ? <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      </button>
-                      {isOpen && <div className="px-4 pb-4 text-sm text-muted-foreground border-t"><p className="pt-3">{isBn ? item.a_bn : item.a_en}</p></div>}
-                    </div>
-                  );
-                })}
+              <div className="flex items-center justify-between mb-8"><h2 className="text-2xl font-bold">{isBn ? `আমার সিভি (${resumes.length})` : `My CVs (${resumes.length})`}</h2></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {resumes.map((resume, idx) => (
+                  <Card key={resume.uuid} className="group hover:shadow-lg transition-all duration-200">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${TEMPLATE_GRADIENTS[idx % TEMPLATE_GRADIENTS.length]} flex items-center justify-center shrink-0`}><FileText className="h-5 w-5 text-white" /></div>
+                          <div className="min-w-0"><h3 className="font-medium text-sm truncate">{resume.title}</h3><p className="text-xs text-muted-foreground capitalize">{resume.template_name || resume.template_slug || "Template"}</p></div>
+                        </div>
+                        {resume.is_public && <Badge variant="secondary" className="text-[10px] shrink-0"><Eye className="h-2.5 w-2.5 mr-0.5" />{isBn ? "পাবলিক" : "Public"}</Badge>}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Clock className="h-3 w-3" />{formatDate(resume.created_at)}</div>
+                      <div className="flex items-center gap-1 pt-1 border-t">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.push(`/cv/preview/${resume.uuid}`)} title="View"><Eye className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownloadPdf(resume.uuid)} title="PDF"><Download className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleGetShareLink(resume)} title="Share"><Share2 className={`h-3.5 w-3.5 ${resume.is_public ? "text-primary" : ""}`} /></Button>
+                        {resume.is_public && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopyLink(resume)} title="Copy"><Copy className="h-3.5 w-3.5" /></Button>}
+                        <div className="flex-1" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(resume)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
           </section>
+        )}
 
-          <section className="py-16 bg-primary text-primary-foreground">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4">{isBn ? "আজই CV তৈরি শুরু করুন" : "Start Building Today"}</h2>
-              <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto">{isBn ? "হাজারো ব্যবহারকারী আমাদের CV বিল্ডার ব্যবহার করছেন।" : "Thousands of users are building their resumes with our CV builder."}</p>
-              <Button size="lg" variant="secondary" className="px-8" onClick={() => { document.getElementById("templates-section")?.scrollIntoView({ behavior: "smooth" }); }}>{isBn ? "এখনই শুরু করুন" : "Get Started Free"}<ArrowRight className="h-5 w-5 ml-2" /></Button>
+        {/* FAQ */}
+        <section className="py-16">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12"><h2 className="text-2xl md:text-3xl font-bold mb-3">{isBn ? "সচরাচর জিজ্ঞাসা" : "FAQ"}</h2></div>
+            <div className="max-w-2xl mx-auto space-y-3">
+              {FAQ_ITEMS.map((item, i) => {
+                const isOpen = openFaq === i;
+                return (
+                  <div key={i} className="border rounded-xl overflow-hidden">
+                    <button className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors" onClick={() => setOpenFaq(openFaq === i ? null : i)}>
+                      <span className="font-medium text-sm pr-4">{isBn ? item.q_bn : item.q_en}</span>
+                      {isOpen ? <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                    </button>
+                    {isOpen && <div className="px-4 pb-4 text-sm text-muted-foreground border-t"><p className="pt-3">{isBn ? item.a_bn : item.a_en}</p></div>}
+                  </div>
+                );
+              })}
             </div>
-          </section>
-        </div>
-      )}
+          </div>
+        </section>
 
+        {/* CTA */}
+        <section className="py-16 bg-primary text-primary-foreground">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 className="text-2xl md:text-3xl font-bold mb-4">{isBn ? "আজই CV তৈরি শুরু করুন" : "Start Building Today"}</h2>
+            <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto">{isBn ? "হাজারো ব্যবহারকারী আমাদের CV বিল্ডার ব্যবহার করছেন।" : "Thousands of users are building their resumes with our CV builder."}</p>
+            <Button size="lg" variant="secondary" className="px-8" onClick={() => { document.getElementById("templates-section")?.scrollIntoView({ behavior: "smooth" }); }}>{isBn ? "এখনই শুরু করুন" : "Get Started Free"}<ArrowRight className="h-5 w-5 ml-2" /></Button>
+          </div>
+        </section>
+      </div>
+
+      {/* Template Modal */}
       <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{isBn ? "টেমপ্লেট বাছুন" : "Choose Template"}</DialogTitle></DialogHeader>
@@ -659,6 +447,7 @@ export default function CvBuilderClient() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader><DialogTitle>{isBn ? "মুছে ফেলুন?" : "Delete?"}</DialogTitle></DialogHeader>
@@ -671,7 +460,6 @@ export default function CvBuilderClient() {
       </Dialog>
 
       {purchaseTemplate && <TemplatePurchaseDialog template={purchaseTemplate} open={!!purchaseTemplate} onClose={() => setPurchaseTemplate(null)} onSuccess={loadData} />}
-
       <PersonalInfoModal open={showPersonalInfoModal} onClose={() => { setShowPersonalInfoModal(false); setPendingTemplateSlug(null); }} onComplete={handlePersonalInfoModalComplete} />
     </PublicLayout>
   );
