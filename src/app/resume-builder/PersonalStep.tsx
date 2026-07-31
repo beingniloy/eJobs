@@ -98,8 +98,9 @@ export default function PersonalStep({ wizard, onNext }: { wizard: ReturnType<ty
       } else {
         toast.error(isBn ? "ছবি আপলোড ব্যর্থ" : "Upload failed");
       }
-    } catch {
-      toast.error(isBn ? "ছবি আপলোড ব্যর্থ" : "Upload failed");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || (isBn ? "ছবি আপলোড ব্যর্থ" : "Upload failed");
+      toast.error(msg);
     } finally {
       setUploadingPhoto(false);
     }
