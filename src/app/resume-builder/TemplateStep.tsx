@@ -72,7 +72,7 @@ export default function TemplateStep({ wizard, onPrev }: { wizard: ReturnType<ty
         education: data.education.map((e) => ({ institution: e.school, degree: e.degree, location: e.city, start_date: e.start_date, end_date: e.end_date, description: e.description })),
         skills: data.skills.map((s) => s.skill + (s.level ? ` (${s.level})` : "")),
         languages: data.languages.map((l) => ({ name: l.language, proficiency: l.level })),
-        certifications: data.achievements.map((a) => ({ name: "Achievement", description: a.description })),
+        certifications: data.achievements.map((a) => ({ name: "Achievement", issuer: "", date: "", description: a.description })),
         projects: [], awards: [], hobbies: data.interests.map((i) => i.hobby),
         social_links: { linkedin_url: data.personal.linkedin, portfolio_url: data.personal.website },
       });

@@ -79,8 +79,7 @@ export default function CandidateProfileOverviewClient() {
     try { await api.post("/candidate/profile-update", { is_public: val ? "1" : "0" }); toast.success(val ? "Profile made public" : "Profile made private"); } catch { toast.error("Failed"); }
   };
 
-  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleResumeUpload = async (file: File) => {
     if (!file) return;
     if (file.type !== "application/pdf") { toast.error(isBn ? "শুধুমাত্র PDF ফাইল আপলোড করুন" : "Only PDF files are allowed"); return; }
     if (file.size > 2 * 1024 * 1024) { toast.error(isBn ? "ফাইলের সাইজ 2MB এর বেশি হতে পারে না" : "File size must be under 2MB"); return; }

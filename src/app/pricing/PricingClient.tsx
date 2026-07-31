@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Wallet, Briefcase, Users, CreditCard, ArrowRight, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import type { PlanButtonState } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 import PricingPlanCard from "@/components/pricing/PricingPlanCard";
 import PricingPurchaseModal from "@/components/pricing/PricingPurchaseModal";
@@ -151,17 +152,17 @@ export default function PricingClient() {
     return Number(Math.max(0, oldPrice - (usedDays * (oldPrice / totalDays))).toFixed(2));
   };
 
-  const getButtonState = (plan: Plan) => {
+  const getButtonState = (plan: Plan): PlanButtonState => {
     const isCurrentPlan = currentSubscription?.status === "active" && currentSubscription?.plan_id === plan.id;
-    if (isCurrentPlan) return { label: isBn ? "বর্তমান প্ল্যান" : "Current Plan", disabled: true, variant: "outline" as const, action: "current" as const };
-    if (!isAuthenticated) return { label: isBn ? "এখনই শুরু করুন" : "Get Started", disabled: false, variant: (plan.is_popular ? "default" : "outline") as const, action: "subscribe" as const };
+    if (isCurrentPlan) return { label: isBn ? "বর্তমান প্ল্যান" : "Current Plan", disabled: true, variant: "outline", action: "current" };
+    if (!isAuthenticated) return { label: isBn ? "এখনই শুরু করুন" : "Get Started", disabled: false, variant: plan.is_popular ? "default" : "outline", action: "subscribe" };
     if (currentSubscription?.status === "active" && currentSubscription?.plan) {
       const currentPrice = Number(currentSubscription.plan_details?.price || currentSubscription.plan.price || 0);
-      if (plan.price < currentPrice) return { label: isBn ? "ডাউনগ্রেড সম্ভব নয়" : "Downgrade Restricted", disabled: true, variant: "outline" as const, action: "downgrade" as const };
-      if (plan.price > currentPrice) return { label: isBn ? "আপগ্রেড করুন" : "Upgrade", disabled: false, variant: "default" as const, action: "upgrade" as const };
-      return { label: isBn ? "বর্তমান প্ল্যান" : "Current Plan", disabled: true, variant: "outline" as const, action: "current" as const };
+      if (plan.price < currentPrice) return { label: isBn ? "ডাউনগ্রেড সম্ভব নয়" : "Downgrade Restricted", disabled: true, variant: "outline", action: "downgrade" };
+      if (plan.price > currentPrice) return { label: isBn ? "আপগ্রেড করুন" : "Upgrade", disabled: false, variant: "default", action: "upgrade" };
+      return { label: isBn ? "বর্তমান প্ল্যান" : "Current Plan", disabled: true, variant: "outline", action: "current" };
     }
-    return { label: isBn ? "এখনই শুরু করুন" : "Get Started", disabled: false, variant: (plan.is_popular ? "default" : "outline") as const, action: "subscribe" as const };
+    return { label: isBn ? "এখনই শুরু করুন" : "Get Started", disabled: false, variant: plan.is_popular ? "default" : "outline", action: "subscribe" };
   };
 
   const currentPlanId = currentSubscription?.plan_id;
