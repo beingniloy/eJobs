@@ -17,10 +17,10 @@ interface Props {
 }
 
 export default function ProfileHeader({ profile, user, isPublic, activeBadges, isBn }: Props) {
-  const fullName = profile.full_name_en || user.name || "";
-  const position = profile.current_position || "";
-  const city = profile.city || "";
-  const avatar = profile.avatar || "";
+  const fullName = profile.full_name_en || profile.full_name || user.name || "";
+  const position = profile.current_position || profile.current_position || "";
+  const city = profile.city || profile.district || "";
+  const avatar = profile.avatar || user?.avatar || "";
   const hasPremium = activeBadges.some((b: any) => b.badge_key === "premium");
 
   return (
@@ -28,7 +28,11 @@ export default function ProfileHeader({ profile, user, isPublic, activeBadges, i
       {/* Cover */}
       <div className="relative h-[200px] bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600">
         {profile.cover_photo && (
-          <img src={profile.cover_photo.startsWith("http") ? profile.cover_photo : `/storage/${profile.cover_photo}`} alt="Cover" className="absolute inset-0 w-full h-full object-cover" />
+          <img
+            src={profile.cover_photo.startsWith("http") ? profile.cover_photo : `/storage/${profile.cover_photo}`}
+            alt="Cover"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
         )}
         <div className="absolute inset-0 bg-black/20" />
         <div className="absolute top-4 right-4">
@@ -43,7 +47,11 @@ export default function ProfileHeader({ profile, user, isPublic, activeBadges, i
       <div className="relative px-6 pb-6">
         <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-[60px]">
           <div className="relative">
-            <DefaultAvatar src={avatar} name={fullName || user.name} className="h-[120px] w-[120px] border-4 border-background shadow-lg" />
+            <DefaultAvatar
+              src={avatar}
+              name={fullName || user.name}
+              className="h-[120px] w-[120px] border-4 border-background shadow-lg"
+            />
             {hasPremium && (
               <div className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm">
                 <Zap className="h-3 w-3 text-white" />
@@ -62,7 +70,7 @@ export default function ProfileHeader({ profile, user, isPublic, activeBadges, i
             {position && <p className="text-muted-foreground text-sm">{position}</p>}
             {city && (
               <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                <MapPin className="h-3 w-3" />{city}, Bangladesh
+                <MapPin className="h-3 w-3" />{city}{!isBn ? ", Bangladesh" : ", বাংলাদেশ"}
               </p>
             )}
           </div>

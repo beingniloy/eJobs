@@ -2,12 +2,10 @@
 
 import React, { useRef } from "react";
 import Link from "next/link";
-import api from "@/lib/api-client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Globe, Shield, Target, FileText, Upload, ExternalLink, Loader2 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
 
 interface Props {
   profile: any;
@@ -24,6 +22,8 @@ export default function ProfileBottomCards({ profile, user, isPublic, isBn, onTo
   const p = profile;
   const resumeInputRef = useRef<HTMLInputElement>(null);
 
+  const resumePath = p.resume_path || p.resume;
+
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -38,7 +38,7 @@ export default function ProfileBottomCards({ profile, user, isPublic, isBn, onTo
               {p.current_profession && <div className="flex justify-between"><span className="text-muted-foreground">{isBn ? "পছন্দের পদবি" : "Preferred Role"}</span><span className="font-medium">{p.current_profession}</span></div>}
               {p.expected_job_category && <div className="flex justify-between"><span className="text-muted-foreground">{isBn ? "ক্যাটাগরি" : "Category"}</span><span className="font-medium">{p.expected_job_category}</span></div>}
               {p.preferred_location && <div className="flex justify-between"><span className="text-muted-foreground">{isBn ? "লোকেশন" : "Location"}</span><span className="font-medium">{p.preferred_location}</span></div>}
-              {p.expected_salary && <div className="flex justify-between"><span className="text-muted-foreground">{isBn ? "বেতন" : "Salary"}</span><span className="font-medium">{formatCurrency(Number(p.expected_salary))}/mo</span></div>}
+              {p.expected_salary && <div className="flex justify-between"><span className="text-muted-foreground">{isBn ? "বেতন" : "Salary"}</span><span className="font-medium">{p.expected_salary}</span></div>}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{isBn ? "কাজের ধরন" : "Work Type"}</span>
                 <span className="font-medium">{p.available_remote ? "Remote/On-site" : "On-site"}</span>
@@ -61,7 +61,7 @@ export default function ProfileBottomCards({ profile, user, isPublic, isBn, onTo
               <FileText className="h-4 w-4 text-muted-foreground" />
               {isBn ? "রিজুমে" : "Resume"}
             </h3>
-            {p.resume_path ? (
+            {resumePath ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                   <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -71,7 +71,7 @@ export default function ProfileBottomCards({ profile, user, isPublic, isBn, onTo
                     <p className="text-xs font-medium truncate">{user.name}_Resume.pdf</p>
                     <p className="text-[10px] text-muted-foreground">PDF</p>
                   </div>
-                  <a href={p.resume_path.startsWith("cv/") ? `/${p.resume_path}` : `/storage/${p.resume_path}`} target="_blank" rel="noopener noreferrer">
+                  <a href={resumePath.startsWith("cv/") ? `/${resumePath}` : `/storage/${resumePath}`} target="_blank" rel="noopener noreferrer">
                     <Button variant="ghost" size="icon" className="h-8 w-8"><ExternalLink className="h-4 w-4" /></Button>
                   </a>
                 </div>
