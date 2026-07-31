@@ -12,31 +12,24 @@ import { Badge } from "@/components/ui/badge";
 import BadgeDisplay, { BadgeGrid } from "@/components/badges/BadgeDisplay";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DefaultAvatar } from "@/components/ui/default-avatar";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { getInitials } from "@/lib/utils";
 import {
-  MapPin, Briefcase, GraduationCap, CheckCircle, Award, Globe, Code, Calendar,
-  Eye, Users, ExternalLink, Edit3, Mail, Phone, LinkIcon, Star, Trophy,
-  Shield, Zap, ArrowRight, FileText, Target, TrendingUp, Clock, Loader2,
-  BriefcaseBusiness, Briefcase as LinkedinIcon, Globe as GithubIcon, Users as FacebookIcon,
-  Upload, ChevronDown, Check, Copy, BookOpen,
-} from "lucide-react";
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  MapPin, Briefcase, GraduationCap, CheckCircle, Award, Globe, Code, Calendar,
+  Eye, ExternalLink, Edit3, Mail, Phone, LinkIcon, Star, Trophy,
+  Shield, Zap, ArrowRight, FileText, Target, TrendingUp, Clock, Loader2,
+  BriefcaseBusiness, Upload, Check, Copy, BookOpen, MessageSquare,
+  Users, MoreHorizontal, Settings, Share2, ChevronDown, ChevronUp,
+  Download, Plus,
+} from "lucide-react";
 
 export default function CandidateProfileOverviewClient() {
   const { user } = useAuth();
@@ -50,12 +43,12 @@ export default function CandidateProfileOverviewClient() {
   const [cvData, setCvData] = useState<any>({});
   const [profileViews, setProfileViews] = useState<any[]>([]);
   const [isPublic, setIsPublic] = useState(true);
-  const [cvResumes, setCvResumes] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [trainings, setTrainings] = useState<any[]>([]);
   const [uploadingResume, setUploadingResume] = useState(false);
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
-  const [trainings, setTrainings] = useState<any[]>([]);
-  const [documents, setDocuments] = useState<any[]>([]);
   const resumeInputRef = useRef<HTMLInputElement>(null);
+  const [expandedAbout, setExpandedAbout] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -67,9 +60,7 @@ export default function CandidateProfileOverviewClient() {
       ]);
       const d = dashRes.data;
       const profileData = d.user?.profile || {};
-      if (!profileData.avatar && d.user?.avatar) {
-        profileData.avatar = d.user.avatar;
-      }
+      if (!profileData.avatar && d.user?.avatar) profileData.avatar = d.user.avatar;
       setProfile(profileData);
       setStats(d.stats || {});
       setApplications(d.applications || []);
@@ -79,9 +70,7 @@ export default function CandidateProfileOverviewClient() {
       setIsPublic(d.user?.profile?.is_public !== false);
       setDocuments(d.user?.profile?.documents || d.documents || []);
       setTrainings(d.user?.profile?.trainings || []);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   useEffect(() => {
@@ -94,23 +83,14 @@ export default function CandidateProfileOverviewClient() {
 
   const toggleVisibility = async (val: boolean) => {
     setIsPublic(val);
-    try {
-      await api.post("/candidate/profile-update", { is_public: val ? "1" : "0" });
-      toast.success(val ? "Profile made public" : "Profile made private");
-    } catch { toast.error("Failed"); }
+    try { await api.post("/candidate/profile-update", { is_public: val ? "1" : "0" }); toast.success(val ? "Profile made public" : "Profile made private"); } catch { toast.error("Failed"); }
   };
 
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== "application/pdf") {
-      toast.error(isBn ? "শুধুমাত্র PDF ফাইল আপলোড করুন" : "Only PDF files are allowed");
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error(isBn ? "ফাইলের সাইজ 2MB এর বেশি হতে পারে না" : "File size must be under 2MB");
-      return;
-    }
+    if (file.type !== "application/pdf") { toast.error(isBn ? "শুধুমাত্র PDF ফাইল আপলোড করুন" : "Only PDF files are allowed"); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error(isBn ? "ফাইলের সাইজ 2MB এর বেশি হতে পারে না" : "File size must be under 2MB"); return; }
     setUploadingResume(true);
     try {
       const formData = new FormData();
@@ -119,11 +99,7 @@ export default function CandidateProfileOverviewClient() {
       setProfile((prev: any) => ({ ...prev, resume_path: result.resume_path }));
       toast.success(isBn ? "রিজুমে আপলোড হয়েছে" : "Resume uploaded successfully");
       setResumeDialogOpen(false);
-    } catch {
-      toast.error(isBn ? "আপলোড ব্যর্থ হয়েছে" : "Upload failed");
-    } finally {
-      setUploadingResume(false);
-    }
+    } catch { toast.error(isBn ? "আপলোড ব্যর্থ হয়েছে" : "Upload failed"); } finally { setUploadingResume(false); }
   };
 
   const handleSelectCvResume = async (uuid: string) => {
@@ -133,29 +109,16 @@ export default function CandidateProfileOverviewClient() {
       if (path) setProfile((prev: any) => ({ ...prev, resume_path: path }));
       toast.success(isBn ? "রিজুমে নির্বাচিত হয়েছে" : "Resume selected");
       setResumeDialogOpen(false);
-    } catch {
-      toast.error(isBn ? "নির্বাচন ব্যর্থ হয়েছে" : "Selection failed");
-    }
+    } catch { toast.error(isBn ? "নির্বাচন ব্যর্থ হয়েছে" : "Selection failed"); }
   };
-
-  const EmptySection = ({ text }: { text: string }) => (
-    <div className="text-center py-6 text-sm text-muted-foreground">
-      <p>{text}</p>
-      <Button variant="link" size="sm" className="mt-1 h-auto p-0" asChild>
-        <Link href="/dashboard/profile">Add now</Link>
-      </Button>
-    </div>
-  );
 
   if (loading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-48 w-full rounded-xl" />
-        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}
-        </div>
+        <Skeleton className="h-64 w-full rounded-xl" />
+        <Skeleton className="h-20 w-full rounded-xl" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6"><Skeleton className="h-64 rounded-lg" /><Skeleton className="h-48 rounded-lg" /></div>
+          <div className="lg:col-span-2 space-y-6"><Skeleton className="h-48 rounded-lg" /><Skeleton className="h-48 rounded-lg" /></div>
           <div className="space-y-4"><Skeleton className="h-40 rounded-lg" /><Skeleton className="h-40 rounded-lg" /></div>
         </div>
       </div>
@@ -183,13 +146,10 @@ export default function CandidateProfileOverviewClient() {
   const projects = Array.isArray(p.projects) ? p.projects : (Array.isArray(cv.projects) ? cv.projects : []);
   const certifications = Array.isArray(p.certifications) ? p.certifications : [];
   const applicationsCount = stats?.applied || applications.length || 0;
-  const shortlistedCount = stats?.shortlisted || 0;
   const expectedSalary = p.expected_salary || "";
   const availability = p.availability_status || "Immediate";
   const experienceYears = p.experience_years || "";
-  const profileStrength = p.profile_completion_percentage || 0;
 
-  // Compute profile strength sections
   const strengthSections = [
     { label: "Basic Information", done: !!(fullName && phone && city) },
     { label: "Resume Added", done: !!(p.resume_path) },
@@ -205,524 +165,598 @@ export default function CandidateProfileOverviewClient() {
   const strengthPercent = Math.round((strengthSections.filter((s) => s.done).length / strengthSections.length) * 100);
 
   const socialLinks = [
-    linkedin && { icon: LinkedinIcon, href: linkedin, label: "LinkedIn" },
-    github && { icon: GithubIcon, href: github, label: "GitHub" },
-    facebook && { icon: FacebookIcon, href: facebook, label: "Facebook" },
+    linkedin && { icon: Briefcase, href: linkedin, label: "LinkedIn" },
+    github && { icon: Code, href: github, label: "GitHub" },
+    facebook && { icon: Globe, href: facebook, label: "Facebook" },
     portfolio && { icon: LinkIcon, href: portfolio, label: "Portfolio" },
   ].filter(Boolean) as { icon: any; href: string; label: string }[];
 
   return (
-    <div className="space-y-6">
-      {/* ── Profile Header ── */}
-      <div className="relative rounded-xl overflow-hidden bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white">
-        <div className="absolute inset-0 bg-[url('/images/company-bg.jpg')] bg-cover bg-center opacity-20" />
-        <div className="relative p-6 md:p-8">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-5">
-            <DefaultAvatar src={avatar} name={fullName || user.name} className="h-24 w-24 border-4 border-white/20 shadow-xl" />
-            <div className="flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl font-bold">{fullName || user.name}</h1>
-                {p.is_verified && <><CheckCircle className="h-5 w-5 text-green-400 fill-green-400/20" /><span className="text-xs text-green-400 font-medium">Verified</span></>}
-                {activeBadges.some((b: any) => b.badge_key === "premium") && <Badge className="bg-yellow-500 text-white text-xs"><Zap className="h-3 w-3 mr-1" />Pro</Badge>}
-              </div>
-              {position && <p className="text-white/70 mt-1">{position}</p>}
-              <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-white/60">
-                {city && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{city}, Bangladesh</span>}
-                {phone && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{phone}</span>}
-                {email && <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{email}</span>}
-              </div>
-              {socialLinks.length > 0 && (
-                <div className="flex items-center gap-2 mt-2">
-                  {socialLinks.map((sl, i) => (
-                    <a key={i} href={sl.href} target="_blank" rel="noopener noreferrer" className="h-7 w-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
-                      <sl.icon className="h-3.5 w-3.5" />
-                    </a>
-                  ))}
+    <div className="space-y-6 max-w-[900px] mx-auto">
+
+      {/* ═══ LINKEDIN-STYLE PROFILE HEADER ═══ */}
+      <Card className="overflow-hidden border-0 shadow-sm">
+        {/* Cover Photo */}
+        <div className="relative h-[200px] bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600">
+          {p.cover_photo && (
+            <img
+              src={p.cover_photo.startsWith("http") ? p.cover_photo : `/storage/${p.cover_photo}`}
+              alt="Cover"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          )}
+          <div className="absolute inset-0 bg-black/20" />
+          {/* Public/Private Badge */}
+          <div className="absolute top-4 right-4">
+            <Badge variant={isPublic ? "default" : "secondary"} className="gap-1.5 text-xs">
+              {isPublic ? <Globe className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
+              {isPublic ? (isBn ? "পাবলিক" : "Public") : (isBn ? "প্রাইভেট" : "Private")}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Profile Info Bar */}
+        <div className="relative px-6 pb-6">
+          {/* Avatar - overlaps cover */}
+          <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-[60px]">
+            <div className="relative">
+              <DefaultAvatar
+                src={avatar}
+                name={fullName || user.name}
+                className="h-[120px] w-[120px] border-4 border-background shadow-lg"
+              />
+              {activeBadges.some((b: any) => b.badge_key === "premium") && (
+                <div className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm">
+                  <Zap className="h-3 w-3 text-white" />
                 </div>
               )}
             </div>
+            <div className="flex-1 min-w-0 sm:pb-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl font-bold">{fullName || user.name}</h1>
+                {p.is_verified && (
+                  <Badge variant="outline" className="text-xs gap-1 border-emerald-300 text-emerald-600 dark:border-emerald-700 dark:text-emerald-400">
+                    <CheckCircle className="h-3 w-3" /> {isBn ? "যাচাইকৃত" : "Verified"}
+                  </Badge>
+                )}
+              </div>
+              {position && <p className="text-muted-foreground text-sm">{position}</p>}
+              {city && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                  <MapPin className="h-3 w-3" />{city}, Bangladesh
+                </p>
+              )}
+            </div>
             <div className="flex items-center gap-2 shrink-0">
-              <Button variant="outline" size="sm" className="border-white/40 dark:text-white text-foreground hover:bg-white/10" asChild>
-                <Link href={`/profile/${user.username}`} target="_blank"><Eye className="h-4 w-4 mr-1" />Preview Profile</Link>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/profile/${user.username}`} target="_blank">
+                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />{isBn ? "প্রিভিউ" : "Preview"}
+                </Link>
               </Button>
-              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground" asChild>
-                <Link href="/dashboard/profile"><Edit3 className="h-4 w-4 mr-1" />Edit Profile</Link>
+              <Button size="sm" asChild>
+                <Link href="/dashboard/profile">
+                  <Edit3 className="h-3.5 w-3.5 mr-1.5" />{isBn ? "এডিট" : "Edit"}
+                </Link>
               </Button>
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
-      {/* ── Stats Bar ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      {/* ═══ LINKEDIN-STYLE STATS BAR ═══ */}
+      <div className="flex items-center gap-4 px-2">
         {[
-          { icon: Briefcase, label: "Experience", value: experienceYears ? `${experienceYears}+ Years` : `${experience.length} Positions` },
-          { icon: FileText, label: "Total Applications", value: String(applicationsCount) },
-          { icon: Eye, label: "Profile Views", value: String(p.profile_views_count || profileViews.length || 0) },
-          { icon: Award, label: "Endorsed", value: String(activeBadges.length) },
-          { icon: TrendingUp, label: "Expected Salary", value: expectedSalary ? `${formatCurrency(Number(expectedSalary))}/month` : "Not set" },
-          { icon: Clock, label: "Availability", value: availability || "Immediate" },
+          { label: isBn ? "আবেদন" : "Applications", value: applicationsCount, icon: FileText },
+          { label: isBn ? "ভিউ" : "Profile Views", value: p.profile_views_count || profileViews.length || 0, icon: Eye },
+          { label: isBn ? "সার্চ উপস্থিতি" : "Search Appearances", value: stats?.search_appearances || 0, icon: TrendingUp },
+          { label: isBn ? "প্রোফাইল শক্তি" : "Profile Strength", value: `${strengthPercent}%`, icon: Shield },
         ].map((s) => (
-          <Card key={s.label} className="text-center p-3">
-            <s.icon className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-            <p className="text-xs text-muted-foreground">{s.label}</p>
-            <p className="text-sm font-bold mt-0.5">{s.value}</p>
-          </Card>
+          <div key={s.label} className="flex items-center gap-2 text-sm">
+            <s.icon className="h-4 w-4 text-muted-foreground" />
+            <span className="font-semibold">{s.value}</span>
+            <span className="text-muted-foreground hidden sm:inline">{s.label}</span>
+          </div>
         ))}
       </div>
 
-      {/* ── Earned Badges ── */}
+      {/* ═══ ABOUT ═══ */}
+      {bio && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold">{isBn ? "সম্পর্কে" : "About"}</h2>
+              <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
+                <Link href="/dashboard/profile"><Edit3 className="h-3.5 w-3.5" /></Link>
+              </Button>
+            </div>
+            <p className={`text-sm text-muted-foreground leading-relaxed ${!expandedAbout && bio.length > 300 ? "line-clamp-4" : ""}`}>
+              {bio}
+            </p>
+            {bio.length > 300 && (
+              <button
+                onClick={() => setExpandedAbout(!expandedAbout)}
+                className="text-sm font-medium text-primary hover:underline mt-1 flex items-center gap-1"
+              >
+                {expandedAbout ? (isBn ? "কম দেখুন" : "Show less") : (isBn ? "আরও দেখুন" : "Show more")}
+                {expandedAbout ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══ ACTIVITY ═══ */}
+      {applications.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold">{isBn ? "সাম্প্রতিক কার্যক্রম" : "Activity"}</h2>
+              <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
+                <Link href="/dashboard/applied-jobs">{isBn ? "সব দেখুন" : "See all"} <ArrowRight className="h-3.5 w-3.5 ml-0.5" /></Link>
+              </Button>
+            </div>
+            <div className="space-y-3">
+              {applications.slice(0, 3).map((app: any, i: number) => {
+                const statusColors: Record<string, string> = {
+                  pending: "bg-amber-100 text-amber-700",
+                  shortlisted: "bg-emerald-100 text-emerald-700",
+                  rejected: "bg-red-100 text-red-700",
+                };
+                return (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
+                    <div className="h-10 w-10 rounded-lg bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center shrink-0">
+                      <Briefcase className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{app.job?.title || "Job"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {app.job?.company?.name || ""} {app.job?.location ? `· ${app.job.location}` : ""}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className={`text-[10px] capitalize shrink-0 ${(statusColors as any)[app.status] || ""}`}>
+                      {app.status || "Applied"}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══ PROFILE STRENGTH ═══ */}
+      {strengthPercent < 80 && (
+        <Card className="border-0 shadow-sm border-l-4 border-l-amber-400">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-amber-500" />
+                <h2 className="text-lg font-bold">{isBn ? "প্রোফাইল শক্তি" : "Profile Strength"}</h2>
+              </div>
+              <span className="text-2xl font-bold text-primary">{strengthPercent}%</span>
+            </div>
+            <Progress value={strengthPercent} className="h-2 mb-4" />
+            <div className="grid grid-cols-2 gap-2">
+              {strengthSections.map((s, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs">
+                  {s.done ? (
+                    <CheckCircle className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                  ) : (
+                    <div className="h-3.5 w-3.5 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+                  )}
+                  <span className={s.done ? "text-foreground" : "text-muted-foreground"}>{s.label}</span>
+                </div>
+              ))}
+            </div>
+            <Button variant="outline" size="sm" className="w-full mt-4" asChild>
+              <Link href="/dashboard/profile">{isBn ? "প্রোফাইল উন্নত করুন" : "Complete Profile"}</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══ EXPERIENCE ═══ */}
+      {experience.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-muted-foreground" />
+                {isBn ? "কর্ম অভিজ্ঞতা" : "Experience"}
+              </h2>
+              <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
+                <Link href="/dashboard/profile"><Plus className="h-3.5 w-3.5" /></Link>
+              </Button>
+            </div>
+            <div className="space-y-0">
+              {experience.map((exp: any, i: number) => (
+                <div key={i} className="relative pl-8 pb-6 last:pb-0">
+                  {/* Timeline dot & line */}
+                  <div className="absolute left-0 top-1.5 w-[18px] flex flex-col items-center">
+                    <div className="h-[18px] w-[18px] rounded-full bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-400 dark:border-blue-500 flex items-center justify-center">
+                      <div className="h-2 w-2 rounded-full bg-blue-500" />
+                    </div>
+                    {i < experience.length - 1 && <div className="w-px flex-1 bg-border mt-1" />}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm">{exp.position || exp.job_title}</h3>
+                    <p className="text-sm text-foreground">{exp.company || exp.company_name}</p>
+                    {exp.location && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <MapPin className="h-3 w-3" />{exp.location}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {exp.start_date}{exp.end_date ? ` - ${exp.end_date}` : exp.is_current ? ` - ${isBn ? "বর্তমান" : "Present"}` : ""}
+                    </p>
+                    {exp.description && <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{exp.description}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══ EDUCATION ═══ */}
+      {education.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <GraduationCap className="h-5 w-5 text-muted-foreground" />
+                {isBn ? "শিক্ষা" : "Education"}
+              </h2>
+              <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
+                <Link href="/dashboard/profile"><Plus className="h-3.5 w-3.5" /></Link>
+              </Button>
+            </div>
+            <div className="space-y-0">
+              {education.map((edu: any, i: number) => (
+                <div key={i} className="relative pl-8 pb-6 last:pb-0">
+                  <div className="absolute left-0 top-1.5 w-[18px] flex flex-col items-center">
+                    <div className="h-[18px] w-[18px] rounded-full bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-400 dark:border-blue-500 flex items-center justify-center">
+                      <div className="h-2 w-2 rounded-full bg-blue-500" />
+                    </div>
+                    {i < education.length - 1 && <div className="w-px flex-1 bg-border mt-1" />}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm">{edu.degree || edu.degree_name || edu.level}</h3>
+                    <p className="text-sm text-foreground">{edu.institution || edu.school_name}</p>
+                    {edu.field_of_study && <p className="text-xs text-muted-foreground">{edu.field_of_study}</p>}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {edu.start_date ? `${edu.start_date} - ` : ""}{edu.end_date || edu.graduation_year || ""}
+                      {edu.gpa || edu.result ? ` · GPA: ${edu.gpa || edu.result}` : ""}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══ SKILLS ═══ */}
+      {skills.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Zap className="h-5 w-5 text-muted-foreground" />
+                {isBn ? "দক্ষতা" : "Skills"}
+              </h2>
+              <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
+                <Link href="/dashboard/profile"><Plus className="h-3.5 w-3.5" /></Link>
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {skills.slice(0, 12).map((skill: string, i: number) => (
+                <Badge key={i} variant="secondary" className="text-sm px-3 py-1">{skill}</Badge>
+              ))}
+              {skills.length > 12 && (
+                <Badge variant="outline" className="text-sm px-3 py-1">+{skills.length - 12} more</Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══ BADGES ═══ */}
       {activeBadges.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2"><Trophy className="h-4 w-4 text-yellow-500" />Earned Badges ({activeBadges.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Trophy className="h-5 w-5 text-amber-500" />
+              <h2 className="text-lg font-bold">{isBn ? "অর্জিত ব্যাজ" : "Badges"}</h2>
+            </div>
             <BadgeGrid badges={activeBadges} size="md" />
           </CardContent>
         </Card>
       )}
 
-      {/* ── Main Content Grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Main Content (left) */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* About Me */}
-          <Card>
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-base">About Me</CardTitle>
-              <Button variant="ghost" size="sm" asChild><Link href="/dashboard/profile"><Edit3 className="h-3.5 w-3.5 mr-1" />Edit</Link></Button>
-            </CardHeader>
-            <CardContent>
-              {bio ? <p className="text-sm text-muted-foreground leading-relaxed">{bio}</p> : <EmptySection text="Add a bio to tell employers about yourself" />}
-              {skills.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium mb-2">Key Strengths</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {skills.slice(0, 8).map((s: string, i: number) => <Badge key={i} variant="secondary" className="text-xs">{s}</Badge>)}
-                    {skills.length > 8 && <Badge variant="outline" className="text-xs">+{skills.length - 8} more</Badge>}
+      {/* ═══ PROJECTS ═══ */}
+      {projects.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Code className="h-5 w-5 text-muted-foreground" />
+                {isBn ? "প্রকল্প" : "Projects"}
+              </h2>
+              <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
+                <Link href="/dashboard/profile"><Plus className="h-3.5 w-3.5" /></Link>
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {projects.map((proj: any, i: number) => (
+                <div key={i} className="p-4 rounded-xl border border-border/50 hover:border-border transition-colors">
+                  <h4 className="font-semibold text-sm mb-1">{proj.name || proj.project_name}</h4>
+                  {proj.description && <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{proj.description}</p>}
+                  {proj.technologies && proj.technologies.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {proj.technologies.slice(0, 3).map((t: string, j: number) => <Badge key={j} variant="secondary" className="text-[10px]">{t}</Badge>)}
+                    </div>
+                  )}
+                  {proj.url && <a href={proj.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline inline-flex items-center gap-1"><ExternalLink className="h-3 w-3" />View</a>}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══ CERTIFICATIONS ═══ */}
+      {certifications.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <h2 className="text-lg font-bold flex items-center gap-2 mb-4">
+              <Award className="h-5 w-5 text-muted-foreground" />
+              {isBn ? "সার্টিফিকেশন" : "Certifications"}
+            </h2>
+            <div className="space-y-2">
+              {certifications.map((cert: any, i: number) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border/50">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Award className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{cert.name || cert.title}</p>
+                    <p className="text-xs text-muted-foreground">{cert.issuer || cert.organization} {cert.year ? `(${cert.year})` : ""}</p>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-          {/* Work Experience */}
-          <Card>
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4" />Work Experience ({experience.length})</CardTitle>
-              <Button variant="ghost" size="sm" asChild><Link href="/dashboard/profile">Add Experience</Link></Button>
-            </CardHeader>
-            <CardContent>
-              {experience.length > 0 ? (
-                <div className="space-y-4">
-                  {experience.map((exp: any, i: number) => (
-                    <div key={i} className="relative pl-6 pb-4 border-l-2 border-primary/20 last:border-0">
-                      <div className="absolute -left-1.5 top-0 h-3 w-3 rounded-full bg-primary" />
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="font-semibold text-sm">{exp.position || exp.job_title}</h4>
-                          <p className="text-sm text-muted-foreground">{exp.company || exp.company_name}</p>
-                          {exp.location && <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5"><MapPin className="h-3 w-3" />{exp.location}</p>}
-                        </div>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {exp.start_date} - {exp.end_date || (exp.is_current ? "Present" : "")}
-                        </span>
-                      </div>
-                      {exp.description && <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{exp.description}</p>}
-                    </div>
-                  ))}
-                </div>
-              ) : <EmptySection text="Add your work experience to stand out" />}
-            </CardContent>
-          </Card>
-
-          {/* Education */}
-          <Card>
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2"><GraduationCap className="h-4 w-4" />Education ({education.length})</CardTitle>
-              <Button variant="ghost" size="sm" asChild><Link href="/dashboard/profile">Add Education</Link></Button>
-            </CardHeader>
-            <CardContent>
-              {education.length > 0 ? (
-                <div className="space-y-4">
-                  {education.map((edu: any, i: number) => (
-                    <div key={i} className="relative pl-6 pb-4 border-l-2 border-primary/20 last:border-0">
-                      <div className="absolute -left-1.5 top-0 h-3 w-3 rounded-full bg-primary" />
-                      <h4 className="font-semibold text-sm">{edu.degree || edu.degree_name || edu.level}</h4>
-                      <p className="text-sm text-muted-foreground">{edu.institution || edu.school_name}</p>
-                      {edu.field_of_study && <p className="text-xs text-muted-foreground">{edu.field_of_study}</p>}
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {edu.start_date ? `${edu.start_date} - ` : ""}{edu.end_date || edu.graduation_year || ""}
-                        {edu.gpa || edu.result ? ` | GPA: ${edu.gpa || edu.result}` : ""}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : <EmptySection text="Add your educational background" />}
-            </CardContent>
-          </Card>
-
-          {/* Projects */}
-          {projects.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2"><BriefcaseBusiness className="h-4 w-4" />Projects ({projects.length})</CardTitle>
-                <Button variant="ghost" size="sm" asChild><Link href="/dashboard/profile">Add Project</Link></Button>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {projects.map((proj: any, i: number) => (
-                    <Card key={i} className="p-3">
-                      <h4 className="font-semibold text-sm">{proj.name || proj.project_name}</h4>
-                      {proj.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{proj.description}</p>}
-                      {proj.technologies && proj.technologies.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {proj.technologies.slice(0, 3).map((t: string, j: number) => <Badge key={j} variant="outline" className="text-[10px]">{t}</Badge>)}
-                        </div>
-                      )}
-                      {proj.url && <a href={proj.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline mt-1 inline-flex items-center gap-1"><ExternalLink className="h-3 w-3" />View</a>}
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Certifications */}
-          {certifications.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Award className="h-4 w-4" />Certifications ({certifications.length})</CardTitle></CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {certifications.map((cert: any, i: number) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg border">
-                      <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center shrink-0"><Award className="h-5 w-5 text-primary" /></div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{cert.name || cert.title}</p>
-                        <p className="text-xs text-muted-foreground">{cert.issuer || cert.organization} {cert.year ? `(${cert.year})` : ""}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Languages */}
-          {p.language_proficiency && p.language_proficiency.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2"><Globe className="h-4 w-4" />Languages ({p.language_proficiency.length})</CardTitle>
-                <Button variant="ghost" size="sm" asChild><Link href="/dashboard/profile">Edit</Link></Button>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {p.language_proficiency.map((lang: any, i: number) => (
-                    <div key={i} className="flex items-center gap-2 p-2 rounded-lg border">
-                      <Globe className="h-4 w-4 text-primary shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{lang.name || lang.language}</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {[
-                            lang.read && "Read",
-                            lang.write && "Write",
-                            lang.speak && "Speak",
-                          ].filter(Boolean).join(" · ") || lang.proficiency || ""}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Training */}
-          {trainings.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2"><BookOpen className="h-4 w-4" />Training ({trainings.length})</CardTitle>
-                <Button variant="ghost" size="sm" asChild><Link href="/dashboard/profile">Edit</Link></Button>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {trainings.map((training: any, i: number) => (
-                    <div key={i} className="relative pl-6 pb-4 border-l-2 border-primary/20 last:border-0">
-                      <div className="absolute -left-1.5 top-0 h-3 w-3 rounded-full bg-primary" />
-                      <h4 className="font-semibold text-sm">{training.title}</h4>
-                      {training.institute_name && <p className="text-sm text-muted-foreground">{training.institute_name}</p>}
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {training.duration && `${training.duration} `}
-                        {training.year && `(${training.year})`}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Documents */}
-          {documents.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />Documents ({documents.length})</CardTitle>
-                <Button variant="ghost" size="sm" asChild><Link href="/dashboard/profile">Edit</Link></Button>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {documents.map((doc: any, i: number) => {
-                    const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://127.0.0.1:8000";
-                    const docUrl = doc.url || (doc.file_path ? `${API_BASE}/storage/${doc.file_path.replace(/^\/?storage\//, "")}` : "");
-                    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.file_path || "");
-                    return (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg border">
-                      <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
-                        {isImage && docUrl ? <img src={docUrl} alt={doc.type} className="h-full w-full object-cover" /> : <FileText className="h-5 w-5 text-primary" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate capitalize">{doc.type?.replace(/_/g, " ") || doc.label}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{doc.file_path?.split("/").pop() || ""}</p>
-                      </div>
-                      {docUrl && <a href={docUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline shrink-0">View</a>}
-                    </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Recent Applications */}
-          {applications.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-base">Recent Applications</CardTitle></CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {applications.slice(0, 5).map((app: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between p-3 rounded-lg border">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{app.job?.title || "Job"}</p>
-                        <p className="text-xs text-muted-foreground">{app.job?.company?.name || ""} {app.job?.location ? `- ${app.job.location}` : ""}</p>
-                      </div>
-                      <Badge variant={app.status === "shortlisted" ? "default" : app.status === "rejected" ? "destructive" : "secondary"} className="text-xs shrink-0 ml-2">
-                        {app.status || "Applied"}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Sidebar (right) */}
-        <div className="lg:col-span-4 space-y-4">
-          {/* Profile Strength */}
-          <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Shield className="h-4 w-4" />Profile Strength</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-center">
-                <div className="relative">
-                  <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="8" fill="none" className="text-muted" />
-                    <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="8" fill="none" strokeDasharray={`${2 * Math.PI * 40}`} strokeDashoffset={`${2 * Math.PI * 40 * (1 - strengthPercent / 100)}`} className="text-primary" strokeLinecap="round" />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center"><span className="text-xl font-bold">{strengthPercent}%</span></div>
-                </div>
-              </div>
-              <p className="text-center text-sm font-medium">{strengthPercent >= 80 ? "Excellent" : strengthPercent >= 50 ? "Good" : "Needs Improvement"}</p>
-              <div className="space-y-1.5">
-                {strengthSections.map((s, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs">
-                    <CheckCircle className={`h-3.5 w-3.5 ${s.done ? "text-green-500" : "text-muted-foreground/40"}`} />
-                    <span className={s.done ? "" : "text-muted-foreground"}>{s.label}</span>
+      {/* ═══ LANGUAGES ═══ */}
+      {p.language_proficiency && p.language_proficiency.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Globe className="h-5 w-5 text-muted-foreground" />
+                {isBn ? "ভাষা" : "Languages"}
+              </h2>
+              <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
+                <Link href="/dashboard/profile"><Edit3 className="h-3.5 w-3.5" /></Link>
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {p.language_proficiency.map((lang: any, i: number) => (
+                <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg border border-border/50">
+                  <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{lang.name || lang.language}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {[lang.read && "Read", lang.write && "Write", lang.speak && "Speak"].filter(Boolean).join(" · ") || lang.proficiency || ""}
+                    </p>
                   </div>
-                ))}
-              </div>
-              <Button variant="outline" size="sm" className="w-full" asChild><Link href="/dashboard/profile">Improve Profile</Link></Button>
-            </CardContent>
-          </Card>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-          {/* AI Profile Insights */}
-          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-            <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Zap className="h-4 w-4 text-primary" />AI Profile Insights</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{Math.min(100, strengthPercent + 10)}%</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {strengthPercent >= 70 ? "Your profile matches well with many jobs" : "Complete your profile to improve job matches"}
-                </p>
-              </div>
-              <Button variant="outline" size="sm" className="w-full" asChild><Link href="/dashboard/ai-match">Get AI Suggestions</Link></Button>
-            </CardContent>
-          </Card>
-
-          {/* Top Skills */}
-          {skills.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-sm">Top Skills</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
-                {skills.slice(0, 8).map((skill: string, i: number) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <span>{skill}</span>
-                    <div className="flex items-center gap-2">
-                      <Progress value={Math.max(50, 95 - i * 5)} className="h-1.5 w-16" />
-                      <span className="text-xs text-muted-foreground w-8 text-right">{Math.max(50, 95 - i * 5)}%</span>
+      {/* ═══ DOCUMENTS ═══ */}
+      {documents.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <h2 className="text-lg font-bold flex items-center gap-2 mb-4">
+              <FileText className="h-5 w-5 text-muted-foreground" />
+              {isBn ? "ডকুমেন্ট" : "Documents"}
+            </h2>
+            <div className="space-y-2">
+              {documents.map((doc: any, i: number) => {
+                const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://127.0.0.1:8000";
+                const docUrl = doc.url || (doc.file_path ? `${API_BASE}/storage/${doc.file_path.replace(/^\/?storage\//, "")}` : "");
+                const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.file_path || "");
+                return (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border/50">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
+                      {isImage && docUrl ? <img src={docUrl} alt={doc.type} className="h-full w-full object-cover" /> : <FileText className="h-5 w-5 text-primary" />}
                     </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Who Viewed My Profile */}
-          {profileViews.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Eye className="h-4 w-4" />Who Viewed My Profile</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
-                {profileViews.slice(0, 5).map((v: any, i: number) => (
-                  <div key={i} className="flex items-center gap-3 text-sm">
-                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold shrink-0">{(v.company_name || "A")[0]}</div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate text-xs">{v.company_name || "Anonymous"}</p>
-                      <p className="text-[10px] text-muted-foreground">{v.timestamp || ""}</p>
+                      <p className="text-sm font-medium truncate capitalize">{doc.type?.replace(/_/g, " ") || doc.label}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{doc.file_path?.split("/").pop() || ""}</p>
                     </div>
+                    {docUrl && <a href={docUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline shrink-0">View</a>}
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-          {/* Job Preferences */}
-          <Card>
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm">Job Preferences</CardTitle>
-              <Button variant="ghost" size="sm" asChild><Link href="/dashboard/profile"><Edit3 className="h-3 w-3" /></Link></Button>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              {p.current_profession && <div className="flex justify-between"><span className="text-muted-foreground">Preferred Role</span><span className="font-medium">{p.current_profession}</span></div>}
-              {p.expected_job_category && <div className="flex justify-between"><span className="text-muted-foreground">Category</span><span className="font-medium">{p.expected_job_category}</span></div>}
-              {p.preferred_location && <div className="flex justify-between"><span className="text-muted-foreground">Location</span><span className="font-medium">{p.preferred_location}</span></div>}
-              {expectedSalary && <div className="flex justify-between"><span className="text-muted-foreground">Salary</span><span className="font-medium">{formatCurrency(Number(expectedSalary))}/mo</span></div>}
+      {/* ═══ TRAINING ═══ */}
+      {trainings.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <h2 className="text-lg font-bold flex items-center gap-2 mb-4">
+              <BookOpen className="h-5 w-5 text-muted-foreground" />
+              {isBn ? "প্রশিক্ষণ" : "Training"}
+            </h2>
+            <div className="space-y-0">
+              {trainings.map((training: any, i: number) => (
+                <div key={i} className="relative pl-8 pb-4 last:pb-0">
+                  <div className="absolute left-0 top-1.5 w-[18px] flex flex-col items-center">
+                    <div className="h-[18px] w-[18px] rounded-full bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-400 dark:border-blue-500 flex items-center justify-center">
+                      <div className="h-2 w-2 rounded-full bg-blue-500" />
+                    </div>
+                    {i < trainings.length - 1 && <div className="w-px flex-1 bg-border mt-1" />}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm">{training.title}</h3>
+                    {training.institute_name && <p className="text-sm text-muted-foreground">{training.institute_name}</p>}
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {training.duration && `${training.duration} `}{training.year && `(${training.year})`}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══ SIDEBAR-STYLE CARDS (below main content) ═══ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Job Preferences */}
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+              <Target className="h-4 w-4 text-muted-foreground" />
+              {isBn ? "চাকরির পছন্দ" : "Job Preferences"}
+            </h3>
+            <div className="space-y-2 text-sm">
+              {p.current_profession && <div className="flex justify-between"><span className="text-muted-foreground">{isBn ? "পছন্দের পদবি" : "Preferred Role"}</span><span className="font-medium">{p.current_profession}</span></div>}
+              {p.expected_job_category && <div className="flex justify-between"><span className="text-muted-foreground">{isBn ? "ক্যাটাগরি" : "Category"}</span><span className="font-medium">{p.expected_job_category}</span></div>}
+              {p.preferred_location && <div className="flex justify-between"><span className="text-muted-foreground">{isBn ? "লোকেশন" : "Location"}</span><span className="font-medium">{p.preferred_location}</span></div>}
+              {expectedSalary && <div className="flex justify-between"><span className="text-muted-foreground">{isBn ? "বেতন" : "Salary"}</span><span className="font-medium">{formatCurrency(Number(expectedSalary))}/mo</span></div>}
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Work Type</span>
+                <span className="text-muted-foreground">{isBn ? "কাজের ধরন" : "Work Type"}</span>
                 <span className="font-medium">{p.available_remote ? "Remote/On-site" : "On-site"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Availability</span>
+                <span className="text-muted-foreground">{isBn ? "উপলব্ধতা" : "Availability"}</span>
                 <span className="font-medium">{availability || "Immediate"}</span>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <Button variant="ghost" size="sm" className="w-full mt-3 text-primary" asChild>
+              <Link href="/dashboard/profile">{isBn ? "এডিট করুন" : "Edit preferences"}</Link>
+            </Button>
+          </CardContent>
+        </Card>
 
-          {/* Resume */}
-          <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4" />{isBn ? "রিজুমে" : "Resume"}</CardTitle></CardHeader>
-            <CardContent>
-              {p.resume_path ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                    <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center"><FileText className="h-5 w-5 text-primary" /></div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate">{user.name}_Resume.pdf</p>
-                      <p className="text-[10px] text-muted-foreground">PDF</p>
-                    </div>
-                    <a href={p.resume_path.startsWith("cv/") ? `/${p.resume_path}` : `/storage/${p.resume_path}`} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="icon" className="h-8 w-8"><ExternalLink className="h-4 w-4" /></Button></a>
+        {/* Resume */}
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              {isBn ? "রিজুমে" : "Resume"}
+            </h3>
+            {p.resume_path ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <FileText className="h-5 w-5 text-primary" />
                   </div>
-                  <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => setResumeDialogOpen(true)}>
-                    <Upload className="h-3.5 w-3.5" /> {isBn ? "রিজুমে পরিবর্তন করুন" : "Change Resume"}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground text-center">{isBn ? "কোনো রিজুমে আপলোড হয়নি" : "No resume uploaded"}</p>
-                  <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => setResumeDialogOpen(true)}>
-                    <Upload className="h-3.5 w-3.5" /> {isBn ? "রিজুমে আপলোড করুন" : "Upload Resume"}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Resume Picker Dialog */}
-          <Dialog open={resumeDialogOpen} onOpenChange={setResumeDialogOpen}>
-            <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{isBn ? "রিজুমে নির্বাচন করুন" : "Select Resume"}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-2">
-                {/* Upload New */}
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2">{isBn ? "নতুন আপলোড করুন" : "Upload New"}</p>
-                  <input ref={resumeInputRef} type="file" accept=".pdf" className="hidden" onChange={handleResumeUpload} />
-                  <button
-                    onClick={() => resumeInputRef.current?.click()}
-                    disabled={uploadingResume}
-                    className="w-full p-4 border-2 border-dashed rounded-lg hover:border-primary/50 transition-colors text-center"
-                  >
-                    {uploadingResume ? (
-                      <Loader2 className="h-6 w-6 mx-auto animate-spin text-primary" />
-                    ) : (
-                      <>
-                        <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
-                        <p className="text-xs text-muted-foreground">{isBn ? "PDF ফাইল ড্র্যাগ করুন অথবা ক্লিক করুন" : "Drag PDF or click to browse"}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">Max 2MB</p>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Existing CV Builder Resumes */}
-                {cvResumes.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-2">{isBn ? "CV থেকে নির্বাচন করুন" : "Select from CV Builder"}</p>
-                    <div className="space-y-1.5">
-                      {cvResumes.map((resume: any) => {
-                        const isActive = p.resume_path === `cv/share/${resume.uuid}`;
-                        return (
-                          <button
-                            key={resume.uuid}
-                            onClick={() => handleSelectCvResume(resume.uuid)}
-                            className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
-                              isActive ? "border-primary bg-primary/5" : "hover:border-primary/50"
-                            }`}
-                          >
-                            <div className="h-9 w-9 rounded bg-primary/10 flex items-center justify-center shrink-0">
-                              <FileText className="h-4 w-4 text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{resume.title}</p>
-                              <p className="text-[10px] text-muted-foreground">{resume.template_slug}</p>
-                            </div>
-                            {isActive && <Check className="h-4 w-4 text-primary shrink-0" />}
-                          </button>
-                        );
-                      })}
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{user.name}_Resume.pdf</p>
+                    <p className="text-[10px] text-muted-foreground">PDF</p>
                   </div>
-                )}
-
-                <Button variant="link" size="sm" className="w-full" asChild>
-                  <Link href="/dashboard/resume">{isBn ? "রিজুমে ম্যানেজ করুন" : "Manage Resumes"} →</Link>
+                  <a href={p.resume_path.startsWith("cv/") ? `/${p.resume_path}` : `/storage/${p.resume_path}`} target="_blank" rel="noopener noreferrer">
+                    <Button variant="ghost" size="icon" className="h-8 w-8"><ExternalLink className="h-4 w-4" /></Button>
+                  </a>
+                </div>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => setResumeDialogOpen(true)}>
+                  <Upload className="h-3.5 w-3.5 mr-1.5" /> {isBn ? "পরিবর্তন করুন" : "Change Resume"}
                 </Button>
               </div>
-            </DialogContent>
-          </Dialog>
-
-          {/* Profile Visibility */}
-          <Card>
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Profile Visibility</p>
-                <p className="text-xs text-muted-foreground">{isPublic ? "Your profile is visible to employers" : "Your profile is hidden from employers"}</p>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-xs text-muted-foreground mb-3">{isBn ? "কোনো রিজুমে নেই" : "No resume uploaded"}</p>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => setResumeDialogOpen(true)}>
+                  <Upload className="h-3.5 w-3.5 mr-1.5" /> {isBn ? "আপলোড করুন" : "Upload Resume"}
+                </Button>
               </div>
-              <Switch checked={isPublic} onCheckedChange={toggleVisibility} />
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      {/* ═══ PROFILE VISIBILITY ═══ */}
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Globe className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">{isBn ? "প্রোফাইল দৃশ্যমানতা" : "Profile Visibility"}</p>
+              <p className="text-xs text-muted-foreground">{isPublic ? (isBn ? "নিয়োগকর্তাদের কাছে দৃশ্যমান" : "Visible to employers") : (isBn ? "নিয়োগকর্তাদের কাছে লুকানো" : "Hidden from employers")}</p>
+            </div>
+          </div>
+          <Switch checked={isPublic} onCheckedChange={toggleVisibility} />
+        </CardContent>
+      </Card>
+
+      {/* ═══ WHO VIEWED ═══ */}
+      {profileViews.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+              <Eye className="h-4 w-4 text-muted-foreground" />
+              {isBn ? "কে দেখেছে" : "Who Viewed Your Profile"}
+            </h3>
+            <div className="space-y-2">
+              {profileViews.slice(0, 5).map((v: any, i: number) => (
+                <div key={i} className="flex items-center gap-3 text-sm">
+                  <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold shrink-0">{(v.company_name || "A")[0]}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate text-xs">{v.company_name || "Anonymous"}</p>
+                    <p className="text-[10px] text-muted-foreground">{v.timestamp || ""}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══ RESUME PICKER DIALOG ═══ */}
+      <Dialog open={resumeDialogOpen} onOpenChange={setResumeDialogOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{isBn ? "রিজুমে নির্বাচন করুন" : "Select Resume"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">{isBn ? "নতুন আপলোড করুন" : "Upload New"}</p>
+              <input ref={resumeInputRef} type="file" accept=".pdf" className="hidden" onChange={handleResumeUpload} />
+              <button
+                onClick={() => resumeInputRef.current?.click()}
+                disabled={uploadingResume}
+                className="w-full p-4 border-2 border-dashed rounded-lg hover:border-primary/50 transition-colors text-center"
+              >
+                {uploadingResume ? (
+                  <Loader2 className="h-6 w-6 mx-auto animate-spin text-primary" />
+                ) : (
+                  <>
+                    <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                    <p className="text-xs text-muted-foreground">{isBn ? "PDF ফাইল" : "Drag PDF or click to browse"}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Max 2MB</p>
+                  </>
+                )}
+              </button>
+            </div>
+            <Button variant="link" size="sm" className="w-full" asChild>
+              <Link href="/dashboard/resume">{isBn ? "রিজুমে ম্যানেজ করুন" : "Manage Resumes"} →</Link>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
