@@ -16,10 +16,10 @@ import LanguagesSection from "./sections/LanguagesSection";
 import AchievementsSection from "./sections/AchievementsSection";
 import CustomSection from "./sections/CustomSection";
 
-export default function ExperiencesStep({ wizard }: { wizard: ReturnType<typeof useResumeWizard> }) {
+export default function ExperiencesStep({ wizard, onNext, onPrev }: { wizard: ReturnType<typeof useResumeWizard>; onNext: () => void; onPrev: () => void }) {
   const { language } = useThemeStore();
   const isBn = language === "bn";
-  const { data, setSectionData, setStep, activeExpView, setActiveExpView } = wizard;
+  const { data, setSectionData, activeExpView, setActiveExpView } = wizard;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -31,7 +31,6 @@ export default function ExperiencesStep({ wizard }: { wizard: ReturnType<typeof 
           </Button>
         </div>
 
-        {/* Sub-view Tabs */}
         <div className="flex gap-2">
           <button onClick={() => setActiveExpView("details")} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeExpView === "details" ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}>
             Resume Details
@@ -57,14 +56,12 @@ export default function ExperiencesStep({ wizard }: { wizard: ReturnType<typeof 
           </div>
         )}
 
-        {/* Navigation */}
         <div className="flex justify-between pt-6">
-          <Button variant="outline" onClick={() => setStep(1)}><ArrowLeft className="h-4 w-4 mr-2" /> Previous step</Button>
-          <Button onClick={() => setStep(3)}>Next step <ArrowRight className="h-4 w-4 ml-2" /></Button>
+          <Button variant="outline" onClick={onPrev}><ArrowLeft className="h-4 w-4 mr-2" /> Previous step</Button>
+          <Button onClick={onNext}>Next step <ArrowRight className="h-4 w-4 ml-2" /></Button>
         </div>
       </div>
 
-      {/* Right sidebar */}
       <div className="hidden lg:block lg:col-span-2">
         <Card className="sticky top-24"><CardContent className="p-4 text-sm text-muted-foreground space-y-2">
           <p className="font-medium text-foreground">Tips</p>

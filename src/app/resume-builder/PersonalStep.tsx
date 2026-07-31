@@ -25,14 +25,13 @@ function getStorageUrl(path: string): string {
   return `${API_BASE}/storage/${path}`;
 }
 
-export default function PersonalStep({ wizard }: { wizard: ReturnType<typeof useResumeWizard> }) {
+export default function PersonalStep({ wizard, onNext }: { wizard: ReturnType<typeof useResumeWizard>; onNext: () => void }) {
   const { language } = useThemeStore();
   const isBn = language === "bn";
   const { user } = useAuth();
-  const { data, setStep, updatePersonal } = wizard;
+  const { data, updatePersonal } = wizard;
   const p = data.personal;
   const [showMore, setShowMore] = useState(false);
-  const [showExtra, setShowExtra] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importedRef = useRef(false);
 
@@ -42,11 +41,9 @@ export default function PersonalStep({ wizard }: { wizard: ReturnType<typeof use
     importedRef.current = true;
 
     const p = wizard.data.personal;
-    // Only import if fields are empty (don't overwrite localStorage draft)
     if (p.first_name && p.email) return;
 
     const updates: Record<string, string> = {};
-
     if (user.name) {
       const parts = user.name.split(" ");
       updates.first_name = parts[0] || "";
@@ -55,7 +52,6 @@ export default function PersonalStep({ wizard }: { wizard: ReturnType<typeof use
     }
     if (user.email) updates.email = user.email;
 
-    // Fetch full profile for extra fields
     api.get("/candidate/dashboard").then((res) => {
       const prof = res.data?.user?.profile || {};
       if (prof.phone) updates.phone = prof.phone;
@@ -69,10 +65,8 @@ export default function PersonalStep({ wizard }: { wizard: ReturnType<typeof use
       if (prof.avatar) updates.photo_url = getStorageUrl(prof.avatar);
       if (prof.present_address || prof.address) updates.address = prof.present_address || prof.address;
       if (prof.marital_status) updates.marital_status = prof.marital_status;
-
       updatePersonal(updates);
     }).catch(() => {
-      // Still import what we have from user object
       if (Object.keys(updates).length > 0) updatePersonal(updates);
     });
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -85,16 +79,9 @@ export default function PersonalStep({ wizard }: { wizard: ReturnType<typeof use
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error(isBn ? "শুধুমাত্র ছবি দিন" : "Only image files allowed");
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error(isBn ? "২MB এর কম হতে হবে" : "Max 2MB");
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    updatePersonal({ photo_url: url });
+    if (!file.type.startsWith("image/")) { toast.error(isBn ? "শুধুমাত্র ছবি" : "Only images"); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error(isBn ? "২MB এর কম" : "Max 2MB"); return; }
+    updatePersonal({ photo_url: URL.createObjectURL(file) });
   };
 
   const photoDisplay = p.photo_url
@@ -107,67 +94,48 @@ export default function PersonalStep({ wizard }: { wizard: ReturnType<typeof use
         <h2 className="text-xl font-bold">Personal details</h2>
         <p className="text-sm text-muted-foreground">Resume language: English</p>
 
-        {/* Photo */}
         <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="w-20 h-20 rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden hover:border-primary/50 transition-colors cursor-pointer shrink-0"
-          >
-            {photoDisplay ? (
-              <img src={photoDisplay} alt="Photo" className="w-full h-full object-cover rounded-lg" />
-            ) : (
-              <User className="h-8 w-8 text-muted-foreground/40" />
-            )}
+          <button type="button" onClick={() => fileInputRef.current?.click()}
+            className="w-20 h-20 rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden hover:border-primary/50 transition-colors cursor-pointer shrink-0">
+            {photoDisplay ? <img src={photoDisplay} alt="Photo" className="w-full h-full object-cover rounded-lg" /> : <User className="h-8 w-8 text-muted-foreground/40" />}
           </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            onChange={handlePhotoChange}
-          />
+          <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoChange} />
           <div className="text-sm">
             <p className="font-medium">Add photo (optional)</p>
             <p className="text-muted-foreground text-xs">JPEG/PNG/WebP — max 2MB.</p>
           </div>
         </div>
 
-        {/* Name */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label>First name <span className="text-destructive">*</span></Label>
-            <div className="relative"><Input value={p.first_name} onChange={(e) => { set("first_name", e.target.value, MAX_CHARS.full_name); set("full_name", (e.target.value + " " + p.last_name).trim()); }} placeholder="" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">{p.first_name.length}/{MAX_CHARS.full_name}</span></div>
+            <div className="relative"><Input value={p.first_name} onChange={(e) => { set("first_name", e.target.value, MAX_CHARS.full_name); set("full_name", (e.target.value + " " + p.last_name).trim()); }} /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">{p.first_name.length}/{MAX_CHARS.full_name}</span></div>
           </div>
           <div className="space-y-1.5">
             <Label>Last name <span className="text-destructive">*</span></Label>
-            <div className="relative"><Input value={p.last_name} onChange={(e) => { set("last_name", e.target.value, MAX_CHARS.full_name); set("full_name", (p.first_name + " " + e.target.value).trim()); }} placeholder="" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">{p.last_name.length}/{MAX_CHARS.full_name}</span></div>
+            <div className="relative"><Input value={p.last_name} onChange={(e) => { set("last_name", e.target.value, MAX_CHARS.full_name); set("full_name", (p.first_name + " " + e.target.value).trim()); }} /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">{p.last_name.length}/{MAX_CHARS.full_name}</span></div>
           </div>
         </div>
 
-        {/* Email */}
         <div className="space-y-1.5">
           <Label>Email address <span className="text-destructive">*</span></Label>
-          <div className="relative"><Input type="email" value={p.email} onChange={(e) => set("email", e.target.value, MAX_CHARS.email)} placeholder="" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">{p.email.length}/{MAX_CHARS.email}</span></div>
+          <div className="relative"><Input type="email" value={p.email} onChange={(e) => set("email", e.target.value, MAX_CHARS.email)} /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">{p.email.length}/{MAX_CHARS.email}</span></div>
         </div>
 
-        {/* Phone */}
         <div className="space-y-1.5">
           <Label>Phone number <span className="text-destructive">*</span></Label>
-          <div className="relative"><Input type="tel" value={p.phone} onChange={(e) => set("phone", e.target.value, MAX_CHARS.phone)} placeholder="" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">{p.phone.length}/{MAX_CHARS.phone}</span></div>
+          <div className="relative"><Input type="tel" value={p.phone} onChange={(e) => set("phone", e.target.value, MAX_CHARS.phone)} /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">{p.phone.length}/{MAX_CHARS.phone}</span></div>
         </div>
 
-        {/* Address */}
         <div className="space-y-1.5">
           <Label>Address</Label>
-          <div className="relative"><Input value={p.address} onChange={(e) => set("address", e.target.value, MAX_CHARS.address)} placeholder="" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">{p.address.length}/{MAX_CHARS.address}</span></div>
+          <div className="relative"><Input value={p.address} onChange={(e) => set("address", e.target.value, MAX_CHARS.address)} /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">{p.address.length}/{MAX_CHARS.address}</span></div>
         </div>
 
-        {/* Zip + City */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label>Zip code</Label>
-            <div className="relative"><Input value={p.zip_code} onChange={(e) => set("zip_code", e.target.value, MAX_CHARS.zip_code)} placeholder="" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">{p.zip_code.length}/{MAX_CHARS.zip_code}</span></div>
+            <div className="relative"><Input value={p.zip_code} onChange={(e) => set("zip_code", e.target.value, MAX_CHARS.zip_code)} /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">{p.zip_code.length}/{MAX_CHARS.zip_code}</span></div>
           </div>
           <div className="space-y-1.5">
             <Label>City/Town</Label>
@@ -175,68 +143,32 @@ export default function PersonalStep({ wizard }: { wizard: ReturnType<typeof use
           </div>
         </div>
 
-        {/* Additional Information Toggle */}
         <button onClick={() => setShowMore(!showMore)} className="flex items-center gap-2 text-sm font-medium text-primary hover:underline">
           Additional information {showMore ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
 
         {showMore && (
           <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-            <div className="space-y-1.5">
-              <Label>Date of birth</Label>
-              <Input type="date" value={p.dob} onChange={(e) => set("dob", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Place of birth</Label>
-              <Input value={p.place_of_birth} onChange={(e) => set("place_of_birth", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Driving license</Label>
-              <Input value={p.driving_license} onChange={(e) => set("driving_license", e.target.value)} placeholder="e.g. A, B" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Gender</Label>
-              <Select value={p.gender} onValueChange={(v) => set("gender", v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{GENDERS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Nationality</Label>
-              <Input value={p.nationality} onChange={(e) => set("nationality", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Marital status</Label>
-              <Select value={p.marital_status} onValueChange={(v) => set("marital_status", v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{MARITAL.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>LinkedIn</Label>
-              <Input value={p.linkedin} onChange={(e) => set("linkedin", e.target.value)} placeholder="https://linkedin.com/in/..." />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Website</Label>
-              <Input value={p.website} onChange={(e) => set("website", e.target.value)} placeholder="https://..." />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Additional information</Label>
-              <Textarea value={p.additional_info} onChange={(e) => set("additional_info", e.target.value)} rows={3} />
-            </div>
+            <div className="space-y-1.5"><Label>Date of birth</Label><Input type="date" value={p.dob} onChange={(e) => set("dob", e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Place of birth</Label><Input value={p.place_of_birth} onChange={(e) => set("place_of_birth", e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Driving license</Label><Input value={p.driving_license} onChange={(e) => set("driving_license", e.target.value)} placeholder="e.g. A, B" /></div>
+            <div className="space-y-1.5"><Label>Gender</Label><Select value={p.gender} onValueChange={(v) => set("gender", v)}><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{GENDERS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-1.5"><Label>Nationality</Label><Input value={p.nationality} onChange={(e) => set("nationality", e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Marital status</Label><Select value={p.marital_status} onValueChange={(v) => set("marital_status", v)}><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{MARITAL.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-1.5"><Label>LinkedIn</Label><Input value={p.linkedin} onChange={(e) => set("linkedin", e.target.value)} placeholder="https://linkedin.com/in/..." /></div>
+            <div className="space-y-1.5"><Label>Website</Label><Input value={p.website} onChange={(e) => set("website", e.target.value)} placeholder="https://..." /></div>
+            <div className="space-y-1.5"><Label>Additional information</Label><Textarea value={p.additional_info} onChange={(e) => set("additional_info", e.target.value)} rows={3} /></div>
           </div>
         )}
 
-        {/* Navigation */}
         <div className="flex justify-between pt-6">
           <Button variant="outline" onClick={() => toast.info("Draft saved!")}>Save draft</Button>
-          <Button onClick={() => { if (!p.first_name || !p.email || !p.phone) { toast.error("Please fill in required fields"); return; } setStep(2); }}>
+          <Button onClick={() => { if (!p.first_name || !p.email || !p.phone) { toast.error("Please fill in required fields"); return; } onNext(); }}>
             Next step <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
       </div>
 
-      {/* Right sidebar */}
       <div className="hidden lg:block lg:col-span-2">
         <Card className="sticky top-24"><CardContent className="p-4 text-center text-sm text-muted-foreground space-y-2">
           <p>Your resume will be created based on the information you provide.</p>

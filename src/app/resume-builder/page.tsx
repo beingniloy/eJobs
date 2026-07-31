@@ -1,11 +1,5 @@
-import type { Metadata } from "next";
-import ResumeWizardClient from "./ResumeWizardClient";
-
-export const metadata: Metadata = {
-  title: "CV Builder",
-  description: "Create a professional resume with our AI-powered CV builder. Choose templates and customize your resume.",
-};
+import { redirect } from "next/navigation";
 
 export default function ResumeBuilderPage() {
-  return <ResumeWizardClient />;
+  redirect("/resume-builder/personal");
 }
