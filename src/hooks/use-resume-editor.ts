@@ -66,9 +66,12 @@ export function useResumeEditor({ slug, onNotFound }: UseResumeEditorOptions) {
         if (!tmpl) { onNotFound?.() ?? router.push("/resume-builder"); return; }
         setTemplate(tmpl);
 
-        /* localStorage → API fallback */
+        /* localStorage → API fallback.
+           dataReadyRef MUST be set BEFORE setEditorData so the
+           debounced preview effect fires on the first re-render. */
         const stored = loadDraft(slug);
         if (stored) {
+          dataReadyRef.current = true;
           setEditorData(stored);
         } else {
           const profile = await resumeService.getProfile().catch(() => null as CvProfile | null);
@@ -77,6 +80,7 @@ export function useResumeEditor({ slug, onNotFound }: UseResumeEditorOptions) {
             if (!data.projects || (Array.isArray(data.projects) && data.projects.length === 0)) {
               data.projects = [{ ...EMPTY_PROJECT }];
             }
+            dataReadyRef.current = true;
             setEditorData(data);
           }
         }
@@ -84,12 +88,11 @@ export function useResumeEditor({ slug, onNotFound }: UseResumeEditorOptions) {
         onNotFound?.() ?? router.push("/resume-builder");
       } finally {
         setLoading(false);
-        dataReadyRef.current = true;
       }
     })();
   }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ── 2. Load initial preview (empty template demo) ── */
+  /* ── 2. Load initial preview ── */
   useEffect(() => {
     if (!template) return;
     setPreviewLoading(true);

@@ -67,7 +67,6 @@ async function compressToWebp(file: File): Promise<File> {
         return new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" });
       }
     }
-    /* last resort */
     const canvas = document.createElement("canvas");
     canvas.width = 200; canvas.height = 200;
     const ctx = canvas.getContext("2d");
@@ -163,8 +162,11 @@ function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, an
 
 function ExperienceSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
   const addEntry = () => onChange([...data, { company: "", position: "", location: "", start_date: "", end_date: "", is_current: false, description: "" }]);
-  const update = (i: number, key: string, val: any) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
   const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
+  const update = (i: number, key: string, val: any) => {
+    const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n);
+  };
 
   return (
     <div className="space-y-4">
@@ -193,7 +195,7 @@ function ExperienceSectionForm({ data, onChange, isBn }: { data: any[]; onChange
 }
 
 /* ═══════════════════════════════════════════════════
-   Education — ALL fields templates render
+   Education — ALL fields, single-write per change
    ═══════════════════════════════════════════════════ */
 
 function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
@@ -202,17 +204,18 @@ function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
     group_or_subject: "", start_date: "", end_date: "",
     year: "", result: "", gpa_or_cgpa: "", description: "",
   }]);
-  const update = (i: number, key: string, val: any) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
+
   const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
 
-  const EDUCATION_LEVELS = [
-    { value: "ssc", label: "SSC / O-Level" },
-    { value: "hsc", label: "HSC / A-Level" },
-    { value: "graduation", label: "Bachelor's / Graduation" },
-    { value: "post_graduation", label: "Master's / Post Graduation" },
-    { value: "diploma", label: "Diploma" },
-    { value: "phd", label: "PhD" },
-  ];
+  /* Single atomic write — prevents stale-closure data loss */
+  const update = (i: number, key: string, val: any) => {
+    const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n);
+  };
+
+  /* Write multiple keys in one call */
+  const updateMulti = (i: number, keys: Record<string, any>) => {
+    const n = [...data]; n[i] = { ...n[i], ...keys }; onChange(n);
+  };
 
   return (
     <div className="space-y-4">
@@ -271,12 +274,12 @@ function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
               />
             </div>
 
-            {/* Group / Subject / Field */}
+            {/* Group / Subject / Field — SINGLE WRITE */}
             <div>
               <Label className="text-[10px] text-muted-foreground">{isBn ? "বিষয় / গ্রুপ" : "Group / Subject / Field"}</Label>
               <Input
                 value={edu.field || edu.group_or_subject || ""}
-                onChange={(e) => { update(i, "field", e.target.value); update(i, "group_or_subject", e.target.value); }}
+                onChange={(e) => updateMulti(i, { field: e.target.value, group_or_subject: e.target.value })}
                 placeholder={isHigherEdu
                   ? (isBn ? "বিষয় (যেমন: CSE)" : "Subject (e.g. CSE)")
                   : (isBn ? "গ্রুপ (যেমন: বিজ্ঞান)" : "Group (e.g. Science)")}
@@ -284,14 +287,14 @@ function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
               />
             </div>
 
-            {/* Year / Dates */}
+            {/* Year / Dates — SINGLE WRITE */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-[10px] text-muted-foreground">{isBn ? "পাশের সাল" : "Passing Year"}</Label>
                 <Input
                   type="number"
                   value={edu.year || edu.passing_year || ""}
-                  onChange={(e) => { const v = e.target.value; update(i, "year", v); update(i, "passing_year", v); }}
+                  onChange={(e) => updateMulti(i, { year: e.target.value, passing_year: e.target.value })}
                   placeholder={isBn ? "২০২২" : "2022"}
                   className="h-8 text-sm"
                   min="1950" max="2099"
@@ -308,7 +311,7 @@ function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
               </div>
             </div>
 
-            {/* GPA / CGPA / Result */}
+            {/* GPA / CGPA / Result — SINGLE WRITE */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-[10px] text-muted-foreground">{isHigherEdu ? "CGPA" : "GPA"}</Label>
@@ -316,8 +319,8 @@ function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
                   type="number"
                   step="0.01"
                   max="5"
-                  value={edu.gpa_or_cgpa || edu.gpa || edu.cgpa || edu.result || ""}
-                  onChange={(e) => { const v = e.target.value; update(i, "gpa_or_cgpa", v); update(i, "gpa", v); update(i, "result", v); }}
+                  value={edu.gpa_or_cgpa || edu.gpa || ""}
+                  onChange={(e) => updateMulti(i, { gpa_or_cgpa: e.target.value, gpa: e.target.value, cgpa: e.target.value })}
                   placeholder={isHigherEdu ? "CGPA (e.g. 3.80)" : "GPA (e.g. 5.00)"}
                   className="h-8 text-sm"
                 />
@@ -325,8 +328,8 @@ function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
               <div>
                 <Label className="text-[10px] text-muted-foreground">{isBn ? "গ্রেড / ফলাফল" : "Grade / Result"}</Label>
                 <Input
-                  value={edu.grade || ""}
-                  onChange={(e) => update(i, "grade", e.target.value)}
+                  value={edu.grade || edu.result || ""}
+                  onChange={(e) => updateMulti(i, { grade: e.target.value, result: e.target.value })}
                   placeholder={isBn ? "যেমন: A+" : "e.g. A+, First Class"}
                   className="h-8 text-sm"
                 />
