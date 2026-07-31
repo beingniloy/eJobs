@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Plus, User, Globe } from "lucide-react";
+import { X, Plus, User, Globe, Link2, Code, Twitter, Facebook } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -535,8 +535,16 @@ function HobbiesSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (
 }
 
 /* ═══════════════════════════════════════════════════
-   Social Links
+   Social Links — with per-platform icons
    ═══════════════════════════════════════════════════ */
+
+const SOCIAL_ICON_MAP: Record<string, typeof Globe> = {
+  linkedin: Link2,
+  github: Code,
+  twitter: Twitter,
+  facebook: Facebook,
+  portfolio: Globe,
+};
 
 function SocialSectionForm({ data, onChange, isBn }: { data: Record<string, any>; onChange: (d: any) => void; isBn: boolean }) {
   const platforms = ["linkedin", "github", "twitter", "facebook", "portfolio"];
@@ -556,15 +564,18 @@ function SocialSectionForm({ data, onChange, isBn }: { data: Record<string, any>
 
   return (
     <div className="space-y-2">
-      {platforms.map((p) => (
-        <div key={p} className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <Input value={data[p] || ""} onChange={(e) => handleChange(p, e.target.value)} placeholder={isBn ? labels[p].bn : labels[p].en} className="h-8 text-sm" />
+      {platforms.map((p) => {
+        const Icon = SOCIAL_ICON_MAP[p] || Globe;
+        return (
+          <div key={p} className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <Input value={data[p] || ""} onChange={(e) => handleChange(p, e.target.value)} placeholder={isBn ? labels[p].bn : labels[p].en} className="h-8 text-sm" />
+            </div>
+            {errors[p] && <p className="text-xs text-destructive pl-[26px]">{errors[p]}</p>}
           </div>
-          {errors[p] && <p className="text-xs text-destructive pl-[26px]">{errors[p]}</p>}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
