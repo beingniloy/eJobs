@@ -55,7 +55,7 @@ export default function EmployerDashboardPage() {
           recent_applications: [],
         });
       })
-      .catch(() => toast.error("Failed to load dashboard data"))
+      .catch((err) => toast.error(err?.response?.data?.message || "Failed to load dashboard data"))
       .finally(() => setLoading(false));
   }, []);
 

@@ -69,7 +69,7 @@ export default function CandidateDashboardPage() {
           wallet_balance: d.user?.profile?.wallet_balance ?? 0,
         });
       })
-      .catch(() => toast.error("Failed to load dashboard data"))
+      .catch((err) => toast.error(err?.response?.data?.message || "Failed to load dashboard data"))
       .finally(() => setLoading(false));
   }, []);
 
