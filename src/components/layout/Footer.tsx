@@ -108,7 +108,6 @@ export default function Footer() {
             </h3>
             <ul className="space-y-2 text-sm text-surface-footer-foreground/80">
               <li><Link href="/employer/register" className="hover:text-primary transition-colors">{isBn ? "চাকরি পোস্ট করুন" : "Post a Job"}</Link></li>
-              <li><Link href="/jobs/guest-post" className="hover:text-primary transition-colors">{isBn ? "গেস্ট চাকরি পোস্ট" : "Post Job (Guest)"}</Link></li>
               <li><Link href="/pricing" className="hover:text-primary transition-colors">{isBn ? "পরিকল্পনাসমূহ" : "Plans"}</Link></li>
               <li><Link href="/employer/login" className="hover:text-primary transition-colors">{isBn ? "নিয়োগকর্তা লগইন" : "Employer Login"}</Link></li>
             </ul>
