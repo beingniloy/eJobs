@@ -44,6 +44,30 @@ export default function SectionForm({ section, data, onChange, isBn }: { section
   }
 }
 
+async function compressToWebp(file: File, maxBytes = 2 * 1024 * 1024): Promise<File> {
+  if (!file.type.startsWith("image/")) return file;
+  const url = URL.createObjectURL(file);
+  const img = await new Promise<HTMLImageElement>((res, rej) => {
+    const i = new window.Image();
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = url;
+  });
+  for (const maxDim of [1280, 960, 640]) {
+    const canvas = document.createElement("canvas");
+    let w = img.width, h = img.height;
+    if (w > maxDim || h > maxDim) { const r = Math.min(maxDim / w, maxDim / h); w = Math.round(w * r); h = Math.round(h * r); }
+    canvas.width = w; canvas.height = h;
+    canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/webp", 0.82));
+    URL.revokeObjectURL(url);
+    if (!blob || blob.size > maxBytes) continue;
+    return new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" });
+  }
+  URL.revokeObjectURL(url);
+  return file;
+}
+
 function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, any>; onChange: (d: any) => void; isBn: boolean }) {
   const [uploading, setUploading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -63,8 +87,9 @@ function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, an
     }
     setUploading(true);
     try {
+      const compressed = await compressToWebp(file);
       const formData = new FormData();
-      formData.append("photo", file);
+      formData.append("photo", compressed);
       const res = await api.post("/candidate/cv/profile/upload-photo", formData, {
         headers: { "Content-Type": undefined },
       });
