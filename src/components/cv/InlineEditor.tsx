@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { ArrowLeft, FileText, RotateCcw, Eye, Loader2, ChevronUp, ChevronDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { CV_SECTIONS } from "@/constants/cv-builder";
 import SectionForm from "@/components/cv/SectionForm";
 import type { CvTemplate } from "@/types";
+
+const A4_WIDTH_PX = 794;
+const A4_HEIGHT_PX = Math.round(A4_WIDTH_PX * 1.414);
 
 export default function InlineEditor({ template, data, onChange, previewHtml, previewLoading, onRefreshPreview, onBack, onSaveAndCreate, savingCreating, isBn, activeSection, setActiveSection }: {
   template: CvTemplate;
@@ -24,6 +27,21 @@ export default function InlineEditor({ template, data, onChange, previewHtml, pr
   setActiveSection: (s: string) => void;
 }) {
   const [showMobilePreview, setShowMobilePreview] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  const updateScale = useCallback(() => {
+    if (!wrapperRef.current) return;
+    const w = wrapperRef.current.clientWidth;
+    setScale(Math.min(1, w / A4_WIDTH_PX));
+  }, []);
+
+  useEffect(() => {
+    updateScale();
+    const obs = new ResizeObserver(updateScale);
+    if (wrapperRef.current) obs.observe(wrapperRef.current);
+    return () => obs.disconnect();
+  }, [updateScale, showMobilePreview]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -89,13 +107,29 @@ export default function InlineEditor({ template, data, onChange, previewHtml, pr
           {/* Scrollable preview content */}
           <div className="overflow-y-auto h-full p-3 sm:p-6">
             <div className="flex items-start justify-center">
-              <div className="bg-white rounded-lg shadow-2xl w-full max-w-[600px] min-h-[600px] sm:min-h-[800px] overflow-hidden">
+              <div className="bg-white rounded-lg shadow-2xl w-full max-w-[800px] overflow-hidden">
                 {previewLoading ? (
                   <div className="flex items-center justify-center h-[400px] sm:h-[600px]">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
                 ) : previewHtml ? (
-                  <iframe srcDoc={previewHtml} title={isBn ? "CV প্রিভিউ" : "CV Preview"} className="w-full border-0" style={{ minHeight: "600px" }} sandbox="allow-same-origin" />
+                  <div ref={wrapperRef} style={{ width: "100%", height: `${A4_HEIGHT_PX * scale}px`, overflow: "hidden", position: "relative" }}>
+                    <iframe
+                      srcDoc={previewHtml}
+                      title={isBn ? "CV প্রিভিউ" : "CV Preview"}
+                      style={{
+                        width: `${A4_WIDTH_PX}px`,
+                        height: `${A4_HEIGHT_PX}px`,
+                        border: "none",
+                        transform: `scale(${scale})`,
+                        transformOrigin: "top left",
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                      }}
+                      sandbox="allow-same-origin"
+                    />
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-[400px] sm:h-[600px] text-muted-foreground">
                     <FileText className="h-16 w-16 mb-4" />

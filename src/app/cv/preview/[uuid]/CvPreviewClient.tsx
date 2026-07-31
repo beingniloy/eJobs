@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { resumeService } from "@/services/resume.service";
@@ -10,6 +10,9 @@ import {
   ArrowLeft, Download, Share2, LinkIcon, Loader2,
   Lock, Globe,
 } from "lucide-react";
+
+const A4_WIDTH_PX = 794;
+const A4_HEIGHT_PX = Math.round(A4_WIDTH_PX * 1.414);
 
 export default function CvPreviewClient() {
   const params = useParams();
@@ -25,12 +28,27 @@ export default function CvPreviewClient() {
   const [isPublic, setIsPublic] = useState(false);
   const [shareToken, setShareToken] = useState<string | null>(null);
 
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  const updateScale = useCallback(() => {
+    if (!wrapperRef.current) return;
+    const w = wrapperRef.current.clientWidth;
+    setScale(Math.min(1, w / A4_WIDTH_PX));
+  }, []);
+
+  useEffect(() => {
+    updateScale();
+    const obs = new ResizeObserver(updateScale);
+    if (wrapperRef.current) obs.observe(wrapperRef.current);
+    return () => obs.disconnect();
+  }, [updateScale, html]);
+
   useEffect(() => {
     if (!uuid) return;
     setLoading(true);
     setError(null);
 
-    // Fetch resume metadata (authenticated endpoint)
     resumeService.getResume(uuid)
       .then(async (resume: any) => {
         setIsPublic(!!resume.is_public);
@@ -39,7 +57,6 @@ export default function CvPreviewClient() {
         const slug = resume.template_slug;
         if (!slug) throw new Error("No template assigned to this resume");
 
-        // Get preview HTML via authenticated live-preview endpoint
         try {
           const previewHtml = await resumeService.getLivePreview(slug);
           if (previewHtml && previewHtml.length > 50) {
@@ -48,7 +65,6 @@ export default function CvPreviewClient() {
             throw new Error("Empty preview");
           }
         } catch {
-          // Fallback: try demo preview (public, no auth)
           try {
             const demoHtml = await resumeService.getPreviewDemo(slug);
             if (demoHtml && demoHtml.length > 50) {
@@ -186,14 +202,30 @@ export default function CvPreviewClient() {
         </div>
       </div>
 
-      <div className="max-w-[210mm] mx-auto bg-white shadow-lg min-h-screen md:my-4 md:rounded-lg overflow-hidden">
-        <iframe
-          srcDoc={html}
-          title="CV Preview"
-          className="w-full border-0"
-          style={{ minHeight: "100dvh", height: "auto" }}
-          sandbox="allow-same-origin"
-        />
+      <div className="mx-auto px-0 md:px-4 py-0 md:py-4">
+        <div
+          ref={wrapperRef}
+          className="mx-auto bg-white shadow-lg md:rounded-lg overflow-hidden"
+          style={{ maxWidth: "210mm", width: "100%" }}
+        >
+          <div style={{ height: `${A4_HEIGHT_PX * scale}px`, overflow: "hidden", position: "relative" }}>
+            <iframe
+              srcDoc={html}
+              title="CV Preview"
+              sandbox="allow-same-origin"
+              style={{
+                width: `${A4_WIDTH_PX}px`,
+                height: `${A4_HEIGHT_PX}px`,
+                border: "none",
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+                position: "absolute",
+                top: 0,
+                left: 0,
+              }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
