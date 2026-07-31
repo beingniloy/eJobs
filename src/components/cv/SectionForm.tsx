@@ -13,7 +13,7 @@ import {
 import api from "@/lib/api-client";
 import { toast } from "sonner";
 
-const MAX_PHOTO_BYTES = 1.8 * 1024 * 1024; // 1.8MB — safely under 2MB backend limit
+const MAX_PHOTO_BYTES = 1.8 * 1024 * 1024;
 
 export default function SectionForm({ section, data, onChange, isBn }: { section: string; data: any; onChange: (d: any) => void; isBn: boolean }) {
   switch (section) {
@@ -31,10 +31,9 @@ export default function SectionForm({ section, data, onChange, isBn }: { section
   }
 }
 
-/* ─── Reliable image compressor using toDataURL, guaranteed under MAX_PHOTO_BYTES ─── */
+/* ─── Image compressor (toDataURL, guaranteed under limit) ─── */
 async function compressToWebp(file: File): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
-
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -44,7 +43,6 @@ async function compressToWebp(file: File): Promise<File> {
       el.src = url;
     });
 
-    // Start at 500px max dimension with moderate quality — aggressive from the start
     const attempts = [
       { maxDim: 500, quality: 0.55 },
       { maxDim: 400, quality: 0.50 },
@@ -60,7 +58,6 @@ async function compressToWebp(file: File): Promise<File> {
       canvas.height = Math.round(img.height * scale);
       const ctx = canvas.getContext("2d");
       if (!ctx) continue;
-
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
       const dataUrl = canvas.toDataURL("image/webp", quality);
@@ -75,12 +72,11 @@ async function compressToWebp(file: File): Promise<File> {
       }
     }
 
-    // Last resort: 200x200 at 0.35 quality
+    /* last resort */
     const canvas = document.createElement("canvas");
-    canvas.width = 200;
-    canvas.height = 200;
+    canvas.width = 200; canvas.height = 200;
     const ctx = canvas.getContext("2d");
-    if (!ctx) { return file; }
+    if (!ctx) return file;
     ctx.drawImage(img, 0, 0, 200, 200);
     const dataUrl = canvas.toDataURL("image/webp", 0.35);
     const base64 = dataUrl.split(",")[1];
@@ -89,12 +85,13 @@ async function compressToWebp(file: File): Promise<File> {
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     const blob = new Blob([bytes], { type: "image/webp" });
     return new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" });
-  } catch {
-    return file;
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+  } catch { return file; }
+  finally { URL.revokeObjectURL(url); }
 }
+
+/* ═══════════════════════════════════════════════════
+   Personal Details
+   ═══════════════════════════════════════════════════ */
 
 function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, any>; onChange: (d: any) => void; isBn: boolean }) {
   const [uploading, setUploading] = useState(false);
@@ -105,8 +102,7 @@ function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, an
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       toast.error(isBn ? "শুধুমাত্র ছবি অনুমোদিত" : "Only image files are allowed");
-      e.target.value = "";
-      return;
+      e.target.value = ""; return;
     }
     setUploading(true);
     try {
@@ -115,37 +111,25 @@ function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, an
       const formData = new FormData();
       formData.append("photo", compressed);
       const res = await api.post("/candidate/cv/profile/upload-photo", formData, {
-        headers: { "Content-Type": undefined },
+        headers: { "Content-Type": "multipart/form-data" },
       });
       const photoUrl = res.data?.data?.photo_url || res.data?.photo_url;
       if (photoUrl) onChange({ ...data, photo_url: photoUrl });
       toast.success(isBn ? "ছবি আপলোড হয়েছে!" : "Photo uploaded!");
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || (isBn ? "আপলোড ব্যর্থ" : "Upload failed");
-      toast.error(msg);
-    } finally {
-      setUploading(false);
-    }
+      toast.error(err?.response?.data?.message || err?.message || (isBn ? "আপলোড ব্যর্থ" : "Upload failed"));
+    } finally { setUploading(false); }
     e.target.value = "";
   };
 
-  const photoFullUrl = data.photo_url
+  const photoUrl = data.photo_url
     ? (data.photo_url.startsWith("http") ? data.photo_url : `/storage/${data.photo_url}`)
     : null;
 
-  const field = (label_en: string, label_bn: string, key: string, type = "text", placeholder?: string, validate?: (v: string) => string | null) => (
+  const field = (en: string, bn: string, key: string, type = "text", placeholder?: string, validate?: (v: string) => string | null) => (
     <div className="space-y-1.5">
-      <Label className="text-xs font-medium">{isBn ? label_bn : label_en}</Label>
-      <Input
-        type={type}
-        value={data[key] || ""}
-        onChange={(e) => {
-          onChange({ ...data, [key]: e.target.value });
-          if (validate) setFieldErrors((prev) => ({ ...prev, [key]: validate(e.target.value) || "" }));
-        }}
-        placeholder={placeholder || (isBn ? label_bn : label_en)}
-        className="h-9 text-sm"
-      />
+      <Label className="text-xs font-medium">{isBn ? bn : en}</Label>
+      <Input type={type} value={data[key] || ""} onChange={(e) => { onChange({ ...data, [key]: e.target.value }); if (validate) setFieldErrors((p) => ({ ...p, [key]: validate(e.target.value) || "" })); }} placeholder={placeholder || (isBn ? bn : en)} className="h-9 text-sm" />
       {fieldErrors[key] && <p className="text-xs text-destructive h-4">{fieldErrors[key]}</p>}
     </div>
   );
@@ -154,25 +138,21 @@ function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, an
     <div className="space-y-3">
       <div className="flex items-center gap-4">
         <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-dashed border-muted-foreground/30 flex items-center justify-center bg-muted/30 shrink-0">
-          {photoFullUrl ? (
-            <img src={photoFullUrl} alt="Profile" className="w-full h-full object-cover" />
-          ) : (
-            <User className="h-8 w-8 text-muted-foreground/50" />
-          )}
+          {photoUrl ? <img src={photoUrl} alt="Profile" className="w-full h-full object-cover" /> : <User className="h-8 w-8 text-muted-foreground/50" />}
         </div>
         <div className="flex-1 min-w-0">
           <Label className="text-xs font-medium">{isBn ? "প্রোফাইল ছবি" : "Profile Photo"}</Label>
-          <Input type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoUpload} disabled={uploading} className="h-8 text-sm mt-1" />
-          {uploading && <p className="text-xs text-muted-foreground mt-1">{isBn ? "কম্প্রেস ও আপলোড হচ্ছে..." : "Compressing & uploading..."}</p>}
+          <Input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploading} className="h-8 text-sm mt-1" />
+          {uploading && <p className="text-xs text-muted-foreground mt-1">{isBn ? "আপলোড হচ্ছে..." : "Compressing & uploading..."}</p>}
         </div>
       </div>
       {field("Full Name", "পূর্ণ নাম", "full_name", "text", isBn ? "আপনার পূর্ণ নাম" : "John Doe")}
       {field("Professional Title", "পেশাদার উপাধি", "title", "text", isBn ? "যেমন: সফটওয়্যার ইঞ্জিনিয়ার" : "e.g. Software Engineer")}
-      {field("Email", "ইমেইল", "email", "email", isBn ? "আপনা@উদাহরণ.com" : "you@example.com", (v) => v.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? (isBn ? "সঠিক ইমেইল দিন" : "Invalid email") : null)}
+      {field("Email", "ইমেইল", "email", "email", isBn ? "আপনা@উদাহরণ.কম" : "you@example.com", (v) => v.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? (isBn ? "সঠিক ইমেইল দিন" : "Invalid email") : null)}
       {field("Phone", "ফোন", "phone", "tel", isBn ? "০১XXXXXXXXX" : "01XXXXXXXXX", (v) => v.trim() && !/^[+]?[\d\s()-]{7,20}$/.test(v) ? (isBn ? "সঠিক ফোন" : "Invalid phone") : null)}
       {field("Location", "অবস্থান", "location", "text", isBn ? "ঢাকা, বাংলাদেশ" : "Dhaka, Bangladesh")}
-      {field("Website", "ওয়েবসাইট", "website", "url", "https://...")}
-      {field("LinkedIn", "LinkedIn", "linkedin", "url", "https://linkedin.com/in/...")}
+      {field("Website", "ওয়েবসাইট", "website", "url", "https://...", (v) => v.trim() && !/^https?:\/\//i.test(v) ? (isBn ? "https:// দিয়ে শুরু করুন" : "Must start with http(s)") : null)}
+      {field("LinkedIn", "LinkedIn", "linkedin", "url", "https://linkedin.com/in/...", (v) => v.trim() && !/^https?:\/\//i.test(v) ? (isBn ? "https:// দিয়ে শুরু করুন" : "Must start with http(s)") : null)}
       <div className="space-y-1.5">
         <Label className="text-xs font-medium">{isBn ? "সারসংক্ষেপ" : "Summary"}</Label>
         <Textarea value={data.summary || ""} onChange={(e) => onChange({ ...data, summary: e.target.value })} placeholder={isBn ? "পেশাদার সারসংক্ষেপ..." : "Professional summary..."} className="min-h-[100px] text-sm" />
@@ -181,22 +161,33 @@ function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, an
   );
 }
 
+/* ═══════════════════════════════════════════════════
+   Work Experience  (dates → type="date")
+   ═══════════════════════════════════════════════════ */
+
 function ExperienceSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
   const addEntry = () => onChange([...data, { company: "", position: "", start_date: "", end_date: "", description: "" }]);
-  const updateEntry = (i: number, field: string, value: string) => { const n = [...data]; n[i] = { ...n[i], [field]: value }; onChange(n); };
-  const removeEntry = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+  const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
+  const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
   return (
     <div className="space-y-4">
       {data.map((exp, i) => (
         <div key={i} className="p-3 border rounded-lg space-y-2 relative">
-          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => removeEntry(i)}><X className="h-3 w-3" /></Button>
-          <Input value={exp.position || ""} onChange={(e) => updateEntry(i, "position", e.target.value)} placeholder={isBn ? "পদবি" : "Position"} className="h-8 text-sm" />
-          <Input value={exp.company || ""} onChange={(e) => updateEntry(i, "company", e.target.value)} placeholder={isBn ? "কোম্পানি" : "Company"} className="h-8 text-sm" />
+          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => remove(i)}><X className="h-3 w-3" /></Button>
+          <Input value={exp.position || ""} onChange={(e) => update(i, "position", e.target.value)} placeholder={isBn ? "পদবি" : "Position"} className="h-8 text-sm" />
+          <Input value={exp.company || ""} onChange={(e) => update(i, "company", e.target.value)} placeholder={isBn ? "কোম্পানি" : "Company"} className="h-8 text-sm" />
           <div className="grid grid-cols-2 gap-2">
-            <Input value={exp.start_date || ""} onChange={(e) => updateEntry(i, "start_date", e.target.value)} placeholder={isBn ? "শুরু" : "Start"} className="h-8 text-sm" />
-            <Input value={exp.end_date || ""} onChange={(e) => updateEntry(i, "end_date", e.target.value)} placeholder={isBn ? "শেষ" : "End"} className="h-8 text-sm" />
+            <div>
+              <Label className="text-[10px] text-muted-foreground">{isBn ? "শুরুর তারিখ" : "Start Date"}</Label>
+              <Input type="date" value={exp.start_date || ""} onChange={(e) => update(i, "start_date", e.target.value)} className="h-8 text-sm" />
+            </div>
+            <div>
+              <Label className="text-[10px] text-muted-foreground">{isBn ? "শেষ তারিখ" : "End Date"}</Label>
+              <Input type="date" value={exp.end_date || ""} onChange={(e) => update(i, "end_date", e.target.value)} className="h-8 text-sm" />
+            </div>
           </div>
-          <Textarea value={exp.description || ""} onChange={(e) => updateEntry(i, "description", e.target.value)} placeholder={isBn ? "দায়িত্ব..." : "Responsibilities..."} className="min-h-[60px] text-sm" />
+          <Textarea value={exp.description || ""} onChange={(e) => update(i, "description", e.target.value)} placeholder={isBn ? "দায়িত্ব..." : "Responsibilities..."} className="min-h-[60px] text-sm" />
         </div>
       ))}
       <Button variant="outline" size="sm" onClick={addEntry} className="w-full"><Plus className="h-3.5 w-3.5 mr-1" />{isBn ? "অভিজ্ঞতা যোগ" : "Add Experience"}</Button>
@@ -204,20 +195,25 @@ function ExperienceSectionForm({ data, onChange, isBn }: { data: any[]; onChange
   );
 }
 
+/* ═══════════════════════════════════════════════════
+   Education
+   ═══════════════════════════════════════════════════ */
+
 function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
   const addEntry = () => onChange([...data, { degree: "", institution: "", year: "", field: "" }]);
-  const updateEntry = (i: number, field: string, value: string) => { const n = [...data]; n[i] = { ...n[i], [field]: value }; onChange(n); };
-  const removeEntry = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+  const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
+  const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
   return (
     <div className="space-y-4">
       {data.map((edu, i) => (
         <div key={i} className="p-3 border rounded-lg space-y-2 relative">
-          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => removeEntry(i)}><X className="h-3 w-3" /></Button>
-          <Input value={edu.degree || ""} onChange={(e) => updateEntry(i, "degree", e.target.value)} placeholder={isBn ? "ডিগ্রি" : "Degree"} className="h-8 text-sm" />
-          <Input value={edu.institution || ""} onChange={(e) => updateEntry(i, "institution", e.target.value)} placeholder={isBn ? "প্রতিষ্ঠান" : "Institution"} className="h-8 text-sm" />
+          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => remove(i)}><X className="h-3 w-3" /></Button>
+          <Input value={edu.degree || ""} onChange={(e) => update(i, "degree", e.target.value)} placeholder={isBn ? "ডিগ্রি" : "Degree"} className="h-8 text-sm" />
+          <Input value={edu.institution || ""} onChange={(e) => update(i, "institution", e.target.value)} placeholder={isBn ? "প্রতিষ্ঠান" : "Institution"} className="h-8 text-sm" />
           <div className="grid grid-cols-2 gap-2">
-            <Input value={edu.field || ""} onChange={(e) => updateEntry(i, "field", e.target.value)} placeholder={isBn ? "বিষয়" : "Field"} className="h-8 text-sm" />
-            <Input value={edu.year || ""} onChange={(e) => updateEntry(i, "year", e.target.value)} placeholder={isBn ? "বছর" : "Year"} className="h-8 text-sm" />
+            <Input value={edu.field || ""} onChange={(e) => update(i, "field", e.target.value)} placeholder={isBn ? "বিষয়" : "Field"} className="h-8 text-sm" />
+            <Input type="number" value={edu.year || ""} onChange={(e) => update(i, "year", e.target.value)} placeholder={isBn ? "বছর (যেমন ২০২০)" : "Year (e.g. 2020)"} className="h-8 text-sm" min="1950" max="2099" />
           </div>
         </div>
       ))}
@@ -226,43 +222,64 @@ function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
   );
 }
 
+/* ═══════════════════════════════════════════════════
+   Key Skills
+   ═══════════════════════════════════════════════════ */
+
 function SkillsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
   const [newSkill, setNewSkill] = useState("");
   const [newLevel, setNewLevel] = useState("intermediate");
   const addSkill = () => { if (!newSkill.trim()) return; onChange([...data, { name: newSkill.trim(), level: newLevel }]); setNewSkill(""); };
   const removeSkill = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-1.5 min-h-[40px]">
         {data.map((skill, i) => (
           <Badge key={i} variant="secondary" className="text-xs gap-1">
             {typeof skill === "string" ? skill : skill.name}
-            <button onClick={() => removeSkill(i)} className="ml-0.5 hover:text-destructive"><X className="h-2.5 w-2.5" /></button>
+            {!false && <button onClick={() => removeSkill(i)} className="ml-0.5 hover:text-destructive"><X className="h-2.5 w-2.5" /></button>}
           </Badge>
         ))}
       </div>
       <div className="flex gap-2">
         <Input value={newSkill} onChange={(e) => setNewSkill(e.target.value)} placeholder={isBn ? "দক্ষতা..." : "Skill..."} className="h-8 text-sm flex-1" onKeyDown={(e) => e.key === "Enter" && addSkill()} />
-        <Select value={newLevel} onValueChange={setNewLevel}><SelectTrigger className="w-[120px] h-8 text-sm"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="beginner">Beginner</SelectItem><SelectItem value="intermediate">Intermediate</SelectItem><SelectItem value="advanced">Advanced</SelectItem><SelectItem value="expert">Expert</SelectItem></SelectContent></Select>
+        <Select value={newLevel} onValueChange={setNewLevel}>
+          <SelectTrigger className="w-[120px] h-8 text-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="beginner">{isBn ? "শিক্ষানবিস" : "Beginner"}</SelectItem>
+            <SelectItem value="intermediate">{isBn ? "মধ্যম" : "Intermediate"}</SelectItem>
+            <SelectItem value="advanced">{isBn ? "উন্নত" : "Advanced"}</SelectItem>
+            <SelectItem value="expert">{isBn ? "বিশেষজ্ঞ" : "Expert"}</SelectItem>
+          </SelectContent>
+        </Select>
         <Button size="sm" onClick={addSkill}><Plus className="h-3.5 w-3.5" /></Button>
       </div>
     </div>
   );
 }
 
+/* ═══════════════════════════════════════════════════
+   Certifications  (date → type="date")
+   ═══════════════════════════════════════════════════ */
+
 function CertificationsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
   const addEntry = () => onChange([...data, { name: "", issuer: "", date: "" }]);
-  const updateEntry = (i: number, field: string, value: string) => { const n = [...data]; n[i] = { ...n[i], [field]: value }; onChange(n); };
-  const removeEntry = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+  const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
+  const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
   return (
     <div className="space-y-3">
       {data.map((cert, i) => (
         <div key={i} className="p-3 border rounded-lg space-y-2 relative">
-          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => removeEntry(i)}><X className="h-3 w-3" /></Button>
-          <Input value={cert.name || ""} onChange={(e) => updateEntry(i, "name", e.target.value)} placeholder={isBn ? "সার্টিফিকেশন" : "Certification"} className="h-8 text-sm" />
+          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => remove(i)}><X className="h-3 w-3" /></Button>
+          <Input value={cert.name || ""} onChange={(e) => update(i, "name", e.target.value)} placeholder={isBn ? "সার্টিফিকেশন" : "Certification"} className="h-8 text-sm" />
           <div className="grid grid-cols-2 gap-2">
-            <Input value={cert.issuer || ""} onChange={(e) => updateEntry(i, "issuer", e.target.value)} placeholder={isBn ? "প্রদানকারী" : "Issuer"} className="h-8 text-sm" />
-            <Input value={cert.date || ""} onChange={(e) => updateEntry(i, "date", e.target.value)} placeholder={isBn ? "তারিখ" : "Date"} className="h-8 text-sm" />
+            <Input value={cert.issuer || ""} onChange={(e) => update(i, "issuer", e.target.value)} placeholder={isBn ? "প্রদানকারী" : "Issuer"} className="h-8 text-sm" />
+            <div>
+              <Label className="text-[10px] text-muted-foreground">{isBn ? "তারিখ" : "Date"}</Label>
+              <Input type="date" value={cert.date || ""} onChange={(e) => update(i, "date", e.target.value)} className="h-8 text-sm" />
+            </div>
           </div>
         </div>
       ))}
@@ -271,23 +288,31 @@ function CertificationsSectionForm({ data, onChange, isBn }: { data: any[]; onCh
   );
 }
 
+/* ═══════════════════════════════════════════════════
+   Languages
+   ═══════════════════════════════════════════════════ */
+
 function LanguagesSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
   const addEntry = () => onChange([...data, { name: "", proficiency: "intermediate" }]);
-  const updateEntry = (i: number, field: string, value: string) => { const n = [...data]; n[i] = { ...n[i], [field]: value }; onChange(n); };
-  const removeEntry = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+  const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
+  const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
   const proficiencies = [
     { value: "basic", en: "Basic", bn: "মৌলিক" },
     { value: "conversational", en: "Conversational", bn: "কথোপকথন" },
     { value: "professional", en: "Professional", bn: "পেশাদার" },
     { value: "native", en: "Native", bn: "মাতৃভাষী" },
   ];
+
   return (
     <div className="space-y-3">
       {data.map((lang, i) => (
         <div key={i} className="flex items-center gap-2 p-2 border rounded-lg relative">
-          <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-5 w-5" onClick={() => removeEntry(i)}><X className="h-3 w-3" /></Button>
-          <Input value={lang.name || ""} onChange={(e) => updateEntry(i, "name", e.target.value)} placeholder={isBn ? "ভাষা" : "Language"} className="h-8 text-sm flex-1" />
-          <Select value={lang.proficiency || "intermediate"} onValueChange={(v) => updateEntry(i, "proficiency", v)}><SelectTrigger className="w-[110px] h-8 text-sm"><SelectValue /></SelectTrigger><SelectContent>{proficiencies.map((p) => <SelectItem key={p.value} value={p.value}>{isBn ? p.bn : p.en}</SelectItem>)}</SelectContent></Select>
+          <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-5 w-5" onClick={() => remove(i)}><X className="h-3 w-3" /></Button>
+          <Input value={lang.name || ""} onChange={(e) => update(i, "name", e.target.value)} placeholder={isBn ? "ভাষা" : "Language"} className="h-8 text-sm flex-1" />
+          <Select value={lang.proficiency || "intermediate"} onValueChange={(v) => update(i, "proficiency", v)}>
+            <SelectTrigger className="w-[110px] h-8 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>{proficiencies.map((p) => <SelectItem key={p.value} value={p.value}>{isBn ? p.bn : p.en}</SelectItem>)}</SelectContent>
+          </Select>
         </div>
       ))}
       <Button variant="outline" size="sm" onClick={addEntry} className="w-full"><Plus className="h-3.5 w-3.5 mr-1" />{isBn ? "ভাষা যোগ" : "Add Language"}</Button>
@@ -295,18 +320,23 @@ function LanguagesSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
   );
 }
 
+/* ═══════════════════════════════════════════════════
+   Projects
+   ═══════════════════════════════════════════════════ */
+
 function ProjectsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
   const addEntry = () => onChange([...data, { name: "", description: "", url: "" }]);
-  const updateEntry = (i: number, field: string, value: string) => { const n = [...data]; n[i] = { ...n[i], [field]: value }; onChange(n); };
-  const removeEntry = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+  const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
+  const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
   return (
     <div className="space-y-4">
       {data.map((proj, i) => (
         <div key={i} className="p-3 border rounded-lg space-y-2 relative">
-          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => removeEntry(i)}><X className="h-3 w-3" /></Button>
-          <Input value={proj.name || ""} onChange={(e) => updateEntry(i, "name", e.target.value)} placeholder={isBn ? "প্রকল্পের নাম" : "Project Name"} className="h-8 text-sm" />
-          <Input value={proj.url || ""} onChange={(e) => updateEntry(i, "url", e.target.value)} placeholder={isBn ? "লিঙ্ক" : "URL"} className="h-8 text-sm" />
-          <Textarea value={proj.description || ""} onChange={(e) => updateEntry(i, "description", e.target.value)} placeholder={isBn ? "বিবরণ..." : "Description..."} className="min-h-[60px] text-sm" />
+          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => remove(i)}><X className="h-3 w-3" /></Button>
+          <Input value={proj.name || ""} onChange={(e) => update(i, "name", e.target.value)} placeholder={isBn ? "প্রকল্পের নাম" : "Project Name"} className="h-8 text-sm" />
+          <Input value={proj.url || ""} onChange={(e) => update(i, "url", e.target.value)} placeholder={isBn ? "লিঙ্ক (ঐচ্ছিক)" : "URL (optional)"} className="h-8 text-sm" />
+          <Textarea value={proj.description || ""} onChange={(e) => update(i, "description", e.target.value)} placeholder={isBn ? "বিবরণ..." : "Description..."} className="min-h-[60px] text-sm" />
         </div>
       ))}
       <Button variant="outline" size="sm" onClick={addEntry} className="w-full"><Plus className="h-3.5 w-3.5 mr-1" />{isBn ? "প্রকল্প যোগ" : "Add Project"}</Button>
@@ -314,19 +344,27 @@ function ProjectsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: 
   );
 }
 
+/* ═══════════════════════════════════════════════════
+   Awards & Honors  (date → type="date")
+   ═══════════════════════════════════════════════════ */
+
 function AwardsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
   const addEntry = () => onChange([...data, { title: "", issuer: "", date: "" }]);
-  const updateEntry = (i: number, field: string, value: string) => { const n = [...data]; n[i] = { ...n[i], [field]: value }; onChange(n); };
-  const removeEntry = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+  const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
+  const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
   return (
     <div className="space-y-3">
       {data.map((award, i) => (
         <div key={i} className="p-3 border rounded-lg space-y-2 relative">
-          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => removeEntry(i)}><X className="h-3 w-3" /></Button>
-          <Input value={award.title || ""} onChange={(e) => updateEntry(i, "title", e.target.value)} placeholder={isBn ? "পুরস্কার" : "Award"} className="h-8 text-sm" />
+          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => remove(i)}><X className="h-3 w-3" /></Button>
+          <Input value={award.title || ""} onChange={(e) => update(i, "title", e.target.value)} placeholder={isBn ? "পুরস্কার" : "Award"} className="h-8 text-sm" />
           <div className="grid grid-cols-2 gap-2">
-            <Input value={award.issuer || ""} onChange={(e) => updateEntry(i, "issuer", e.target.value)} placeholder={isBn ? "প্রদানকারী" : "Issuer"} className="h-8 text-sm" />
-            <Input value={award.date || ""} onChange={(e) => updateEntry(i, "date", e.target.value)} placeholder={isBn ? "তারিখ" : "Date"} className="h-8 text-sm" />
+            <Input value={award.issuer || ""} onChange={(e) => update(i, "issuer", e.target.value)} placeholder={isBn ? "প্রদানকারী" : "Issuer"} className="h-8 text-sm" />
+            <div>
+              <Label className="text-[10px] text-muted-foreground">{isBn ? "তারিখ" : "Date"}</Label>
+              <Input type="date" value={award.date || ""} onChange={(e) => update(i, "date", e.target.value)} className="h-8 text-sm" />
+            </div>
           </div>
         </div>
       ))}
@@ -335,10 +373,15 @@ function AwardsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d
   );
 }
 
+/* ═══════════════════════════════════════════════════
+   Hobbies & Interests
+   ═══════════════════════════════════════════════════ */
+
 function HobbiesSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
   const [newHobby, setNewHobby] = useState("");
   const addHobby = () => { if (!newHobby.trim()) return; onChange([...data, newHobby.trim()]); setNewHobby(""); };
   const removeHobby = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-1.5 min-h-[40px]">
@@ -357,6 +400,10 @@ function HobbiesSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (
   );
 }
 
+/* ═══════════════════════════════════════════════════
+   Social Links
+   ═══════════════════════════════════════════════════ */
+
 function SocialSectionForm({ data, onChange, isBn }: { data: Record<string, any>; onChange: (d: any) => void; isBn: boolean }) {
   const platforms = ["linkedin", "github", "twitter", "facebook", "portfolio"];
   const labels: Record<string, { en: string; bn: string }> = {
@@ -367,11 +414,12 @@ function SocialSectionForm({ data, onChange, isBn }: { data: Record<string, any>
     portfolio: { en: "Portfolio URL", bn: "পোর্টফোলিও URL" },
   };
   const [errors, setErrors] = useState<Record<string, string>>({});
+
   const handleChange = (key: string, value: string) => {
     onChange({ ...data, [key]: value });
-    const msg = value.trim() && !/^https?:\/\//i.test(value) ? (isBn ? "https:// দিয়ে শুরু করুন" : "Must start with http(s)") : null;
-    setErrors((prev) => ({ ...prev, [key]: msg || "" }));
+    setErrors((prev) => ({ ...prev, [key]: value.trim() && !/^https?:\/\//i.test(value) ? (isBn ? "https:// দিয়ে শুরু করুন" : "Must start with http(s)") : "" }));
   };
+
   return (
     <div className="space-y-2">
       {platforms.map((p) => (
