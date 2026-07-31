@@ -1,4 +1,3 @@
-<dyad-chat-summary>Load reviews on company page mount</dyad-chat-summary><dyad-write path="src/app/companies/[slug]/CompanyDetailClient.tsx" description="Load reviews on mount instead of only on tab click">
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -15,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { trackBehavior, useScrollDepthTracking, useClickPatternTracking, useSessionEngagementTracking } from "@/hooks/use-behavior-tracker";
-import { Building2, ArrowLeft, Users, Calendar, Briefcase, Star, Eye, MapPin, Link2, AtSign, Hash, Send, Rss, Globe } from "lucide-react";
+import { Building2, ArrowLeft, Users, Calendar, Briefcase, Star, Eye, MapPin, Link2, AtSign, Hash, Send, Rss, Globe, CheckCircle2 } from "lucide-react";
 import type { Company, CompanyReview } from "@/types";
 import CompanyHeader from "./CompanyHeader";
 import CompanySidebar from "./CompanySidebar";
@@ -80,7 +79,7 @@ export default function CompanyDetailClient({ slug }: Props) {
         rv.forEach((r: CompanyReview) => { const star = Math.round(Number(r.overall_rating || r.rating)); if (star >= 1 && star <= 5) counts[star - 1]++; });
         setRatingBreakdown([5, 4, 3, 2, 1].map((stars) => ({ stars, count: counts[stars - 1], percent: Math.round((counts[stars - 1] / total) * 100) })));
       }
-    } catch {} finally { setReviewsLoading(false); }
+    } catch { /* ignore */ } finally { setReviewsLoading(false); }
   };
 
   useEffect(() => {
@@ -91,7 +90,6 @@ export default function CompanyDetailClient({ slug }: Props) {
         if (data.followers_count != null) setFollowersCount(data.followers_count);
         trackBehavior("company_visit", { targetId: data.id, metaData: { name: data.name, slug } });
         companiesService.getCompanyBrochures(data.id).then((r) => setBrochures(r.data || [])).catch(() => {});
-        // Load reviews immediately on mount
         loadReviews(data.id);
       })
       .catch(() => toast.error("Failed to load company details"))
@@ -180,7 +178,7 @@ export default function CompanyDetailClient({ slug }: Props) {
   const activeJobsCount = String(company.active_jobs_count ?? company.jobs_count ?? jobs.length);
   const avgReview = reviewMeta.total_reviews > 0 ? reviewMeta.average_rating.toFixed(1) : "0.0";
   const totalReviews = String(reviewMeta.total_reviews || 0);
-  const whyJoinUs = (() => { const wju = company.why_join_us; if (Array.isArray(wju)) return wju; if (wju && typeof wju === "object" && "benefits" in wju) return wju.benefits || []; return []; })();
+  const whyJoinUs = (() => { const wju = company.why_join_us; if (Array.isArray(wju)) return wju; if (wju && typeof wju === "object" && "benefits" in wju) return (wju as { benefits?: string[] }).benefits || []; return []; })();
   const topSkills = company.top_skills || [];
   const highlights = company.highlights || [];
   const location = [company.location].filter(Boolean).join(", ");
