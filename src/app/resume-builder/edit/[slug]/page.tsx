@@ -8,6 +8,35 @@ import ResumeEditNotFound from "./not-found";
 import InlineEditor from "@/components/cv/InlineEditor";
 import { useResumeEditor } from "@/hooks/use-resume-editor";
 
+/**
+ * Sanitize editorData before sending to backend Blade templates.
+ * Blade's {{ }} calls htmlspecialchars() which fails on arrays.
+ * This ensures all values passed to templates are strings or string arrays.
+ */
+function sanitizeForBlade(data: Record<string, any>): Record<string, any> {
+  const safe = (v: any): any => {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'string') return v;
+    if (typeof v === 'number') return String(v);
+    if (typeof v === 'boolean') return v ? 'true' : 'false';
+    if (Array.isArray(v)) return v.map(safe);
+    if (typeof v === 'object') {
+      const out: Record<string, any> = {};
+      for (const [k, val] of Object.entries(v)) {
+        out[k] = safe(val);
+      }
+      return out;
+    }
+    return String(v);
+  };
+
+  const result: Record<string, any> = {};
+  for (const [key, val] of Object.entries(data)) {
+    result[key] = safe(val);
+  }
+  return result;
+}
+
 export default function ResumeBuilderEditPage() {
   const { slug } = useParams<{ slug: string }>();
   const { language } = useThemeStore();
@@ -30,10 +59,12 @@ export default function ResumeBuilderEditPage() {
   if (loading) return <PublicLayout><ResumeEditLoading /></PublicLayout>;
   if (!template) return <PublicLayout><ResumeEditNotFound /></PublicLayout>;
 
+  const sanitizedData = sanitizeForBlade(editorData);
+
   return (
     <InlineEditor
       template={template}
-      data={editorData}
+      data={sanitizedData}
       onChange={handleDataChange}
       previewHtml={previewHtml}
       previewLoading={previewLoading}

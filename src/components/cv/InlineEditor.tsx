@@ -68,9 +68,9 @@ export default function InlineEditor({ template, data, onChange, previewHtml, pr
         </div>
       </div>
 
-      {/* ── Two-Panel Layout: both independently scrollable ── */}
+      {/* ── Two-Panel Layout ── */}
       <div className="flex-1 flex overflow-hidden">
-        {/* LEFT: Editor Panel — dedicated vertical scrollbar */}
+        {/* LEFT: Editor Panel */}
         <div className={`${showMobilePreview ? 'hidden' : 'w-full'} lg:block lg:w-[45%] border-r overflow-y-auto`}>
           <div className="p-4 space-y-2 pb-8">
             {CV_SECTIONS.map((section) => {
@@ -97,14 +97,12 @@ export default function InlineEditor({ template, data, onChange, previewHtml, pr
           </div>
         </div>
 
-        {/* RIGHT: Preview Panel — sticky in viewport */}
+        {/* RIGHT: Preview Panel */}
         <div className={`${showMobilePreview ? 'w-full' : 'hidden'} lg:block lg:w-[55%] bg-muted/30 overflow-hidden`}>
-          {/* Sticky header */}
           <div className="sticky top-0 z-10 bg-muted/80 backdrop-blur p-2 flex items-center justify-between lg:hidden border-b">
             <span className="text-xs font-medium">{isBn ? "প্রিভিউ" : "Preview"}</span>
             <Button variant="ghost" size="sm" className="h-7 w-7" onClick={() => setShowMobilePreview(false)}><X className="h-3.5 w-3.5" /></Button>
           </div>
-          {/* Scrollable preview content */}
           <div className="overflow-y-auto h-full p-3 sm:p-6">
             <div className="flex items-start justify-center">
               <div className="bg-white rounded-lg shadow-2xl w-full max-w-[800px] overflow-hidden">

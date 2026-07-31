@@ -36,6 +36,26 @@ function clearDraft(slug: string) {
   try { localStorage.removeItem(storageKey(slug)); } catch {}
 }
 
+/** Ensure all values are strings/arrays-of-strings for Blade templates. */
+function sanitizeForBlade(data: Record<string, any>): Record<string, any> {
+  const safe = (v: any): any => {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'string') return v;
+    if (typeof v === 'number') return String(v);
+    if (typeof v === 'boolean') return v ? 'true' : 'false';
+    if (Array.isArray(v)) return v.map(safe);
+    if (typeof v === 'object') {
+      const out: Record<string, any> = {};
+      for (const [k, val] of Object.entries(v)) { out[k] = safe(val); }
+      return out;
+    }
+    return String(v);
+  };
+  const result: Record<string, any> = {};
+  for (const [key, val] of Object.entries(data)) { result[key] = safe(val); }
+  return result;
+}
+
 const EMPTY_PROJECT = { name: "", description: "", url: "" };
 
 export function useResumeEditor({ slug, onNotFound }: UseResumeEditorOptions) {
@@ -57,7 +77,6 @@ export function useResumeEditor({ slug, onNotFound }: UseResumeEditorOptions) {
   /* ── 1. Load template + editorData ── */
   useEffect(() => {
     if (!slug) return;
-
     (async () => {
       setLoading(true);
       try {
@@ -66,9 +85,6 @@ export function useResumeEditor({ slug, onNotFound }: UseResumeEditorOptions) {
         if (!tmpl) { onNotFound?.() ?? router.push("/resume-builder"); return; }
         setTemplate(tmpl);
 
-        /* localStorage → API fallback.
-           dataReadyRef MUST be set BEFORE setEditorData so the
-           debounced preview effect fires on the first re-render. */
         const stored = loadDraft(slug);
         if (stored) {
           dataReadyRef.current = true;
@@ -90,7 +106,7 @@ export function useResumeEditor({ slug, onNotFound }: UseResumeEditorOptions) {
         setLoading(false);
       }
     })();
-  }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [slug]);
 
   /* ── 2. Load initial preview ── */
   useEffect(() => {
@@ -109,7 +125,7 @@ export function useResumeEditor({ slug, onNotFound }: UseResumeEditorOptions) {
       } catch {}
       finally { setPreviewLoading(false); }
     })();
-  }, [template]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [template]);
 
   /* ── 3. Persist every change to localStorage ── */
   useEffect(() => {
@@ -125,7 +141,8 @@ export function useResumeEditor({ slug, onNotFound }: UseResumeEditorOptions) {
     previewDebounceRef.current = setTimeout(async () => {
       setPreviewLoading(true);
       try {
-        const html = await resumeService.getLivePreviewWithData(template.slug, editorData);
+        const safe = sanitizeForBlade(editorData);
+        const html = await resumeService.getLivePreviewWithData(template.slug, safe);
         if (html && html.length > 50) {
           setPreviewHtml(html);
         } else {
@@ -141,7 +158,7 @@ export function useResumeEditor({ slug, onNotFound }: UseResumeEditorOptions) {
     }, 500);
 
     return () => { if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current); };
-  }, [editorData, template]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editorData, template]);
 
   /* ── Actions ── */
 
@@ -153,7 +170,8 @@ export function useResumeEditor({ slug, onNotFound }: UseResumeEditorOptions) {
     if (!template) return;
     setPreviewLoading(true);
     try {
-      const html = await resumeService.getLivePreviewWithData(template.slug, editorData);
+      const safe = sanitizeForBlade(editorData);
+      const html = await resumeService.getLivePreviewWithData(template.slug, safe);
       if (html && html.length > 50) setPreviewHtml(html);
     } catch {
       try {

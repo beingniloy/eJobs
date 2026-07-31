@@ -15,6 +15,21 @@ import { toast } from "sonner";
 
 const MAX_PHOTO_BYTES = 1.8 * 1024 * 1024;
 
+/** Recursively ensure all values are strings/arrays — prevents Blade htmlspecialchars errors */
+function toSafeStrings(v: any): any {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number') return String(v);
+  if (typeof v === 'boolean') return v ? 'true' : 'false';
+  if (Array.isArray(v)) return v.map(toSafeStrings);
+  if (typeof v === 'object') {
+    const out: Record<string, any> = {};
+    for (const [k, val] of Object.entries(v)) { out[k] = toSafeStrings(val); }
+    return out;
+  }
+  return String(v);
+}
+
 export default function SectionForm({ section, data, onChange, isBn }: { section: string; data: any; onChange: (d: any) => void; isBn: boolean }) {
   switch (section) {
     case "personal":     return <PersonalSectionForm data={data || {}} onChange={onChange} isBn={isBn} />;
@@ -108,7 +123,7 @@ function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, an
         headers: { "Content-Type": "multipart/form-data" },
       });
       const photoUrl = res.data?.data?.photo_url || res.data?.photo_url;
-      if (photoUrl) onChange({ ...data, photo_url: photoUrl });
+      if (photoUrl) onChange(toSafeStrings({ ...data, photo_url: photoUrl }));
       toast.success(isBn ? "ছবি আপলোড হয়েছে!" : "Photo uploaded!");
     } catch (err: any) {
       toast.error(err?.response?.data?.message || err?.message || (isBn ? "আপলোড ব্যর্থ" : "Upload failed"));
@@ -123,7 +138,7 @@ function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, an
   const field = (en: string, bn: string, key: string, type = "text", placeholder?: string, validate?: (v: string) => string | null) => (
     <div className="space-y-1.5">
       <Label className="text-xs font-medium">{isBn ? bn : en}</Label>
-      <Input type={type} value={data[key] || ""} onChange={(e) => { onChange({ ...data, [key]: e.target.value }); if (validate) setFieldErrors((p) => ({ ...p, [key]: validate(e.target.value) || "" })); }} placeholder={placeholder || (isBn ? bn : en)} className="h-9 text-sm" />
+      <Input type={type} value={data[key] || ""} onChange={(e) => { onChange(toSafeStrings({ ...data, [key]: e.target.value })); if (validate) setFieldErrors((p) => ({ ...p, [key]: validate(e.target.value) || "" })); }} placeholder={placeholder || (isBn ? bn : en)} className="h-9 text-sm" />
       {fieldErrors[key] && <p className="text-xs text-destructive h-4">{fieldErrors[key]}</p>}
     </div>
   );
@@ -150,7 +165,7 @@ function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, an
       {field("LinkedIn", "LinkedIn", "linkedin", "url", "https://linkedin.com/in/...", (v) => v.trim() && !/^https?:\/\//i.test(v) ? (isBn ? "https:// দিয়ে শুরু করুন" : "Must start with http(s)") : null)}
       <div className="space-y-1.5">
         <Label className="text-xs font-medium">{isBn ? "সারসংক্ষেপ" : "Summary"}</Label>
-        <Textarea value={data.summary || ""} onChange={(e) => onChange({ ...data, summary: e.target.value })} placeholder={isBn ? "পেশাদার সারসংক্ষেপ..." : "Professional summary..."} className="min-h-[100px] text-sm" />
+        <Textarea value={data.summary || ""} onChange={(e) => onChange(toSafeStrings({ ...data, summary: e.target.value }))} placeholder={isBn ? "পেশাদার সারসংক্ষেপ..." : "Professional summary..."} className="min-h-[100px] text-sm" />
       </div>
     </div>
   );
@@ -161,11 +176,10 @@ function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, an
    ═══════════════════════════════════════════════════ */
 
 function ExperienceSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
-  const addEntry = () => onChange([...data, { company: "", position: "", location: "", start_date: "", end_date: "", is_current: false, description: "" }]);
-  const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
-
+  const addEntry = () => onChange(toSafeStrings([...data, { company: "", position: "", location: "", start_date: "", end_date: "", is_current: false, description: "" }]));
+  const remove = (i: number) => onChange(toSafeStrings(data.filter((_, idx) => idx !== i)));
   const update = (i: number, key: string, val: any) => {
-    const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n);
+    const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(toSafeStrings(n));
   };
 
   return (
@@ -195,26 +209,21 @@ function ExperienceSectionForm({ data, onChange, isBn }: { data: any[]; onChange
 }
 
 /* ═══════════════════════════════════════════════════
-   Education — ALL fields, single-write per change
+   Education
    ═══════════════════════════════════════════════════ */
 
 function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
-  const addEntry = () => onChange([...data, {
+  const addEntry = () => onChange(toSafeStrings([...data, {
     degree: "", institution: "", board: "", field: "",
     group_or_subject: "", start_date: "", end_date: "",
     year: "", result: "", gpa_or_cgpa: "", description: "",
-  }]);
-
-  const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
-
-  /* Single atomic write — prevents stale-closure data loss */
+  }]));
+  const remove = (i: number) => onChange(toSafeStrings(data.filter((_, idx) => idx !== i)));
   const update = (i: number, key: string, val: any) => {
-    const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n);
+    const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(toSafeStrings(n));
   };
-
-  /* Write multiple keys in one call */
   const updateMulti = (i: number, keys: Record<string, any>) => {
-    const n = [...data]; n[i] = { ...n[i], ...keys }; onChange(n);
+    const n = [...data]; n[i] = { ...n[i], ...keys }; onChange(toSafeStrings(n));
   };
 
   return (
@@ -228,7 +237,6 @@ function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
           <div key={i} className="p-3 border rounded-lg space-y-3 relative">
             <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => remove(i)}><X className="h-3 w-3" /></Button>
 
-            {/* Level / Degree Type */}
             <div>
               <Label className="text-[10px] text-muted-foreground">{levelLabel} *</Label>
               <Input
@@ -239,7 +247,6 @@ function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
               />
             </div>
 
-            {/* Board (for SSC/HSC) */}
             {!isHigherEdu && (
               <div>
                 <Label className="text-[10px] text-muted-foreground">{isBn ? "বোর্ড" : "Board"}</Label>
@@ -252,7 +259,6 @@ function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
               </div>
             )}
 
-            {/* Institution */}
             <div>
               <Label className="text-[10px] text-muted-foreground">{isBn ? "প্রতিষ্ঠান" : "Institution"} *</Label>
               <Input
@@ -263,7 +269,6 @@ function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
               />
             </div>
 
-            {/* Location */}
             <div>
               <Label className="text-[10px] text-muted-foreground">{isBn ? "স্থান" : "Location"}</Label>
               <Input
@@ -274,7 +279,6 @@ function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
               />
             </div>
 
-            {/* Group / Subject / Field — SINGLE WRITE */}
             <div>
               <Label className="text-[10px] text-muted-foreground">{isBn ? "বিষয় / গ্রুপ" : "Group / Subject / Field"}</Label>
               <Input
@@ -287,7 +291,6 @@ function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
               />
             </div>
 
-            {/* Year / Dates — SINGLE WRITE */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-[10px] text-muted-foreground">{isBn ? "পাশের সাল" : "Passing Year"}</Label>
@@ -311,7 +314,6 @@ function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
               </div>
             </div>
 
-            {/* GPA / CGPA / Result — SINGLE WRITE */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-[10px] text-muted-foreground">{isHigherEdu ? "CGPA" : "GPA"}</Label>
@@ -336,7 +338,6 @@ function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
               </div>
             </div>
 
-            {/* Description */}
             <div>
               <Label className="text-[10px] text-muted-foreground">{isBn ? "অতিরিক্ত তথ্য" : "Additional Info"}</Label>
               <Textarea
@@ -361,8 +362,8 @@ function EducationSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
 function SkillsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
   const [newSkill, setNewSkill] = useState("");
   const [newLevel, setNewLevel] = useState("intermediate");
-  const addSkill = () => { if (!newSkill.trim()) return; onChange([...data, { name: newSkill.trim(), level: newLevel }]); setNewSkill(""); };
-  const removeSkill = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+  const addSkill = () => { if (!newSkill.trim()) return; onChange(toSafeStrings([...data, { name: newSkill.trim(), level: newLevel }])); setNewSkill(""); };
+  const removeSkill = (i: number) => onChange(toSafeStrings(data.filter((_, idx) => idx !== i)));
 
   return (
     <div className="space-y-3">
@@ -396,9 +397,9 @@ function SkillsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d
    ═══════════════════════════════════════════════════ */
 
 function CertificationsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
-  const addEntry = () => onChange([...data, { name: "", issuer: "", date: "" }]);
-  const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
-  const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+  const addEntry = () => onChange(toSafeStrings([...data, { name: "", issuer: "", date: "" }]));
+  const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(toSafeStrings(n)); };
+  const remove = (i: number) => onChange(toSafeStrings(data.filter((_, idx) => idx !== i)));
 
   return (
     <div className="space-y-3">
@@ -425,9 +426,9 @@ function CertificationsSectionForm({ data, onChange, isBn }: { data: any[]; onCh
    ═══════════════════════════════════════════════════ */
 
 function LanguagesSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
-  const addEntry = () => onChange([...data, { name: "", proficiency: "intermediate" }]);
-  const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
-  const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+  const addEntry = () => onChange(toSafeStrings([...data, { name: "", proficiency: "intermediate" }]));
+  const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(toSafeStrings(n)); };
+  const remove = (i: number) => onChange(toSafeStrings(data.filter((_, idx) => idx !== i)));
   const proficiencies = [
     { value: "basic", en: "Basic", bn: "মৌলিক" },
     { value: "conversational", en: "Conversational", bn: "কথোপকথন" },
@@ -457,9 +458,9 @@ function LanguagesSectionForm({ data, onChange, isBn }: { data: any[]; onChange:
    ═══════════════════════════════════════════════════ */
 
 function ProjectsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
-  const addEntry = () => onChange([...data, { name: "", description: "", url: "", technologies: "" }]);
-  const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
-  const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+  const addEntry = () => onChange(toSafeStrings([...data, { name: "", description: "", url: "", technologies: "" }]));
+  const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(toSafeStrings(n)); };
+  const remove = (i: number) => onChange(toSafeStrings(data.filter((_, idx) => idx !== i)));
 
   return (
     <div className="space-y-4">
@@ -482,9 +483,9 @@ function ProjectsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: 
    ═══════════════════════════════════════════════════ */
 
 function AwardsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
-  const addEntry = () => onChange([...data, { title: "", issuer: "", date: "" }]);
-  const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(n); };
-  const remove = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+  const addEntry = () => onChange(toSafeStrings([...data, { title: "", issuer: "", date: "" }]));
+  const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(toSafeStrings(n)); };
+  const remove = (i: number) => onChange(toSafeStrings(data.filter((_, idx) => idx !== i)));
 
   return (
     <div className="space-y-3">
@@ -512,8 +513,8 @@ function AwardsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d
 
 function HobbiesSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
   const [newHobby, setNewHobby] = useState("");
-  const addHobby = () => { if (!newHobby.trim()) return; onChange([...data, newHobby.trim()]); setNewHobby(""); };
-  const removeHobby = (i: number) => onChange(data.filter((_, idx) => idx !== i));
+  const addHobby = () => { if (!newHobby.trim()) return; onChange(toSafeStrings([...data, newHobby.trim()])); setNewHobby(""); };
+  const removeHobby = (i: number) => onChange(toSafeStrings(data.filter((_, idx) => idx !== i)));
 
   return (
     <div className="space-y-3">
@@ -549,7 +550,7 @@ function SocialSectionForm({ data, onChange, isBn }: { data: Record<string, any>
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleChange = (key: string, value: string) => {
-    onChange({ ...data, [key]: value });
+    onChange(toSafeStrings({ ...data, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: value.trim() && !/^https?:\/\//i.test(value) ? (isBn ? "https:// দিয়ে শুরু করুন" : "Must start with http(s)") : "" }));
   };
 
