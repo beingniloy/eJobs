@@ -31,21 +31,7 @@ export default function CvPreviewClient() {
     setLoading(true);
     setError(null);
 
-    const backendUrl = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000").replace(/\/api\/?$/, "");
-    const previewUrl = `${backendUrl}/cv/preview/${uuid}`;
-
-    // Read Bearer token from Zustand persist store
-    const headers: Record<string, string> = { Accept: "text/html" };
-    try {
-      const raw = localStorage.getItem("auth-storage");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        const token = parsed?.state?.token;
-        if (token) headers.Authorization = `Bearer ${token}`;
-      }
-    } catch {}
-
-    fetch(previewUrl, { headers })
+    fetch(`/api/cv/preview/${uuid}`, { headers: { Accept: "text/html" } })
       .then(async (res) => {
         if (!res.ok) throw new Error(`Preview failed (${res.status})`);
         return res.text();
