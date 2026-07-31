@@ -1,3 +1,4 @@
+<dyad-chat-summary>Load reviews on company page mount</dyad-chat-summary><dyad-write path="src/app/companies/[slug]/CompanyDetailClient.tsx" description="Load reviews on mount instead of only on tab click">
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -50,7 +51,6 @@ export default function CompanyDetailClient({ slug }: Props) {
   useClickPatternTracking();
   useSessionEngagementTracking();
 
-  // Reviews state
   const [reviews, setReviews] = useState<CompanyReview[]>([]);
   const [reviewMeta, setReviewMeta] = useState({ average_rating: 0, total_reviews: 0 });
   const [ratingBreakdown, setRatingBreakdown] = useState<{ stars: number; count: number; percent: number }[]>([]);
@@ -63,31 +63,10 @@ export default function CompanyDetailClient({ slug }: Props) {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [categoryRatings, setCategoryRatings] = useState<Record<string, number>>({ work_culture: 0, salary: 0, management: 0, growth: 0, work_life_balance: 0 });
 
-  useEffect(() => {
-    companiesService.getCompanyBySlug(slug)
-      .then((res) => {
-        const data = res as unknown as Company;
-        setCompany(data);
-        if (data.followers_count != null) setFollowersCount(data.followers_count);
-        trackBehavior("company_visit", { targetId: data.id, metaData: { name: data.name, slug } });
-        companiesService.getCompanyBrochures(data.id).then((r) => setBrochures(r.data || [])).catch(() => {});
-      })
-      .catch(() => toast.error("Failed to load company details"))
-      .finally(() => setLoading(false));
-  }, [slug]);
-
-  useEffect(() => {
-    if (!company || !isAuthenticated) return;
-    api.get(`/candidate/companies/${company.id}/followers/check`)
-      .then((res: any) => setFollowing(res.data.following ?? res.data.data?.following ?? false))
-      .catch(() => {});
-  }, [company, isAuthenticated]);
-
-  const loadReviews = async () => {
-    if (!company) return;
+  const loadReviews = async (companyId: number) => {
     setReviewsLoading(true);
     try {
-      const payload = await companiesService.getCompanyReviews(company.id);
+      const payload = await companiesService.getCompanyReviews(companyId);
       const rv = (payload as any)?.reviews || [];
       setReviews(rv);
       setReviewMeta({
@@ -103,6 +82,28 @@ export default function CompanyDetailClient({ slug }: Props) {
       }
     } catch {} finally { setReviewsLoading(false); }
   };
+
+  useEffect(() => {
+    companiesService.getCompanyBySlug(slug)
+      .then((res) => {
+        const data = res as unknown as Company;
+        setCompany(data);
+        if (data.followers_count != null) setFollowersCount(data.followers_count);
+        trackBehavior("company_visit", { targetId: data.id, metaData: { name: data.name, slug } });
+        companiesService.getCompanyBrochures(data.id).then((r) => setBrochures(r.data || [])).catch(() => {});
+        // Load reviews immediately on mount
+        loadReviews(data.id);
+      })
+      .catch(() => toast.error("Failed to load company details"))
+      .finally(() => setLoading(false));
+  }, [slug]);
+
+  useEffect(() => {
+    if (!company || !isAuthenticated) return;
+    api.get(`/candidate/companies/${company.id}/followers/check`)
+      .then((res: any) => setFollowing(res.data.following ?? res.data.data?.following ?? false))
+      .catch(() => {});
+  }, [company, isAuthenticated]);
 
   const handleFollow = async () => {
     if (!isAuthenticated) { toast.error(isBn ? "লগইন করুন" : "Please login first"); return; }
@@ -133,7 +134,7 @@ export default function CompanyDetailClient({ slug }: Props) {
       setReviewRating(0); setReviewComment(""); setReviewAnonymous(false);
       setUserHasReviewed(true);
       setCategoryRatings({ work_culture: 0, salary: 0, management: 0, growth: 0, work_life_balance: 0 });
-      loadReviews();
+      loadReviews(company.id);
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || "Failed to submit review";
       toast.error(msg);
@@ -191,7 +192,6 @@ export default function CompanyDetailClient({ slug }: Props) {
       <div className="px-6 sm:px-8 lg:px-12 space-y-6">
         <CompanyHeader company={company} following={following} followersCount={followersCount} activeJobsCount={Number(activeJobsCount)} avgReview={avgReview} totalReviews={totalReviews} socialLinks={socialLinks} onFollow={handleFollow} isAuthenticated={isAuthenticated} isBn={isBn} getStorageUrl={getStorageUrl} />
 
-        {/* Stats Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
           {[
             { icon: Calendar, label: "Founded", value: company.founded_year || "N/A" },
@@ -208,8 +208,7 @@ export default function CompanyDetailClient({ slug }: Props) {
           ))}
         </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === "reviews") loadReviews(); }}>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="w-full justify-start h-auto flex-wrap bg-muted/50 p-1">
             {["overview", "jobs", "about", "reviews", "benefits", "followers"].map((t) => (
               <TabsTrigger key={t} value={t} className="text-xs capitalize px-3 py-1.5">
