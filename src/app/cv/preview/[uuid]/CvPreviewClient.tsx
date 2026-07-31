@@ -27,11 +27,10 @@ export default function CvPreviewClient() {
 
   useEffect(() => {
     if (!uuid) return;
-
     setLoading(true);
     setError(null);
 
-    // Get auth token from localStorage
+    // Get auth token
     let authToken: string | null = null;
     try {
       const raw = localStorage.getItem("auth-storage");
@@ -46,21 +45,22 @@ export default function CvPreviewClient() {
 
     fetch(`/api/cv/preview/${uuid}`, { headers })
       .then(async (res) => {
-        const contentType = res.headers.get("content-type") || "";
         const text = await res.text();
+        const contentType = res.headers.get("content-type") || "";
 
-        // If response is JSON (error), throw with message
+        // Check if response is JSON error
         if (contentType.includes("application/json")) {
           try {
             const json = JSON.parse(text);
             throw new Error(json.message || `Preview failed (${res.status})`);
-          } catch (parseErr) {
-            if (parseErr instanceof SyntaxError) throw new Error(`Preview failed (${res.status})`);
-            throw parseErr;
+          } catch (e) {
+            if (e instanceof Error) throw e;
+            throw new Error(`Preview failed (${res.status})`);
           }
         }
 
         if (!res.ok) throw new Error(`Preview failed (${res.status})`);
+        if (!text || text.length < 100) throw new Error("Empty preview response");
         return text;
       })
       .then((data) => {
@@ -72,6 +72,7 @@ export default function CvPreviewClient() {
         setLoading(false);
       });
 
+    // Load resume metadata
     resumeService.getResume(uuid).then((r: any) => {
       if (r) {
         setIsPublic(!!r.is_public);
@@ -83,16 +84,23 @@ export default function CvPreviewClient() {
   const handleDownloadPdf = async () => {
     setDownloading(true);
     try {
-      const blob = isPublic ? await resumeService.downloadPdf(uuid) : await resumeService.downloadResume(uuid);
+      const blob = isPublic
+        ? await resumeService.downloadPdf(uuid)
+        : await resumeService.downloadResume(uuid);
       const url = URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
       const a = document.createElement("a");
-      a.href = url; a.download = "resume.pdf";
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      a.href = url;
+      a.download = "resume.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success(isBn ? "PDF ডাউনলোড শুরু হয়েছে" : "PDF download started");
     } catch {
       toast.error(isBn ? "ডাউনলোড ব্যর্থ" : "Download failed");
-    } finally { setDownloading(false); }
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const handleShareToggle = async () => {
@@ -100,9 +108,10 @@ export default function CvPreviewClient() {
       const result = await resumeService.shareResume(uuid, { is_public: !isPublic });
       setIsPublic(!isPublic);
       if (result.share_token) setShareToken(result.share_token);
-      toast.success(!isPublic
-        ? (isBn ? "পাবলিক লিঙ্ক তৈরি হয়েছে" : "Share link created")
-        : (isBn ? "পাবলিক লিঙ্ক বন্ধ করা হয়েছে" : "Share link disabled")
+      toast.success(
+        !isPublic
+          ? isBn ? "পাবলিক লিঙ্ক তৈরি হয়েছে" : "Share link created"
+          : isBn ? "পাবলিক লিঙ্ক বন্ধ করা হয়েছে" : "Share link disabled"
       );
     } catch {
       toast.error(isBn ? "ব্যর্থ" : "Failed");
@@ -124,30 +133,36 @@ export default function CvPreviewClient() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-3">
-          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <Loader2 className="h-8 w-8 text-primary animate-spin mx-auto" />
           <p className="text-sm text-muted-foreground">Loading preview...</p>
         </div>
       </div>
     );
   }
 
-  if (error || !html) {
+  if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4 max-w-md">
+        <div className="text-center space-y-4 max-w-md px-4">
           <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto">
             <Lock className="h-8 w-8 text-muted-foreground" />
           </div>
           <p className="text-lg font-semibold">Preview Unavailable</p>
-          <p className="text-sm text-muted-foreground">
-            {error || (isBn ? "সিভির প্রিভিউ লোড করা যায়নি" : "Could not load CV preview")}
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <p className="text-xs text-muted-foreground">
+            {isBn
+              ? "ব্যাকএন্ডে cv/share রুট যোগ করা হয়নি। সাপোর্টে জানান।"
+              : "The CV share endpoint is not configured. Please contact support."}
           </p>
           <div className="flex gap-3 justify-center">
             <Button variant="outline" size="sm" onClick={() => router.push("/resume-builder")}>
-              <ArrowLeft className="h-4 w-4 mr-1" />{isBn ? "ফিরে যান" : "Go Back"}
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              {isBn ? "ফিরে যান" : "Go Back"}
             </Button>
             <Button size="sm" onClick={handleDownloadPdf} disabled={downloading}>
-              {downloading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
+              {downloading
+                ? <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                : <Download className="h-4 w-4 mr-1" />}
               {isBn ? "PDF ডাউনলোড" : "Download PDF"}
             </Button>
           </div>
@@ -162,27 +177,39 @@ export default function CvPreviewClient() {
         <div className="container mx-auto px-4 sm:px-6 py-2 flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => router.push("/resume-builder")}>
-              <ArrowLeft className="h-4 w-4 mr-1" />{isBn ? "ফিরে যান" : "Back"}
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              {isBn ? "ফিরে যান" : "Back"}
             </Button>
-            <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${isPublic ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"}`}>
-              {isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-              {isPublic ? (isBn ? "পাবলিক" : "Public") : (isBn ? "এই সিভি প্রাইভেট" : "This resume is private")}
+            <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${
+              isPublic
+                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+            }`}>
+              {isPublic
+                ? <Globe className="h-3 w-3" />
+                : <Lock className="h-3 w-3" />}
+              {isPublic
+                ? isBn ? "পাবলিক" : "Public"
+                : isBn ? "এই সিভি প্রাইভেট" : "This resume is private"}
             </span>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={downloading}>
-              {downloading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
+              {downloading
+                ? <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                : <Download className="h-4 w-4 mr-1" />}
               {isBn ? "PDF ডাউনলোড" : "Download PDF"}
             </Button>
             <Button variant="outline" size="sm" onClick={handleShareToggle}>
               <Share2 className="h-4 w-4 mr-1" />
               {isPublic
-                ? (isBn ? "আনপাবলিশ" : "Unpublish")
-                : (isBn ? "শেয়ার করুন" : "Share")}
+                ? isBn ? "আনপাবলিশ" : "Unpublish"
+                : isBn ? "শেয়ার করুন" : "Share"}
             </Button>
             {isPublic && (
               <Button variant="outline" size="sm" onClick={handleCopyLink}>
-                <LinkIcon className="h-4 w-4 mr-1" />{isBn ? "লিঙ্ক কপি" : "Copy Link"}
+                <LinkIcon className="h-4 w-4 mr-1" />
+                {isBn ? "লিঙ্ক কপি" : "Copy Link"}
               </Button>
             )}
           </div>
