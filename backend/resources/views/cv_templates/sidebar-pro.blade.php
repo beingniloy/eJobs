@@ -1,97 +1,105 @@
-{{-- Sidebar Pro Template --}}
+@php
+// ── Safely extract every variable as a string before any {{ }} output ──
+$pi = is_array($personal_info) ? $personal_info : [];
+$_name   = is_string($pi['full_name'] ?? null) ? $pi['full_name'] : '';
+$_title  = is_string($pi['title'] ?? null) ? $pi['title'] : '';
+$_email  = is_string($pi['email'] ?? null) ? $pi['email'] : '';
+$_phone  = is_string($pi['phone'] ?? null) ? $pi['phone'] : '';
+$_loc    = is_string($pi['location'] ?? null) ? $pi['location'] : '';
+$_addr   = is_string($pi['address'] ?? null) ? $pi['address'] : '';
+$_summary = is_string($pi['summary'] ?? null) ? $pi['summary'] : '';
+$_photo  = is_string($pi['photo_url'] ?? null) ? $pi['photo_url'] : '';
+$_photo_attr = is_string($pi['full_name'] ?? null) ? $pi['full_name'] : '';
+
+$_skills_raw   = is_array($skills ?? null) ? $skills : [];
+$_langs_raw    = is_array($languages ?? null) ? $languages : [];
+$_certs_raw    = is_array($certifications ?? null) ? $certifications : [];
+$_social_raw   = is_array($social_links ?? null) ? $social_links : [];
+$_exp_raw      = is_array($experience ?? null) ? $experience : [];
+$_edu_raw      = is_array($education ?? null) ? $education : [];
+$_proj_raw     = is_array($projects ?? null) ? $projects : [];
+$_awards_raw   = is_array($awards ?? null) ? $awards : [];
+$_hobbies_raw  = is_array($hobbies ?? null) ? $hobbies : [];
+@endphp
+
 <div class="sidebar-pro">
+
   {{-- Profile Photo --}}
-  @if(!empty($personal_info['photo_url']) && is_string($personal_info['photo_url']))
+  @if($_photo)
     <div class="photo-section">
-      <img src="{{ (string)($personal_info['photo_url']) }}" alt="{{ is_string($personal_info['full_name'] ?? null) ? $personal_info['full_name'] : '' }}" />
+      <img src="{{ $_photo }}" alt="{{ $_photo_attr }}" />
     </div>
   @endif
 
   {{-- Personal Info --}}
   <div class="personal-info">
-    <h1 class="name">{{ is_array($personal_info) ? (string)($personal_info['full_name'] ?? '') : (string)($personal_info ?? '') }}</h1>
-
-    @if(!empty($personal_info['title']) && is_string($personal_info['title']))
-      <p class="title">{{ (string)$personal_info['title'] }}</p>
+    <h1 class="name">{{ $_name }}</h1>
+    @if($_title)
+      <p class="title">{{ $_title }}</p>
     @endif
 
     <div class="contact-details">
-      @if(!empty($personal_info['email']) && is_string($personal_info['email']))
-        <div class="contact-item">
-          <span class="icon">✉</span>
-          <span>{{ (string)$personal_info['email'] }}</span>
-        </div>
+      @if($_email)
+        <div class="contact-item"><span class="icon">✉</span><span>{{ $_email }}</span></div>
       @endif
-
-      @if(!empty($personal_info['phone']) && is_string($personal_info['phone']))
-        <div class="contact-item">
-          <span class="icon">☎</span>
-          <span>{{ (string)$personal_info['phone'] }}</span>
-        </div>
+      @if($_phone)
+        <div class="contact-item"><span class="icon">☎</span><span>{{ $_phone }}</span></div>
       @endif
-
-      @if(!empty($personal_info['location']) && is_string($personal_info['location']))
-        <div class="contact-item">
-          <span class="icon">📍</span>
-          <span>{{ (string)$personal_info['location'] }}</span>
-        </div>
+      @if($_loc)
+        <div class="contact-item"><span class="icon">📍</span><span>{{ $_loc }}</span></div>
       @endif
-
-      @if(!empty($personal_info['address']) && is_string($personal_info['address']))
-        <div class="contact-item">
-          <span class="icon">🏠</span>
-          <span>{{ (string)$personal_info['address'] }}</span>
-        </div>
+      @if($_addr)
+        <div class="contact-item"><span class="icon">🏠</span><span>{{ $_addr }}</span></div>
       @endif
     </div>
   </div>
 
   {{-- Summary --}}
-  @if(!empty($personal_info['summary']) && is_string($personal_info['summary']))
+  @if($_summary)
     <div class="section">
       <h2>Professional Summary</h2>
-      <p class="summary">{{ (string)$personal_info['summary'] }}</p>
+      <p class="summary">{{ $_summary }}</p>
     </div>
   @endif
 
   {{-- Skills --}}
-  @if(!empty($skills))
+  @if(count($_skills_raw) > 0)
     <div class="section">
       <h2>Skills</h2>
       <div class="skills-list">
-        @if(is_array($skills))
-          @foreach($skills as $skill)
-            @if(is_array($skill))
-              <div class="skill-item">
-                <span class="skill-name">{{ is_string($skill['name'] ?? null) ? $skill['name'] : '' }}</span>
-                @if(!empty($skill['level']) && is_string($skill['level']))
-                  <span class="skill-level">{{ (string)$skill['level'] }}</span>
-                @endif
-              </div>
-            @elseif(is_string($skill))
-              <div class="skill-item">
-                <span class="skill-name">{{ $skill }}</span>
-              </div>
+        @foreach($_skills_raw as $sk)
+          @php
+            $sk_name  = is_array($sk) ? ($sk['name'] ?? '') : $sk;
+            $sk_level = is_array($sk) ? ($sk['level'] ?? '') : '';
+            $sk_name  = is_string($sk_name) ? $sk_name : '';
+            $sk_level = is_string($sk_level) ? $sk_level : '';
+          @endphp
+          <div class="skill-item">
+            <span class="skill-name">{{ $sk_name }}</span>
+            @if($sk_level)
+              <span class="skill-level">{{ $sk_level }}</span>
             @endif
-          @endforeach
-        @endif
+          </div>
+        @endforeach
       </div>
     </div>
   @endif
 
   {{-- Languages --}}
-  @if(!empty($languages) && is_array($languages))
+  @if(count($_langs_raw) > 0)
     <div class="section">
       <h2>Languages</h2>
-      @foreach($languages as $lang)
+      @foreach($_langs_raw as $lg)
+        @php
+          $lg_name = is_array($lg) ? ($lg['name'] ?? '') : (is_string($lg) ? $lg : '');
+          $lg_lev  = is_array($lg) ? ($lg['proficiency'] ?? '') : '';
+          $lg_name = is_string($lg_name) ? $lg_name : '';
+          $lg_lev  = is_string($lg_lev) ? $lg_lev : '';
+        @endphp
         <div class="language-item">
-          @if(is_array($lang))
-            <span class="lang-name">{{ is_string($lang['name'] ?? null) ? $lang['name'] : '' }}</span>
-            @if(!empty($lang['proficiency']) && is_string($lang['proficiency']))
-              <span class="lang-level">{{ (string)$lang['proficiency'] }}</span>
-            @endif
-          @elseif(is_string($lang))
-            <span class="lang-name">{{ $lang }}</span>
+          <span class="lang-name">{{ $lg_name }}</span>
+          @if($lg_lev)
+            <span class="lang-level">{{ $lg_lev }}</span>
           @endif
         </div>
       @endforeach
@@ -99,21 +107,25 @@
   @endif
 
   {{-- Certifications --}}
-  @if(!empty($certifications) && is_array($certifications))
+  @if(count($_certs_raw) > 0)
     <div class="section">
       <h2>Certifications</h2>
-      @foreach($certifications as $cert)
+      @foreach($_certs_raw as $ct)
+        @php
+          $ct_name   = is_array($ct) ? ($ct['name'] ?? '') : (is_string($ct) ? $ct : '');
+          $ct_issuer = is_array($ct) ? ($ct['issuer'] ?? '') : '';
+          $ct_date   = is_array($ct) ? ($ct['date'] ?? '') : '';
+          $ct_name   = is_string($ct_name) ? $ct_name : '';
+          $ct_issuer = is_string($ct_issuer) ? $ct_issuer : '';
+          $ct_date   = is_string($ct_date) ? $ct_date : '';
+        @endphp
         <div class="cert-item">
-          @if(is_array($cert))
-            <p class="cert-name">{{ is_string($cert['name'] ?? null) ? $cert['name'] : '' }}</p>
-            @if(!empty($cert['issuer']) && is_string($cert['issuer']))
-              <p class="cert-issuer">{{ (string)$cert['issuer'] }}</p>
-            @endif
-            @if(!empty($cert['date']) && is_string($cert['date']))
-              <p class="cert-date">{{ (string)$cert['date'] }}</p>
-            @endif
-          @elseif(is_string($cert))
-            <p class="cert-name">{{ $cert }}</p>
+          <p class="cert-name">{{ $ct_name }}</p>
+          @if($ct_issuer)
+            <p class="cert-issuer">{{ $ct_issuer }}</p>
+          @endif
+          @if($ct_date)
+            <p class="cert-date">{{ $ct_date }}</p>
           @endif
         </div>
       @endforeach
@@ -121,13 +133,17 @@
   @endif
 
   {{-- Social Links --}}
-  @if(!empty($social_links) && is_array($social_links))
+  @if(count($_social_raw) > 0)
     <div class="section">
       <h2>Social Links</h2>
-      @foreach($social_links as $platform => $url)
-        @if(!empty($url) && is_string($url))
+      @foreach($_social_raw as $pl => $url)
+        @php
+          $url    = is_string($url) ? $url : '';
+          $pl_str = is_string($pl) ? ucfirst(str_replace('_', ' ', $pl)) : '';
+        @endphp
+        @if($url)
           <div class="social-item">
-            <span class="social-platform">{{ is_string($platform) ? ucfirst(str_replace('_', ' ', $platform)) : '' }}</span>
+            <span class="social-platform">{{ $pl_str }}</span>
             <a href="{{ $url }}" target="_blank" rel="noopener noreferrer">{{ $url }}</a>
           </div>
         @endif
@@ -136,22 +152,29 @@
   @endif
 
   {{-- Experience --}}
-  @if(!empty($experience) && is_array($experience))
+  @if(count($_exp_raw) > 0)
     <div class="section">
       <h2>Work Experience</h2>
-      @foreach($experience as $exp)
-        @if(is_array($exp))
+      @foreach($_exp_raw as $ex)
+        @if(is_array($ex))
+          @php
+            $ex_pos  = is_string($ex['position'] ?? $ex['job_title'] ?? null) ? ($ex['position'] ?? $ex['job_title'] ?? '') : '';
+            $ex_co   = is_string($ex['company'] ?? $ex['company_name'] ?? null) ? ($ex['company'] ?? $ex['company_name'] ?? '') : '';
+            $ex_loc  = is_string($ex['location'] ?? null) ? $ex['location'] : '';
+            $ex_from = is_string($ex['start_date'] ?? null) ? $ex['start_date'] : '';
+            $ex_to   = is_string($ex['end_date'] ?? null) ? $ex['end_date'] : '';
+            $ex_cur  = !empty($ex['is_current']) && $ex['is_current'];
+            $ex_desc = is_string($ex['description'] ?? null) ? $ex['description'] : '';
+          @endphp
           <div class="experience-item">
-            <h3 class="exp-title">{{ is_string($exp['position'] ?? $exp['job_title'] ?? null) ? ($exp['position'] ?? $exp['job_title']) : '' }}</h3>
-            <p class="exp-company">{{ is_string($exp['company'] ?? $exp['company_name'] ?? null) ? ($exp['company'] ?? $exp['company_name']) : '' }}</p>
-            @if(!empty($exp['location']) && is_string($exp['location']))
-              <p class="exp-location">{{ (string)$exp['location'] }}</p>
+            <h3 class="exp-title">{{ $ex_pos }}</h3>
+            <p class="exp-company">{{ $ex_co }}</p>
+            @if($ex_loc)
+              <p class="exp-location">{{ $ex_loc }}</p>
             @endif
-            <p class="exp-dates">
-              {{ is_string($exp['start_date'] ?? null) ? $exp['start_date'] : '' }} — {{ is_string($exp['end_date'] ?? null) ? $exp['end_date'] : ($exp['is_current'] ? 'Present' : '') }}
-            </p>
-            @if(!empty($exp['description']) && is_string($exp['description']))
-              <p class="exp-description">{{ (string)$exp['description'] }}</p>
+            <p class="exp-dates">{{ $ex_from }} — {{ $ex_to ?: ($ex_cur ? 'Present' : '') }}</p>
+            @if($ex_desc)
+              <p class="exp-description">{{ $ex_desc }}</p>
             @endif
           </div>
         @endif
@@ -160,30 +183,42 @@
   @endif
 
   {{-- Education --}}
-  @if(!empty($education) && is_array($education))
+  @if(count($_edu_raw) > 0)
     <div class="section">
       <h2>Education</h2>
-      @foreach($education as $edu)
-        @if(is_array($edu))
+      @foreach($_edu_raw as $ed)
+        @if(is_array($ed))
+          @php
+            $ed_deg  = is_string($ed['degree'] ?? null) ? $ed['degree'] : '';
+            $ed_inst = is_string($ed['institution'] ?? null) ? $ed['institution'] : '';
+            $ed_fld  = is_string($ed['field'] ?? null) ? $ed['field'] : '';
+            $ed_yr   = is_string($ed['year'] ?? null) ? $ed['year'] : '';
+            $ed_from = is_string($ed['start_date'] ?? null) ? $ed['start_date'] : '';
+            $ed_to   = is_string($ed['end_date'] ?? null) ? $ed['end_date'] : '';
+            $ed_gpa  = is_string($ed['gpa_or_cgpa'] ?? null) ? $ed['gpa_or_cgpa'] : '';
+            $ed_grad = is_string($ed['grade'] ?? null) ? $ed['grade'] : '';
+            $ed_desc = is_string($ed['description'] ?? null) ? $ed['description'] : '';
+            $ed_degree = $ed_deg ?: $ed_inst;
+          @endphp
           <div class="education-item">
-            <h3 class="edu-degree">{{ is_string($edu['degree'] ?? $edu['institution'] ?? null) ? ($edu['degree'] ?? $edu['institution']) : '' }}</h3>
-            @if(!empty($edu['institution']) && is_string($edu['institution']) && (string)($edu['degree'] ?? '') !== (string)($edu['institution'] ?? ''))
-              <p class="edu-institution">{{ $edu['institution'] }}</p>
+            <h3 class="edu-degree">{{ $ed_degree }}</h3>
+            @if($ed_inst && $ed_deg !== $ed_inst)
+              <p class="edu-institution">{{ $ed_inst }}</p>
             @endif
-            @if(!empty($edu['field']) && is_string($edu['field']))
-              <p class="edu-field">{{ (string)$edu['field'] }}</p>
+            @if($ed_fld)
+              <p class="edu-field">{{ $ed_fld }}</p>
             @endif
-            @if((!empty($edu['year']) && is_string($edu['year'])) || (!empty($edu['start_date']) && is_string($edu['start_date'])))
-              <p class="edu-dates">{{ is_string($edu['year'] ?? null) ? $edu['year'] : (is_string($edu['start_date'] ?? null) ? $edu['start_date'] : '') }}@if(!empty($edu['end_date']) && is_string($edu['end_date'])) — {{ $edu['end_date'] }}@endif</p>
+            @if($ed_yr || $ed_from)
+              <p class="edu-dates">{{ $ed_yr ?: $ed_from }}@if($ed_to) — {{ $ed_to }}@endif</p>
             @endif
-            @if(!empty($edu['gpa_or_cgpa']) && is_string($edu['gpa_or_cgpa']))
-              <p class="edu-gpa">GPA: {{ (string)$edu['gpa_or_cgpa'] }}</p>
+            @if($ed_gpa)
+              <p class="edu-gpa">GPA: {{ $ed_gpa }}</p>
             @endif
-            @if(!empty($edu['grade']) && is_string($edu['grade']))
-              <p class="edu-grade">Grade: {{ (string)$edu['grade'] }}</p>
+            @if($ed_grad)
+              <p class="edu-grade">Grade: {{ $ed_grad }}</p>
             @endif
-            @if(!empty($edu['description']) && is_string($edu['description']))
-              <p class="edu-description">{{ (string)$edu['description'] }}</p>
+            @if($ed_desc)
+              <p class="edu-description">{{ $ed_desc }}</p>
             @endif
           </div>
         @endif
@@ -192,27 +227,33 @@
   @endif
 
   {{-- Projects --}}
-  @if(!empty($projects) && is_array($projects))
+  @if(count($_proj_raw) > 0)
     <div class="section">
       <h2>Projects</h2>
-      @foreach($projects as $project)
-        @if(is_array($project))
+      @foreach($_proj_raw as $pj)
+        @if(is_array($pj))
+          @php
+            $pj_name  = is_string($pj['name'] ?? $pj['project_name'] ?? null) ? ($pj['name'] ?? $pj['project_name'] ?? '') : '';
+            $pj_desc  = is_string($pj['description'] ?? null) ? $pj['description'] : '';
+            $pj_tech  = $pj['technologies'] ?? null;
+            $pj_url   = is_string($pj['url'] ?? null) ? $pj['url'] : '';
+          @endphp
           <div class="project-item">
-            <h3 class="proj-name">{{ is_string($project['name'] ?? $project['project_name'] ?? null) ? ($project['name'] ?? $project['project_name']) : '' }}</h3>
-            @if(!empty($project['description']) && is_string($project['description']))
-              <p class="proj-description">{{ (string)$project['description'] }}</p>
+            <h3 class="proj-name">{{ $pj_name }}</h3>
+            @if($pj_desc)
+              <p class="proj-description">{{ $pj_desc }}</p>
             @endif
-            @if(!empty($project['technologies']))
+            @if($pj_tech)
               <p class="proj-tech">
-                @if(is_array($project['technologies']))
-                  {{ implode(', ', array_map(function($t) { return is_string($t) ? $t : ''; }, $project['technologies'])) }}
-                @elseif(is_string($project['technologies']))
-                  {{ $project['technologies'] }}
+                @if(is_array($pj_tech))
+                  {{ implode(', ', array_map(function($t){ return is_string($t) ? $t : ''; }, $pj_tech)) }}
+                @else
+                  {{ is_string($pj_tech) ? $pj_tech : '' }}
                 @endif
               </p>
             @endif
-            @if(!empty($project['url']) && is_string($project['url']))
-              <a class="proj-link" href="{{ $project['url'] }}" target="_blank">{{ $project['url'] }}</a>
+            @if($pj_url)
+              <a class="proj-link" href="{{ $pj_url }}" target="_blank">{{ $pj_url }}</a>
             @endif
           </div>
         @endif
@@ -221,21 +262,22 @@
   @endif
 
   {{-- Awards --}}
-  @if(!empty($awards) && is_array($awards))
+  @if(count($_awards_raw) > 0)
     <div class="section">
       <h2>Awards & Honors</h2>
-      @foreach($awards as $award)
+      @foreach($_awards_raw as $aw)
+        @php
+          $aw_title = is_array($aw) ? (is_string($aw['title'] ?? null) ? $aw['title'] : '') : (is_string($aw) ? $aw : '');
+          $aw_iss   = is_array($aw) ? (is_string($aw['issuer'] ?? null) ? $aw['issuer'] : '') : '';
+          $aw_date  = is_array($aw) ? (is_string($aw['date'] ?? null) ? $aw['date'] : '') : '';
+        @endphp
         <div class="award-item">
-          @if(is_array($award))
-            <p class="award-title">{{ is_string($award['title'] ?? null) ? $award['title'] : '' }}</p>
-            @if(!empty($award['issuer']) && is_string($award['issuer']))
-              <p class="award-issuer">{{ (string)$award['issuer'] }}</p>
-            @endif
-            @if(!empty($award['date']) && is_string($award['date']))
-              <p class="award-date">{{ (string)$award['date'] }}</p>
-            @endif
-          @elseif(is_string($award))
-            <p>{{ $award }}</p>
+          <p class="award-title">{{ $aw_title }}</p>
+          @if($aw_iss)
+            <p class="award-issuer">{{ $aw_iss }}</p>
+          @endif
+          @if($aw_date)
+            <p class="award-date">{{ $aw_date }}</p>
           @endif
         </div>
       @endforeach
@@ -243,26 +285,26 @@
   @endif
 
   {{-- Hobbies --}}
-  @if(!empty($hobbies) && is_array($hobbies))
+  @if(count($_hobbies_raw) > 0)
     <div class="section">
       <h2>Hobbies & Interests</h2>
       <div class="hobbies-list">
-        @foreach($hobbies as $hobby)
-          <span class="hobby-badge">
-            {{ is_array($hobby) ? (string)($hobby['name'] ?? '') : (is_string($hobby) ? $hobby : '') }}
-          </span>
+        @foreach($_hobbies_raw as $hb)
+          @php
+            $hb_text = is_array($hb) ? (is_string($hb['name'] ?? null) ? $hb['name'] : '') : (is_string($hb) ? $hb : '');
+          @endphp
+          @if($hb_text)
+            <span class="hobby-badge">{{ $hb_text }}</span>
+          @endif
         @endforeach
       </div>
     </div>
   @endif
+
 </div>
 
 <style>
-  .sidebar-pro {
-    font-family: 'Inter', 'Segoe UI', sans-serif;
-    padding: 0;
-    max-width: 100%;
-  }
+  .sidebar-pro { font-family: 'Inter', 'Segoe UI', sans-serif; padding: 0; max-width: 100%; }
   .photo-section { text-align: center; margin-bottom: 16px; }
   .photo-section img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; }
   .personal-info { text-align: center; margin-bottom: 20px; }
