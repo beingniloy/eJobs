@@ -84,7 +84,7 @@ export default function CvPreviewClient() {
           "Failed to load resume preview"
         );
       })
-      .finally(() => setLoading(false);
+      .finally(() => setLoading(false));
   }, [uuid]);
 
   const handleDownloadPdf = async () => {
