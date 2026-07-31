@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Globe, Link2, Code, Twitter, Facebook } from "lucide-react";
+import { Globe, Link2, Code } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toSafeStrings } from "./utils";
 
 const SOCIAL_ICON_MAP: Record<string, typeof Globe> = {
   linkedin: Link2,
   github: Code,
-  twitter: Twitter,
-  facebook: Facebook,
+  twitter: Globe,
+  facebook: Globe,
   portfolio: Globe,
 };
 
