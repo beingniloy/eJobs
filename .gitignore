@@ -46,3 +46,4 @@ api-test.html
 .npm-cache
 
 next-dev.log
+.dyad/
