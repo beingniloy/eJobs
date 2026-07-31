@@ -55,53 +55,76 @@ function Field({ label, required, children, className = "" }: { label: string; r
   );
 }
 
-/**
- * Compress an image file to webp, keeping max dimension 1920px, quality 0.82.
- * Returns a File if input is an image, otherwise returns the original.
- */
-async function compressImageToWebP(file: File, maxKb = 2000): Promise<File> {
+async function compressImageToWebP(file: File, maxBytes = 2 * 1024 * 1024): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
     const img = new window.Image();
     img.onload = () => {
-      const canvas = document.createElement("canvas");
-      let w = img.width;
-      let h = img.height;
-      const maxDim = 1920;
-      if (w > maxDim || h > maxDim) {
-        const ratio = Math.min(maxDim / w, maxDim / h);
-        w = Math.round(w * ratio);
-        h = Math.round(h * ratio);
-      }
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) { URL.revokeObjectURL(url); return resolve(file); }
-      ctx.drawImage(img, 0, 0, w, h);
-
-      let quality = 0.82;
-      canvas.toBlob((blob) => {
-        URL.revokeObjectURL(url);
-        if (!blob) return resolve(file);
-
-        // If still too big, try lower quality
-        if (blob.size > maxKb * 1024 && quality > 0.3) {
-          canvas.toBlob((blob2) => {
-            URL.revokeObjectURL(url);
-            if (!blob2) return resolve(file);
-            const ext = ".webp";
-            const name = file.name.replace(/\.[^.]+$/, ext);
-            resolve(new File([blob2], name, { type: "image/webp" }));
-          }, "image/webp", 0.5);
-          return;
+      const tryCompress = (maxDim: number, quality: number, attempt: number): void => {
+        const canvas = document.createElement("canvas");
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          const ratio = Math.min(maxDim / w, maxDim / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
         }
-
-        const ext = ".webp";
-        const name = file.name.replace(/\.[^.]+$/, ext);
-        resolve(new File([blob], name, { type: "image/webp" }));
-      }, "image/webp", quality);
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { URL.revokeObjectURL(url); return resolve(file); }
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob((blob) => {
+          URL.revokeObjectURL(url);
+          if (!blob || blob.size > maxBytes) {
+            if (attempt < 3) {
+              const nextDim = attempt === 0 ? 1280 : attempt === 1 ? 960 : 640;
+              const nextQ = quality * 0.6;
+              const nextUrl = URL.createObjectURL(file);
+              const nextImg = new window.Image();
+              nextImg.onload = () => {
+                const tryNext = (d: number, q: number, a: number): void => {
+                  const c2 = document.createElement("canvas");
+                  let w2 = nextImg.width, h2 = nextImg.height;
+                  if (w2 > d || h2 > d) { const r = Math.min(d / w2, d / h2); w2 = Math.round(w2 * r); h2 = Math.round(h2 * r); }
+                  c2.width = w2; c2.height = h2;
+                  const x2 = c2.getContext("2d");
+                  if (!x2) { URL.revokeObjectURL(nextUrl); return resolve(file); }
+                  x2.drawImage(nextImg, 0, 0, w2, h2);
+                  c2.toBlob((b2) => {
+                    URL.revokeObjectURL(nextUrl);
+                    if (!b2 || b2.size > maxBytes) {
+                      if (a < 2) {
+                        const nd = a === 0 ? 960 : 640;
+                        tryNext(nd, q * 0.6, a + 1);
+                      } else {
+                        // Last resort: use whatever we got
+                        const name = file.name.replace(/\.[^.]+$/, ".webp");
+                        resolve(b2 ? new File([b2], name, { type: "image/webp" }) : file);
+                      }
+                      return;
+                    }
+                    const name = file.name.replace(/\.[^.]+$/, ".webp");
+                    resolve(new File([b2], name, { type: "image/webp" }));
+                  }, "image/webp", q);
+                };
+                tryNext(nextDim, nextQ, 0);
+              };
+              nextImg.onerror = () => { URL.revokeObjectURL(nextUrl); resolve(file); };
+              nextImg.src = nextUrl;
+              return;
+            }
+            const name = file.name.replace(/\.[^.]+$/, ".webp");
+            resolve(blob ? new File([blob], name, { type: "image/webp" }) : file);
+            return;
+          }
+          const name = file.name.replace(/\.[^.]+$/, ".webp");
+          resolve(new File([blob], name, { type: "image/webp" }));
+        }, "image/webp", quality);
+      };
+      tryCompress(1600, 0.75, 0);
     };
     img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
     img.src = url;
@@ -138,7 +161,6 @@ export default function CandidateProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState("");
   const [showCompletionModal, setShowCompletionModal] = useState(false);
 
-  // Section 1: Personal
   const [fullNameBn, setFullNameBn] = useState("");
   const [fullNameEn, setFullNameEn] = useState("");
   const [fatherName, setFatherName] = useState("");
@@ -150,7 +172,6 @@ export default function CandidateProfilePage() {
   const [nationalId, setNationalId] = useState("");
   const [birthRegNo, setBirthRegNo] = useState("");
 
-  // Section 2: Contact
   const [phone, setPhone] = useState("");
   const [altPhone, setAltPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -163,7 +184,6 @@ export default function CandidateProfilePage() {
   const [postOffice, setPostOffice] = useState("");
   const [postalCode, setPostalCode] = useState("");
 
-  // Section 3: Career
   const [careerObjective, setCareerObjective] = useState("");
   const [currentProfession, setCurrentProfession] = useState("");
   const [expectedJobCategory, setExpectedJobCategory] = useState("");
@@ -172,25 +192,12 @@ export default function CandidateProfilePage() {
   const [availableRemote, setAvailableRemote] = useState(false);
   const [availableRelocation, setAvailableRelocation] = useState(false);
 
-  // Section 4: Education
   const [educations, setEducations] = useState<CandidateEducationEntry[]>([]);
-
-  // Section 5: Experience
   const [experiences, setExperiences] = useState<CandidateExperienceEntry[]>([]);
-
-  // Section 6: Skills
   const [skills, setSkills] = useState("");
-
-  // Section 7: Languages
   const [languages, setLanguages] = useState<LanguageProficiency[]>([]);
-
-  // Section 8: Training
   const [trainings, setTrainings] = useState<CandidateTrainingEntry[]>([]);
-
-  // Section 9: Certifications
   const [certifications, setCertifications] = useState<(CandidateCertificationEntry & { _cert_file?: File })[]>([]);
-
-  // Section 10: Documents
   const [documents, setDocuments] = useState<CandidateDocumentEntry[]>([]);
   const docTypes = [
     { value: "cv", label: "CV/Resume *" },
@@ -202,7 +209,6 @@ export default function CandidateProfilePage() {
     { value: "photo", label: "Photograph" },
   ];
 
-  // Section 11: Social Links
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [githubUrl, setGithubUrl] = useState("");
   const [facebookUrl, setFacebookUrl] = useState("");
@@ -277,81 +283,47 @@ export default function CandidateProfilePage() {
     }).catch(() => setLoading(false));
   }, [user]);
 
-  // ─── Avatar change with webp compression ───
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     toast.info(isBn ? "ছবি প্রক্রিয়াকরণ হচ্ছে..." : "Processing image...");
-
     const compressed = await compressImageToWebP(file);
-
     if (compressed.size > 2 * 1024 * 1024) {
-      toast.error(isBn ? "ছবির সাইজ ২MB এর বেশি হতে পারে না। ছোট ছবি ব্যবহার করুন।" : "Image must be under 2MB. Use a smaller image.");
+      toast.error(isBn ? "ছবি ২MB এর বেশি। ছোট ছবি ব্যবহার করুন।" : "Image too large. Use a smaller photo.");
       return;
     }
-
     const sizeKb = Math.round(compressed.size / 1024);
     setAvatarFile(compressed);
     setAvatarPreview(URL.createObjectURL(compressed));
-    toast.success(isBn ? `ছবি ${sizeKb}KB তে সংকুচিত হয়েছে` : `Image compressed to ${sizeKb}KB`);
+    toast.success(isBn ? `ছবি ${sizeKb}KB তে সংকুচিত হয়েছে` : `Compressed to ${sizeKb}KB`);
   };
 
-  // ─── Education helpers ───
   const addEducation = () => setEducations([...educations, { level: "", board: "", group_or_subject: "", institute_name: "", passing_year: undefined, gpa_or_cgpa: undefined }]);
   const removeEducation = (i: number) => setEducations(educations.filter((_, idx) => idx !== i));
-  const updateEducation = (i: number, field: string, value: string | number | undefined) => {
-    const next = [...educations];
-    next[i] = { ...next[i], [field]: value };
-    setEducations(next);
-  };
+  const updateEducation = (i: number, field: string, value: string | number | undefined) => { const next = [...educations]; next[i] = { ...next[i], [field]: value }; setEducations(next); };
 
-  // ─── Experience helpers ───
   const addExperience = () => setExperiences([...experiences, { company_name: "", designation: "", employment_type: "Full-time", start_date: "", end_date: "", is_current: false, responsibilities: "" }]);
   const removeExperience = (i: number) => setExperiences(experiences.filter((_, idx) => idx !== i));
-  const updateExperience = (i: number, field: string, value: string | boolean | undefined) => {
-    const next = [...experiences];
-    next[i] = { ...next[i], [field]: value };
-    setExperiences(next);
-  };
+  const updateExperience = (i: number, field: string, value: string | boolean | undefined) => { const next = [...experiences]; next[i] = { ...next[i], [field]: value }; setExperiences(next); };
 
-  // ─── Training helpers ───
   const addTraining = () => setTrainings([...trainings, { title: "", institute_name: "", duration: "", year: undefined }]);
   const removeTraining = (i: number) => setTrainings(trainings.filter((_, idx) => idx !== i));
-  const updateTraining = (i: number, field: string, value: string | number | undefined) => {
-    const next = [...trainings];
-    next[i] = { ...next[i], [field]: value };
-    setTrainings(next);
-  };
+  const updateTraining = (i: number, field: string, value: string | number | undefined) => { const next = [...trainings]; next[i] = { ...next[i], [field]: value }; setTrainings(next); };
 
-  // ─── Certification helpers ───
   const addCertification = () => setCertifications([...certifications, { name: "", organization: "", issue_date: "", expiry_date: "" }]);
   const removeCertification = (i: number) => setCertifications(certifications.filter((_, idx) => idx !== i));
-  const updateCertification = (i: number, field: string, value: string) => {
-    const next = [...certifications];
-    next[i] = { ...next[i], [field]: value };
-    setCertifications(next);
-  };
-  const setCertFile = (i: number, file: File | undefined) => {
-    const next = [...certifications];
-    next[i] = { ...next[i], _cert_file: file };
-    setCertifications(next);
-  };
+  const updateCertification = (i: number, field: string, value: string) => { const next = [...certifications]; next[i] = { ...next[i], [field]: value }; setCertifications(next); };
+  const setCertFile = (i: number, file: File | undefined) => { const next = [...certifications]; next[i] = { ...next[i], _cert_file: file }; setCertifications(next); };
 
-  // ─── Language helpers ───
   const toggleLanguage = (lang: string) => {
     const exists = languages.find((l) => l.name === lang);
-    if (exists) {
-      setLanguages(languages.filter((l) => l.name !== lang));
-    } else {
-      setLanguages([...languages, { name: lang, read: true, write: true, speak: true }]);
-    }
+    if (exists) { setLanguages(languages.filter((l) => l.name !== lang)); }
+    else { setLanguages([...languages, { name: lang, read: true, write: true, speak: true }]); }
   };
   const updateLangProficiency = (lang: string, field: "read" | "write" | "speak", value: boolean) => {
     setLanguages(languages.map((l) => l.name === lang ? { ...l, [field]: value } : l));
   };
 
-  // ─── Section Save Functions ───
   const savePersonal = async () => {
     const fd = new FormData();
     fd.append("name", fullNameEn || user?.name || "");
@@ -398,39 +370,25 @@ export default function CandidateProfilePage() {
     await api.post("/candidate/profile-update", fd);
   };
 
-  const saveEducation = async () => {
-    await api.post("/candidate/profile/educations", { educations });
-  };
-
-  const saveExperience = async () => {
-    await api.post("/candidate/profile/experiences", { experiences });
-  };
-
+  const saveEducation = async () => { await api.post("/candidate/profile/educations", { educations }); };
+  const saveExperience = async () => { await api.post("/candidate/profile/experiences", { experiences }); };
   const saveSkillsSection = async () => {
     const fd = new FormData();
     fd.append("skills", JSON.stringify(skills.split(",").map((s) => s.trim()).filter(Boolean)));
     await api.post("/candidate/profile-update", fd);
   };
-
   const saveLanguagesSection = async () => {
     const fd = new FormData();
     fd.append("language_proficiency", JSON.stringify(languages));
     await api.post("/candidate/profile-update", fd);
   };
-
-  const saveTraining = async () => {
-    await api.post("/candidate/profile/trainings", { trainings });
-  };
-
+  const saveTraining = async () => { await api.post("/candidate/profile/trainings", { trainings }); };
   const saveCertification = async () => {
     const fd = new FormData();
     fd.append("certifications", JSON.stringify(certifications.map(({ _cert_file, ...rest }) => rest)));
-    certifications.forEach((c, i) => {
-      if (c._cert_file) fd.append(`cert_file_${i}`, c._cert_file);
-    });
+    certifications.forEach((c, i) => { if (c._cert_file) fd.append(`cert_file_${i}`, c._cert_file); });
     await api.post("/candidate/profile/certifications", fd);
   };
-
   const saveDocumentSection = async () => {
     const uploads = documents.filter((d) => d._file).map((d) => {
       const fd = new FormData();
@@ -438,99 +396,51 @@ export default function CandidateProfilePage() {
       fd.append("file", d._file!);
       return api.post("/candidate/profile/documents", fd);
     });
-    if (uploads.length > 0) {
-      await Promise.all(uploads);
-    } else if (documents.length === 0) {
-      throw new Error(isBn ? "আপলোড করার জন্য কোনো ফাইল নেই" : "No files to upload");
-    }
+    if (uploads.length > 0) { await Promise.all(uploads); }
+    else if (documents.length === 0) { throw new Error(isBn ? "আপলোড করার জন্য কোনো ফাইল নেই" : "No files to upload"); }
   };
-
   const saveSocial = async () => {
     const fd = new FormData();
     fd.append("linkedin_url", linkedinUrl);
     fd.append("github_url", githubUrl);
     fd.append("facebook_url", facebookUrl);
     fd.append("portfolio_url", portfolioUrl);
-    fd.append("social_links", JSON.stringify({
-      twitter_url: twitterUrl,
-      instagram_url: instagramUrl,
-      youtube_url: youtubeUrl,
-      stackoverflow_url: stackoverflowUrl,
-      whatsapp_url: whatsappUrl,
-      telegram_url: telegramUrl,
-    }));
+    fd.append("social_links", JSON.stringify({ twitter_url: twitterUrl, instagram_url: instagramUrl, youtube_url: youtubeUrl, stackoverflow_url: stackoverflowUrl, whatsapp_url: whatsappUrl, telegram_url: telegramUrl }));
     await api.post("/candidate/profile-update", fd);
   };
 
   const SECTION_SAVE_MAP: Record<string, () => Promise<void>> = {
-    personal: savePersonal,
-    contact: saveContact,
-    career: saveCareer,
-    education: saveEducation,
-    experience: saveExperience,
-    skills: saveSkillsSection,
-    languages: saveLanguagesSection,
-    training: saveTraining,
-    certifications: saveCertification,
-    documents: saveDocumentSection,
-    social: saveSocial,
+    personal: savePersonal, contact: saveContact, career: saveCareer, education: saveEducation,
+    experience: saveExperience, skills: saveSkillsSection, languages: saveLanguagesSection,
+    training: saveTraining, certifications: saveCertification, documents: saveDocumentSection, social: saveSocial,
   };
 
   const handleSave = async (showToast = true): Promise<boolean> => {
     try {
       setSaving(true);
-      const key = STEPS[step].key;
-      const fn = SECTION_SAVE_MAP[key];
+      const fn = SECTION_SAVE_MAP[STEPS[step].key];
       if (fn) await fn();
       if (showToast) toast.success(isBn ? "সংরক্ষিত হয়েছে!" : "Saved!");
       window.dispatchEvent(new Event("candidate-profile-saved"));
       return true;
     } catch (error: any) {
       const data = error.response?.data;
-      const status = error.response?.status;
-      let msg = data?.message || "Failed to save profile";
-      if (status === 413) {
-        msg = isBn ? "ফাইলের সাইজ বড় (সর্বোচ্চ 2MB)" : "File is too large (max 2MB)";
-      } else if (status === 422 && data?.errors) {
-        const firstKey = Object.keys(data.errors)[0];
-        if (firstKey) {
-          const val = data.errors[firstKey];
-          msg = Array.isArray(val) ? val[0] : val;
-        }
-      } else if (status === 500) {
-        msg = isBn ? "সার্ভার সমস্যা হয়েছে। পরে আবার চেষ্টা করুন।" : "Server error. Please try again later.";
-      }
+      let msg = data?.message || "Failed to save";
+      if (error.response?.status === 413) msg = isBn ? "ফাইল বড় (সর্বোচ্চ 2MB)" : "File too large (max 2MB)";
+      else if (error.response?.status === 422 && data?.errors) { const k = Object.keys(data.errors)[0]; if (k) msg = Array.isArray(data.errors[k]) ? data.errors[k][0] : data.errors[k]; }
       if (showToast) toast.error(msg);
       return false;
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
-  const handleSaveAndContinue = async () => {
-    const ok = await handleSave(true);
-    if (ok) {
-      setSavedSteps((prev) => new Set(prev).add(step));
-      if (step < STEPS.length - 1) setStep(step + 1);
-    }
-  };
+  const handleSaveAndContinue = async () => { const ok = await handleSave(true); if (ok) { setSavedSteps((prev) => new Set(prev).add(step)); if (step < STEPS.length - 1) setStep(step + 1); } };
+  const handleSkip = () => { if (step < STEPS.length - 1) setStep(step + 1); };
 
-  const handleSkip = () => {
-    if (step < STEPS.length - 1) setStep(step + 1);
-  };
-
-  // ─── Completion ───
   const totalFields = 25;
   const filledFields = [fullNameEn, gender, dob, phone, presentAddress, careerObjective, skills, email].filter(Boolean).length;
   const completionPct = Math.round((filledFields / totalFields) * 100);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   const renderStepContent = () => {
     switch (STEPS[step].key) {
@@ -548,7 +458,7 @@ export default function CandidateProfilePage() {
               <div>
                 <p className="text-sm font-medium">{isBn ? "প্রোফাইল ফটো" : "Profile Photo"}</p>
                 <p className="text-xs text-muted-foreground">
-                  {isBn ? "JPEG, PNG — সর্বোচ্চ ২MB (স্বয়ংক্রিয়ভাবে WebP-তে রূপান্তরিত)" : "JPEG, PNG — max 2MB (auto-converted to WebP)"}
+                  {isBn ? "JPEG/PNG/WebP — সর্বোচ্চ ২MB। স্বয়ংক্রিয়ভাবে WebP-তে সংকুচিত হবে।" : "JPEG/PNG/WebP — max 2MB. Auto-compressed to WebP."}
                 </p>
               </div>
             </div>
@@ -562,17 +472,13 @@ export default function CandidateProfilePage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Field label={isBn ? "জন্ম তারিখ" : "Date of Birth"}><Input type="date" value={dob} onChange={(e) => setDob(e.target.value)} /></Field>
-              <Field label={isBn ? "লিঙ্গ" : "Gender"}>
-                <Select value={gender} onValueChange={setGender}><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{GENDER_OPTIONS.map((g) => <SelectItem key={g} value={g.toLowerCase()}>{g}</SelectItem>)}</SelectContent></Select>
-              </Field>
-              <Field label={isBn ? "বৈবাহিক অবস্থা" : "Marital Status"}>
-                <Select value={maritalStatus} onValueChange={setMaritalStatus}><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{MARITAL_STATUS.map((s) => <SelectItem key={s} value={s.toLowerCase()}>{s}</SelectItem>)}</SelectContent></Select>
-              </Field>
+              <Field label={isBn ? "লিঙ্গ" : "Gender"}><Select value={gender} onValueChange={setGender}><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{GENDER_OPTIONS.map((g) => <SelectItem key={g} value={g.toLowerCase()}>{g}</SelectItem>)}</SelectContent></Select></Field>
+              <Field label={isBn ? "বৈবাহিক অবস্থা" : "Marital Status"}><Select value={maritalStatus} onValueChange={setMaritalStatus}><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{MARITAL_STATUS.map((s) => <SelectItem key={s} value={s.toLowerCase()}>{s}</SelectItem>)}</SelectContent></Select></Field>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Field label={isBn ? "জাতীয়তা" : "Nationality"}><Input value={nationality} onChange={(e) => setNationality(e.target.value)} /></Field>
               <Field label={isBn ? "জাতীয় পরিচয়পত্র" : "National ID (Optional)"}><Input value={nationalId} onChange={(e) => setNationalId(e.target.value)} /></Field>
-              <Field label={isBn ? "জন্ম নিবন্ধন নম্বর" : "Birth Registration No (Optional)"}><Input value={birthRegNo} onChange={(e) => setBirthRegNo(e.target.value)} /></Field>
+              <Field label={isBn ? "জন্ম নিবন্ধন নম্বর" : "Birth Reg No (Optional)"}><Input value={birthRegNo} onChange={(e) => setBirthRegNo(e.target.value)} /></Field>
             </div>
           </div>
         );
@@ -587,38 +493,13 @@ export default function CandidateProfilePage() {
             <Field label={isBn ? "বর্তমান ঠিকানা" : "Present Address"} required><Textarea value={presentAddress} onChange={(e) => setPresentAddress(e.target.value)} rows={2} /></Field>
             <Field label={isBn ? "স্থায়ী ঠিকানা" : "Permanent Address"} required><Textarea value={permanentAddress} onChange={(e) => setPermanentAddress(e.target.value)} rows={2} /></Field>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Field label={isBn ? "বিভাগ" : "Division"}>
-                <Select value={division} onValueChange={(v) => { setDivision(v); setDistrict(""); setUpazila(""); setUnionName(""); setPostOffice(""); }}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{Object.entries(isBn ? DIVISIONS_BN : DIVISIONS_EN).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
-              <Field label={isBn ? "জেলা" : "District"}>
-                <Select value={district} onValueChange={(v) => { setDistrict(v); setUpazila(""); setUnionName(""); setPostOffice(""); }} disabled={!division}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{((isBn ? DISTRICTS_BN : DISTRICTS_EN)[division] || []).map((d: string) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
-              <Field label={isBn ? "উপজেলা" : "Upazila"}>
-                <Select value={upazila} onValueChange={(v) => { setUpazila(v); setUnionName(""); setPostOffice(""); }} disabled={!district}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{((isBn ? THANAS_BN : THANAS_EN)[district] || []).map((t: string) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
+              <Field label={isBn ? "বিভাগ" : "Division"}><Select value={division} onValueChange={(v) => { setDivision(v); setDistrict(""); setUpazila(""); setUnionName(""); setPostOffice(""); }}><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{Object.entries(isBn ? DIVISIONS_BN : DIVISIONS_EN).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}</SelectContent></Select></Field>
+              <Field label={isBn ? "জেলা" : "District"}><Select value={district} onValueChange={(v) => { setDistrict(v); setUpazila(""); setUnionName(""); setPostOffice(""); }} disabled={!division}><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{((isBn ? DISTRICTS_BN : DISTRICTS_EN)[division] || []).map((d: string) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select></Field>
+              <Field label={isBn ? "উপজেলা" : "Upazila"}><Select value={upazila} onValueChange={(v) => { setUpazila(v); setUnionName(""); setPostOffice(""); }} disabled={!district}><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{((isBn ? THANAS_BN : THANAS_EN)[district] || []).map((t: string) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></Field>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Field label={isBn ? "ইউনিয়ন" : "Union"}>
-                <Select value={unionName} onValueChange={setUnionName} disabled={!upazila}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{(UNIONS_BN[upazila] || []).map((u: string) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
-              <Field label={isBn ? "পোস্ট অফিস" : "Post Office"}>
-                <Select value={postOffice} onValueChange={setPostOffice} disabled={!upazila}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{(POST_OFFICES_BN[upazila] || []).map((p: string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
+              <Field label={isBn ? "ইউনিয়ন" : "Union"}><Select value={unionName} onValueChange={setUnionName} disabled={!upazila}><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{(UNIONS_BN[upazila] || []).map((u: string) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent></Select></Field>
+              <Field label={isBn ? "পোস্ট অফিস" : "Post Office"}><Select value={postOffice} onValueChange={setPostOffice} disabled={!upazila}><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{(POST_OFFICES_BN[upazila] || []).map((p: string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></Field>
               <Field label={isBn ? "পোস্টাল কোড" : "Postal Code"}><Input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} /></Field>
             </div>
           </div>
@@ -626,16 +507,14 @@ export default function CandidateProfilePage() {
       case "career":
         return (
           <div className="space-y-4">
-            <Field label={isBn ? "ক্যারিয়ার উদ্দেশ্য" : "Career Objective / About Me"}>
-              <Textarea value={careerObjective} onChange={(e) => setCareerObjective(e.target.value)} rows={3} placeholder={isBn ? "আপনার ক্যারিয়ার লক্ষ্য লিখুন..." : "Write your career objective..."} />
-            </Field>
+            <Field label={isBn ? "ক্যারিয়ার উদ্দেশ্য" : "Career Objective"}><Textarea value={careerObjective} onChange={(e) => setCareerObjective(e.target.value)} rows={3} placeholder={isBn ? "আপনার ক্যারিয়ার লক্ষ্য লিখুন..." : "Write your career objective..."} /></Field>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label={isBn ? "বর্তমান পেশা" : "Current Profession"}><Input value={currentProfession} onChange={(e) => setCurrentProfession(e.target.value)} /></Field>
-              <Field label={isBn ? "প্রত্যাশিত বেতন (BDT)" : "Expected Salary (BDT)"}><Input value={expectedSalary} onChange={(e) => setExpectedSalary(e.target.value)} placeholder="e.g. 25000-40000" /></Field>
+              <Field label={isBn ? "প্রত্যাশিত বেতন" : "Expected Salary (BDT)"}><Input value={expectedSalary} onChange={(e) => setExpectedSalary(e.target.value)} placeholder="e.g. 25000-40000" /></Field>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label={isBn ? "পছন্দের ক্যাটাগরি" : "Expected Job Category"}><Input value={expectedJobCategory} onChange={(e) => setExpectedJobCategory(e.target.value)} /></Field>
-              <Field label={isBn ? "পছন্দের লোকেশন" : "Preferred Job Location"}><Input value={preferredLocation} onChange={(e) => setPreferredLocation(e.target.value)} /></Field>
+              <Field label={isBn ? "পছন্দের লোকেশন" : "Preferred Location"}><Input value={preferredLocation} onChange={(e) => setPreferredLocation(e.target.value)} /></Field>
             </div>
             <div className="flex gap-6">
               <div className="flex items-center gap-2"><Checkbox checked={availableRemote} onCheckedChange={(c) => setAvailableRemote(!!c)} id="remote" /><Label htmlFor="remote" className="cursor-pointer">{isBn ? "রিমোট কাজের জন্য প্রস্তুত" : "Available for Remote Work"}</Label></div>
@@ -646,33 +525,20 @@ export default function CandidateProfilePage() {
       case "education":
         return (
           <div className="space-y-4">
-            {educations.length === 0 && <p className="text-sm text-muted-foreground">{isBn ? "কোনো শিক্ষাগত যোগ্যতা যোগ করা হয়নি" : "No education entries added yet"}</p>}
+            {educations.length === 0 && <p className="text-sm text-muted-foreground">{isBn ? "কোনো শিক্ষা যোগ করা হয়নি" : "No education entries yet"}</p>}
             {educations.map((edu, i) => (
               <div key={i} className="p-4 rounded-lg border space-y-3 relative">
                 <Button size="sm" variant="ghost" className="absolute top-2 right-2 h-7 w-7 p-0" onClick={() => removeEducation(i)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Field label="Level" required>
-                    <Select value={edu.level} onValueChange={(v) => updateEducation(i, "level", v)}>
-                      <SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger>
-                      <SelectContent>{EDUCATION_LEVELS.map((l) => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </Field>
-                  <Field label={edu.level === "graduation" || edu.level === "post_graduation" ? "Degree Name" : "Board"}>
-                    <Input value={edu.level === "graduation" || edu.level === "post_graduation" ? (edu.degree_name || "") : (edu.board || "")} onChange={(e) => updateEducation(i, edu.level === "graduation" || edu.level === "post_graduation" ? "degree_name" : "board", e.target.value)} />
-                  </Field>
+                  <Field label="Level" required><Select value={edu.level} onValueChange={(v) => updateEducation(i, "level", v)}><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{EDUCATION_LEVELS.map((l) => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}</SelectContent></Select></Field>
+                  <Field label={edu.level === "graduation" || edu.level === "post_graduation" ? "Degree" : "Board"}><Input value={edu.level === "graduation" || edu.level === "post_graduation" ? (edu.degree_name || "") : (edu.board || "")} onChange={(e) => updateEducation(i, edu.level === "graduation" || edu.level === "post_graduation" ? "degree_name" : "board", e.target.value)} /></Field>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <Field label={edu.level === "graduation" || edu.level === "post_graduation" ? "Subject" : "Group"}>
-                    <Input value={edu.group_or_subject || ""} onChange={(e) => updateEducation(i, "group_or_subject", e.target.value)} />
-                  </Field>
+                  <Field label={edu.level === "graduation" || edu.level === "post_graduation" ? "Subject" : "Group"}><Input value={edu.group_or_subject || ""} onChange={(e) => updateEducation(i, "group_or_subject", e.target.value)} /></Field>
                   <Field label="Institute"><Input value={edu.institute_name || ""} onChange={(e) => updateEducation(i, "institute_name", e.target.value)} /></Field>
                   <Field label="Year"><Input type="number" value={edu.passing_year || ""} onChange={(e) => updateEducation(i, "passing_year", parseInt(e.target.value) || undefined)} /></Field>
                 </div>
-                <div className="w-32">
-                  <Field label={edu.level === "graduation" || edu.level === "post_graduation" ? "CGPA" : "GPA"}>
-                    <Input type="number" step="0.01" max="5" value={edu.gpa_or_cgpa || ""} onChange={(e) => updateEducation(i, "gpa_or_cgpa", parseFloat(e.target.value) || undefined)} />
-                  </Field>
-                </div>
+                <div className="w-32"><Field label={edu.level === "graduation" || edu.level === "post_graduation" ? "CGPA" : "GPA"}><Input type="number" step="0.01" max="5" value={edu.gpa_or_cgpa || ""} onChange={(e) => updateEducation(i, "gpa_or_cgpa", parseFloat(e.target.value) || undefined)} /></Field></div>
               </div>
             ))}
             <Button size="sm" variant="outline" onClick={addEducation}><Plus className="h-4 w-4 mr-1" /> {isBn ? "শিক্ষা যোগ করুন" : "Add Education"}</Button>
@@ -681,7 +547,7 @@ export default function CandidateProfilePage() {
       case "experience":
         return (
           <div className="space-y-4">
-            {experiences.length === 0 && <p className="text-sm text-muted-foreground">{isBn ? "কোনো অভিজ্ঞতা যোগ করা হয়নি" : "No experience entries added yet"}</p>}
+            {experiences.length === 0 && <p className="text-sm text-muted-foreground">{isBn ? "কোনো অভিজ্ঞতা যোগ করা হয়নি" : "No experience entries yet"}</p>}
             {experiences.map((exp, i) => (
               <div key={i} className="p-4 rounded-lg border space-y-3 relative">
                 <Button size="sm" variant="ghost" className="absolute top-2 right-2 h-7 w-7 p-0" onClick={() => removeExperience(i)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
@@ -690,21 +556,11 @@ export default function CandidateProfilePage() {
                   <Field label="Designation" required><Input value={exp.designation} onChange={(e) => updateExperience(i, "designation", e.target.value)} /></Field>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <Field label="Type">
-                    <Select value={exp.employment_type || ""} onValueChange={(v) => updateExperience(i, "employment_type", v)}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>{EMPLOYMENT_TYPES.map((t) => <SelectItem key={t} value={t.toLowerCase()}>{t}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </Field>
+                  <Field label="Type"><Select value={exp.employment_type || ""} onValueChange={(v) => updateExperience(i, "employment_type", v)}><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{EMPLOYMENT_TYPES.map((t) => <SelectItem key={t} value={t.toLowerCase()}>{t}</SelectItem>)}</SelectContent></Select></Field>
                   <Field label="Start Date" required><Input type="date" value={exp.start_date || ""} onChange={(e) => updateExperience(i, "start_date", e.target.value)} /></Field>
-                  <Field label="End Date">
-                    <Input type="date" value={exp.end_date || ""} onChange={(e) => updateExperience(i, "end_date", e.target.value)} disabled={exp.is_current} />
-                  </Field>
+                  <Field label="End Date"><Input type="date" value={exp.end_date || ""} onChange={(e) => updateExperience(i, "end_date", e.target.value)} disabled={exp.is_current} /></Field>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox checked={exp.is_current || false} onCheckedChange={(c) => updateExperience(i, "is_current", !!c)} id={`current-${i}`} />
-                  <Label htmlFor={`current-${i}`} className="cursor-pointer text-sm">{isBn ? "বর্তমানে কাজ করছেন" : "Currently working here"}</Label>
-                </div>
+                <div className="flex items-center gap-2"><Checkbox checked={exp.is_current || false} onCheckedChange={(c) => updateExperience(i, "is_current", !!c)} id={`current-${i}`} /><Label htmlFor={`current-${i}`} className="cursor-pointer text-sm">{isBn ? "বর্তমানে কাজ করছেন" : "Currently working here"}</Label></div>
                 <Field label="Responsibilities"><Textarea value={exp.responsibilities || ""} onChange={(e) => updateExperience(i, "responsibilities", e.target.value)} rows={2} /></Field>
               </div>
             ))}
@@ -712,11 +568,7 @@ export default function CandidateProfilePage() {
           </div>
         );
       case "skills":
-        return (
-          <div className="space-y-4">
-            <Field label={isBn ? "দক্ষতা (কমা দিয়ে আলাদা করুন)" : "Skills (comma-separated)"}><Input value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="React, Node.js, Python, Microsoft Office..." /></Field>
-          </div>
-        );
+        return <div className="space-y-4"><Field label={isBn ? "দক্ষতা (কমা দিয়ে)" : "Skills (comma-separated)"}><Input value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="React, Node.js, Python..." /></Field></div>;
       case "languages":
         return (
           <div className="space-y-4">
@@ -725,20 +577,8 @@ export default function CandidateProfilePage() {
               const active = !!entry;
               return (
                 <div key={lang} className="flex items-center gap-4 p-2 rounded-lg border">
-                  <div className="flex items-center gap-2 w-32">
-                    <Checkbox checked={active} onCheckedChange={() => toggleLanguage(lang)} id={`lang-${lang}`} />
-                    <Label htmlFor={`lang-${lang}`} className="cursor-pointer text-sm font-medium">{lang}</Label>
-                  </div>
-                  {active && (
-                    <div className="flex gap-4">
-                      {(["read", "write", "speak"] as const).map((skill) => (
-                        <div key={skill} className="flex items-center gap-1">
-                          <Checkbox checked={entry![skill]} onCheckedChange={(c) => updateLangProficiency(lang, skill, !!c)} id={`${lang}-${skill}`} />
-                          <Label htmlFor={`${lang}-${skill}`} className="cursor-pointer text-xs capitalize">{skill}</Label>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 w-32"><Checkbox checked={active} onCheckedChange={() => toggleLanguage(lang)} id={`lang-${lang}`} /><Label htmlFor={`lang-${lang}`} className="cursor-pointer text-sm font-medium">{lang}</Label></div>
+                  {active && <div className="flex gap-4">{(["read", "write", "speak"] as const).map((skill) => <div key={skill} className="flex items-center gap-1"><Checkbox checked={entry![skill]} onCheckedChange={(c) => updateLangProficiency(lang, skill, !!c)} id={`${lang}-${skill}`} /><Label htmlFor={`${lang}-${skill}`} className="cursor-pointer text-xs capitalize">{skill}</Label></div>)}</div>}
                 </div>
               );
             })}
@@ -781,32 +621,9 @@ export default function CandidateProfilePage() {
                 <div>
                   <Label className="text-sm font-medium">{isBn ? "সার্টিফিকেট ফাইল" : "Certificate File"}</Label>
                   <div className="flex items-center gap-3 mt-1.5">
-                    {c.certificate_path && (
-                      <div className="relative group">
-                        <img src={getAssetUrl(c.certificate_path)} alt="cert" className="h-14 w-14 object-cover rounded border" />
-                      </div>
-                    )}
-                    {c._cert_file && (
-                      <div className="relative">
-                        {c._cert_file.type.startsWith("image/") ? (
-                          <img src={URL.createObjectURL(c._cert_file)} alt="preview" className="h-14 w-14 object-cover rounded border" />
-                        ) : (
-                          <div className="h-14 w-14 flex items-center justify-center rounded border bg-muted">
-                            <FileIcon className="h-6 w-6 text-muted-foreground" />
-                          </div>
-                        )}
-                        <button onClick={() => setCertFile(i, undefined)} className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"><X className="h-3 w-3" /></button>
-                      </div>
-                    )}
-                    <label className="cursor-pointer">
-                      <Button size="sm" variant="outline" type="button" asChild>
-                        <span><Upload className="h-3 w-3 mr-1" />{c.certificate_path || c._cert_file ? "Replace" : "Upload"}</span>
-                      </Button>
-                      <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) setCertFile(i, file);
-                      }} />
-                    </label>
+                    {c.certificate_path && <div className="relative group"><img src={getAssetUrl(c.certificate_path)} alt="cert" className="h-14 w-14 object-cover rounded border" /></div>}
+                    {c._cert_file && <div className="relative">{c._cert_file.type.startsWith("image/") ? <img src={URL.createObjectURL(c._cert_file)} alt="preview" className="h-14 w-14 object-cover rounded border" /> : <div className="h-14 w-14 flex items-center justify-center rounded border bg-muted"><FileIcon className="h-6 w-6 text-muted-foreground" /></div>}<button onClick={() => setCertFile(i, undefined)} className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"><X className="h-3 w-3" /></button></div>}
+                    <label className="cursor-pointer"><Button size="sm" variant="outline" type="button" asChild><span><Upload className="h-3 w-3 mr-1" />{c.certificate_path || c._cert_file ? "Replace" : "Upload"}</span></Button><input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => { const file = e.target.files?.[0]; if (file) setCertFile(i, file); }} /></label>
                   </div>
                 </div>
               </div>
@@ -824,55 +641,10 @@ export default function CandidateProfilePage() {
               const isImage = existing && (existing._file?.type.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp)$/i.test(existing.file_path || ""));
               return (
                 <div key={dt.value} className="flex items-center gap-4 p-3 rounded-lg border">
-                  {existing && previewUrl ? (
-                    <div className="h-12 w-12 flex-shrink-0 rounded overflow-hidden border bg-muted">
-                      {isImage ? (
-                        <img src={previewUrl} alt={dt.label} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center">
-                          <FileIcon className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="h-12 w-12 flex-shrink-0 rounded border bg-muted flex items-center justify-center">
-                      <Upload className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{dt.label}</p>
-                    {existing && <p className="text-xs text-muted-foreground truncate mt-0.5">{(existing.file_path || "").split("/").pop()}</p>}
-                  </div>
-                  <label>
-                    <Button size="sm" variant={existing ? "outline" : "default"} asChild>
-                      <span><Upload className="h-4 w-4 mr-1" /> {existing ? "Replace" : "Upload"}</span>
-                    </Button>
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const entry: CandidateDocumentEntry = {
-                          type: dt.value,
-                          label: dt.label.replace(" *", ""),
-                          file_path: URL.createObjectURL(file),
-                          url: URL.createObjectURL(file),
-                          _file: file,
-                        };
-                        setDocuments((prev) => {
-                          const without = prev.filter((d) => d.type !== dt.value);
-                          return [...without, entry];
-                        });
-                      }}
-                    />
-                  </label>
-                  {existing && (
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setDocuments((prev) => prev.filter((d) => d.type !== dt.value))}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  )}
+                  {existing && previewUrl ? <div className="h-12 w-12 flex-shrink-0 rounded overflow-hidden border bg-muted">{isImage ? <img src={previewUrl} alt={dt.label} className="h-full w-full object-cover" /> : <div className="h-full w-full flex items-center justify-center"><FileIcon className="h-5 w-5 text-muted-foreground" /></div>}</div> : <div className="h-12 w-12 flex-shrink-0 rounded border bg-muted flex items-center justify-center"><Upload className="h-5 w-5 text-muted-foreground" /></div>}
+                  <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{dt.label}</p>{existing && <p className="text-xs text-muted-foreground truncate mt-0.5">{(existing.file_path || "").split("/").pop()}</p>}</div>
+                  <label><Button size="sm" variant={existing ? "outline" : "default"} asChild><span><Upload className="h-4 w-4 mr-1" /> {existing ? "Replace" : "Upload"}</span></Button><input type="file" className="hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const entry: CandidateDocumentEntry = { type: dt.value, label: dt.label.replace(" *", ""), file_path: URL.createObjectURL(file), url: URL.createObjectURL(file), _file: file }; setDocuments((prev) => { const without = prev.filter((d) => d.type !== dt.value); return [...without, entry]; }); }} /></label>
+                  {existing && <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setDocuments((prev) => prev.filter((d) => d.type !== dt.value))}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                 </div>
               );
             })}
@@ -908,7 +680,6 @@ export default function CandidateProfilePage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-8">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{isBn ? "প্রোফাইল সম্পাদনা" : "Edit Profile"}</h1>
@@ -919,118 +690,17 @@ export default function CandidateProfilePage() {
           {saving ? (isBn ? "সংরক্ষিত হচ্ছে..." : "Saving...") : (isBn ? "সংরক্ষণ করুন" : "Save")}
         </Button>
       </div>
-
-      {/* Completion Bar */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium">{isBn ? "প্রোফাইল সম্পূর্ণতা" : "Profile Completion"}</p>
-            <Badge variant={completionPct >= 80 ? "default" : completionPct >= 50 ? "secondary" : "outline"}>{completionPct}%</Badge>
-          </div>
-          <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
-            <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${completionPct}%` }} />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Step Indicators */}
-      <div className="flex items-center gap-1 overflow-x-auto pb-2">
-        {STEPS.map((s, i) => {
-          const Icon = s.icon;
-          const isActive = i === step;
-          const isCompleted = savedSteps.has(i);
-          return (
-            <button
-              key={s.key}
-              onClick={() => setStep(i)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                isActive ? "bg-primary text-primary-foreground" : isCompleted ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-            >
-              {isCompleted ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
-              {isBn ? s.labelBn : s.labelEn}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Step Content */}
-      <Card>
-        <CardContent className="pt-6">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            {React.createElement(STEPS[step].icon, { className: "h-5 w-5 text-primary" })}
-            {isBn ? STEPS[step].labelBn : STEPS[step].labelEn}
-            <Badge variant="outline" className="ml-auto text-xs">{step + 1}/{STEPS.length}</Badge>
-          </h2>
-          {renderStepContent()}
-        </CardContent>
-      </Card>
-
-      {/* Navigation Buttons */}
+      <Card><CardContent className="pt-6"><div className="flex items-center justify-between mb-2"><p className="text-sm font-medium">{isBn ? "প্রোফাইল সম্পূর্ণতা" : "Profile Completion"}</p><Badge variant={completionPct >= 80 ? "default" : completionPct >= 50 ? "secondary" : "outline"}>{completionPct}%</Badge></div><div className="w-full h-2 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${completionPct}%` }} /></div></CardContent></Card>
+      <div className="flex items-center gap-1 overflow-x-auto pb-2">{STEPS.map((s, i) => { const Icon = s.icon; return <button key={s.key} onClick={() => setStep(i)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${i === step ? "bg-primary text-primary-foreground" : savedSteps.has(i) ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>{savedSteps.has(i) ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}{isBn ? s.labelBn : s.labelEn}</button>; })}</div>
+      <Card><CardContent className="pt-6"><h2 className="text-lg font-semibold mb-4 flex items-center gap-2">{React.createElement(STEPS[step].icon, { className: "h-5 w-5 text-primary" })}{isBn ? STEPS[step].labelBn : STEPS[step].labelEn}<Badge variant="outline" className="ml-auto text-xs">{step + 1}/{STEPS.length}</Badge></h2>{renderStepContent()}</CardContent></Card>
       <div className="flex items-center justify-between pb-8">
-        <Button
-          variant="outline"
-          onClick={() => step > 0 && setStep(step - 1)}
-          disabled={step === 0}
-        >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          {isBn ? "পূর্ববর্তী" : "Previous"}
-        </Button>
-
+        <Button variant="outline" onClick={() => step > 0 && setStep(step - 1)} disabled={step === 0}><ChevronLeft className="h-4 w-4 mr-1" />{isBn ? "পূর্ববর্তী" : "Previous"}</Button>
         <div className="flex items-center gap-2">
-          {step < STEPS.length - 1 && (
-            <Button variant="ghost" onClick={handleSkip}>
-              {isBn ? "এড়িয়ে যান" : "Skip"}
-            </Button>
-          )}
-          {step < STEPS.length - 1 ? (
-            <Button onClick={handleSaveAndContinue} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {isBn ? "সংরক্ষণ ও পরবর্তী" : "Save & Continue"}
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          ) : (
-            <Button onClick={async () => {
-              const ok = await handleSave(true);
-              if (ok) {
-                setSavedSteps((prev) => new Set(prev).add(step));
-                setShowCompletionModal(true);
-                setTimeout(() => {
-                  router.push("/dashboard/profile/overview");
-                }, 2500);
-              }
-            }} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {isBn ? "সম্পূর্ণ সংরক্ষণ করুন" : "Save Complete Profile"}
-              <Check className="h-4 w-4 ml-1" />
-            </Button>
-          )}
+          {step < STEPS.length - 1 && <Button variant="ghost" onClick={handleSkip}>{isBn ? "এড়িয়ে যান" : "Skip"}</Button>}
+          {step < STEPS.length - 1 ? <Button onClick={handleSaveAndContinue} disabled={saving}>{saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}{isBn ? "সংরক্ষণ ও পরবর্তী" : "Save & Continue"}<ChevronRight className="h-4 w-4 ml-1" /></Button> : <Button onClick={async () => { const ok = await handleSave(true); if (ok) { setSavedSteps((prev) => new Set(prev).add(step)); setShowCompletionModal(true); setTimeout(() => router.push("/dashboard/profile/overview"), 2500); } }} disabled={saving}>{saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}{isBn ? "সম্পূর্ণ সংরক্ষণ করুন" : "Save Complete Profile"}<Check className="h-4 w-4 ml-1" /></Button>}
         </div>
       </div>
-
-      {/* Completion Modal */}
-      <Dialog open={showCompletionModal} onOpenChange={setShowCompletionModal}>
-        <DialogContent className="sm:max-w-md text-center">
-          <DialogHeader>
-            <DialogTitle className="text-xl flex items-center justify-center gap-2">
-              <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <Check className="h-6 w-6 text-green-600 dark:text-green-400" />
-              </div>
-            </DialogTitle>
-            <DialogDescription className="text-base pt-2">
-              {isBn ? "ধন্যবাদ! আপনার প্রোফাইল সম্পন্ন হয়েছে।" : "Thank you! Your profile has been completed."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              {isBn ? "আপনাকে এখন প্রোফাইল ওভারভিউ পেজে নিয়ে যাওয়া হবে..." : "Redirecting you to the profile overview page..."}
-            </p>
-            <Button variant="outline" className="w-full" onClick={() => router.push("/dashboard/profile/overview")}>
-              {isBn ? "এখনই যান" : "Go Now"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <Dialog open={showCompletionModal} onOpenChange={setShowCompletionModal}><DialogContent className="sm:max-w-md text-center"><DialogHeader><DialogTitle className="text-xl flex items-center justify-center gap-2"><div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center"><Check className="h-6 w-6 text-green-600 dark:text-green-400" /></div></DialogTitle><DialogDescription className="text-base pt-2">{isBn ? "ধন্যবাদ! প্রোফাইল সম্পন্ন।" : "Thank you! Profile completed."}</DialogDescription></DialogHeader><div className="space-y-3"><p className="text-sm text-muted-foreground">{isBn ? "প্রোফাইল ওভারভিউতে নিয়ে যাওয়া হচ্ছে..." : "Redirecting to profile overview..."}</p><Button variant="outline" className="w-full" onClick={() => router.push("/dashboard/profile/overview")}>{isBn ? "এখনই যান" : "Go Now"}</Button></div></DialogContent></Dialog>
     </div>
   );
 }

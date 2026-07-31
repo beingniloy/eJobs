@@ -41,6 +41,24 @@ import type { CvProfile, CvTemplate, Resume, Subscription } from "@/types";
 import { TEMPLATE_GRADIENTS, CV_SECTIONS, FAQ_ITEMS } from "@/constants/cv-builder";
 import { getStoredResumes, storeResumes, profileDataToEditorData, editorDataToProfile } from "@/lib/cv-builder-utils";
 
+const EDITOR_STORAGE_KEY = "cv_editor_state";
+
+function getStoredEditorState(): { slug: string | null; data: Record<string, any>; section: string } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(EDITOR_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function setStoredEditorState(state: { slug: string | null; data: Record<string, any>; section: string }) {
+  try { localStorage.setItem(EDITOR_STORAGE_KEY, JSON.stringify(state)); } catch {}
+}
+
+function clearStoredEditorState() {
+  try { localStorage.removeItem(EDITOR_STORAGE_KEY); } catch {}
+}
+
 export default function CvBuilderClient() {
   const { language } = useThemeStore();
   const isBn = language === "bn";
@@ -71,14 +89,26 @@ export default function CvBuilderClient() {
   const [showPersonalInfoModal, setShowPersonalInfoModal] = useState(false);
   const [pendingTemplateSlug, setPendingTemplateSlug] = useState<string | null>(null);
 
-  const [activeView, setActiveView] = useState<"landing" | "editor">("landing");
-  const [editorTemplate, setEditorTemplate] = useState<CvTemplate | null>(null);
-  const [editorData, setEditorData] = useState<Record<string, any>>({});
-  const [activeSection, setActiveSection] = useState("personal");
+  const [activeView, setActiveView] = useState<"landing" | "editor">(() => {
+    const stored = getStoredEditorState();
+    return stored?.slug ? "editor" : "landing";
+  });
+  const [editorTemplate, setEditorTemplate] = useState<CvTemplate | null>(() => null);
+  const [editorData, setEditorData] = useState<Record<string, any>>(() => {
+    const stored = getStoredEditorState();
+    return stored?.data || {};
+  });
+  const [activeSection, setActiveSection] = useState(() => {
+    const stored = getStoredEditorState();
+    return stored?.section || "personal";
+  });
   const [previewHtmlEditor, setPreviewHtmlEditor] = useState("");
   const [previewLoadingEditor, setPreviewLoadingEditor] = useState(false);
   const previewDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  // Restore editor template from localStorage on mount
+  const editorRestoredRef = useRef(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -90,7 +120,11 @@ export default function CvBuilderClient() {
       setTemplates(templatesData);
       if (profileData) {
         setProfile(profileData);
-        setEditorData(profileDataToEditorData(profileData));
+        // Only set editorData from profile if editor is empty (first load)
+        setEditorData((prev) => {
+          if (prev && Object.keys(prev).length > 0) return prev;
+          return profileDataToEditorData(profileData);
+        });
       }
 
       let apiResumes: any[] = [];
@@ -122,6 +156,40 @@ export default function CvBuilderClient() {
 
   useEffect(() => { loadData(); loadSubscription(); }, [loadData, loadSubscription]);
 
+  // Restore editor from localStorage
+  useEffect(() => {
+    if (editorRestoredRef.current) return;
+    editorRestoredRef.current = true;
+    const stored = getStoredEditorState();
+    if (!stored?.slug) return;
+
+    // Find the template
+    if (templates.length > 0) {
+      const tmpl = templates.find((t) => t.slug === stored.slug);
+      if (tmpl) {
+        setEditorTemplate(tmpl);
+        setActiveView("editor");
+        setEditorData(stored.data || {});
+        setActiveSection(stored.section || "personal");
+      } else {
+        // Template not found, clear stored state
+        clearStoredEditorState();
+        setActiveView("landing");
+      }
+    }
+  }, [templates]);
+
+  // Sync editor state to localStorage on every change
+  useEffect(() => {
+    if (activeView === "editor" && editorTemplate) {
+      setStoredEditorState({
+        slug: editorTemplate.slug,
+        data: editorData,
+        section: activeSection,
+      });
+    }
+  }, [activeView, editorTemplate, editorData, activeSection]);
+
   const [savingCreating, setSavingCreating] = useState(false);
 
   const handleSaveAndCreate = async (template: CvTemplate) => {
@@ -139,6 +207,7 @@ export default function CvBuilderClient() {
         storeResumes(updated);
         return updated;
       });
+      clearStoredEditorState();
       toast.success(isBn ? "সিভি তৈরি হয়েছে!" : "Resume created!");
       router.push(`/cv/preview/${resumeData.uuid}`);
     } catch (e: any) {
@@ -169,7 +238,8 @@ export default function CvBuilderClient() {
     try {
       await resumeService.updateProfile(profileToSave);
       setProfile(profileToSave);
-      setEditorData(profileDataToEditorData(profileToSave));
+      const newEditorData = profileDataToEditorData(profileToSave);
+      setEditorData(newEditorData);
       setAiResult(null);
       toast.success(isBn ? "প্রোফাইল সংরক্ষিত হয়েছে" : "Profile saved!");
     } catch { toast.error(isBn ? "সংরক্ষণ ব্যর্থ" : "Save failed"); }
@@ -193,7 +263,7 @@ export default function CvBuilderClient() {
       return;
     }
     const hasProfile = profile && (
-      profile.personal_info?.full_name || 
+      profile.personal_info?.full_name ||
       profile.personal_info?.email ||
       (profile.skills && profile.skills.length > 0) ||
       (profile.experience && profile.experience.length > 0)
@@ -211,6 +281,7 @@ export default function CvBuilderClient() {
       });
       const resumeData = resume?.data || resume;
       setResumes((prev) => { const updated = [resumeData, ...prev]; storeResumes(updated); return updated; });
+      clearStoredEditorState();
       toast.success(isBn ? "সিভি তৈরি হয়েছে!" : "Resume created!");
       setShowTemplateModal(false);
       if (resumeData?.uuid) router.push(`/cv/preview/${resumeData.uuid}`);
@@ -246,6 +317,7 @@ export default function CvBuilderClient() {
           const resumeData = resume?.data || resume;
           setResumes((prev) => { const updated = [resumeData, ...prev]; storeResumes(updated); return updated; });
           toast.success(isBn ? "সিভি তৈরি হয়েছে!" : "Resume created!");
+          clearStoredEditorState();
           if (resumeData?.uuid) router.push(`/cv/preview/${resumeData.uuid}`);
         } catch { toast.error(isBn ? "ব্যর্থ" : "Failed"); }
         finally { setCreating(false); }
@@ -257,8 +329,7 @@ export default function CvBuilderClient() {
     try {
       const blob = await resumeService.downloadPdf(uuid);
       const url = URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
-      const a = document.createElement("a");
-      a.href = url; a.download = "resume.pdf";
+      const a = document.createElement("a"); a.href = url; a.download = "resume.pdf";
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success(isBn ? "PDF ডাউনলোড শুরু হয়েছে" : "PDF download started");
@@ -269,22 +340,14 @@ export default function CvBuilderClient() {
     const newPublicState = !resume.is_public;
     try {
       const result = await resumeService.shareResume(resume.uuid, { is_public: newPublicState });
-      const updated = resumes.map((r) => r.uuid === resume.uuid
-        ? { ...r, is_public: newPublicState }
-        : r
-      );
+      const updated = resumes.map((r) => r.uuid === resume.uuid ? { ...r, is_public: newPublicState } : r);
       setResumes(updated); storeResumes(updated);
-      toast.success(newPublicState
-        ? (isBn ? "পাবলিক লিঙ্ক তৈরি হয়েছে" : "Share link created")
-        : (isBn ? "পাবলিক লিঙ্ক বন্ধ করা হয়েছে" : "Share link disabled")
-      );
+      toast.success(newPublicState ? (isBn ? "পাবলিক লিঙ্ক তৈরি হয়েছে" : "Share link created") : (isBn ? "পাবলিক লিঙ্ক বন্ধ হয়েছে" : "Share link disabled"));
     } catch { toast.error(isBn ? "ব্যর্থ" : "Failed"); }
   };
 
   const handleCopyLink = async (resume: Resume) => {
-    const token = resume.uuid;
-    const shareUrl = `${window.location.origin}/cv/share/${token}`;
-    try { await navigator.clipboard.writeText(shareUrl); toast.success(isBn ? "লিঙ্ক কপি হয়েছে" : "Link copied!"); }
+    try { await navigator.clipboard.writeText(`${window.location.origin}/cv/share/${resume.uuid}`); toast.success(isBn ? "লিঙ্ক কপি হয়েছে" : "Link copied!"); }
     catch { toast.error(isBn ? "কপি ব্যর্থ" : "Copy failed"); }
   };
 
@@ -317,6 +380,12 @@ export default function CvBuilderClient() {
     setEditorTemplate(template);
     setActiveView("editor");
     setActiveSection("personal");
+    // If editor data is empty, load from profile
+    if (!editorData || Object.keys(editorData).length === 0) {
+      if (profile) {
+        setEditorData(profileDataToEditorData(profile));
+      }
+    }
     loadEditorPreview(template.slug);
   };
 
@@ -379,7 +448,7 @@ export default function CvBuilderClient() {
           previewHtml={previewHtmlEditor}
           previewLoading={previewLoadingEditor}
           onRefreshPreview={() => loadEditorPreview(editorTemplate.slug)}
-          onBack={() => setActiveView("landing")}
+          onBack={() => { clearStoredEditorState(); setActiveView("landing"); setEditorTemplate(null); setEditorData({}); setActiveSection("personal"); }}
           onSaveAndCreate={() => handleSaveAndCreate(editorTemplate)}
           savingCreating={savingCreating}
           isBn={isBn}
@@ -402,23 +471,14 @@ export default function CvBuilderClient() {
                   {isBn ? "সিভি মিনিটে" : "Resume in Minutes"}
                 </h1>
                 <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-                  {isBn
-                    ? "আমাদের প্রিমিয়াম টেমপ্লেট, AI-চালিত টুলস এবং সহজ ইনলাইন এডিটর দিয়ে আপনার পরবর্তী চাকরির জন্য একটি ATS-বান্ধব CV তৈরি করুন।"
-                    : "Create an ATS-friendly resume for your next job using our premium templates, AI-powered tools, and easy inline editor."}
+                  {isBn ? "আমাদের প্রিমিয়াম টেমপ্লেট, AI-চালিত টুলস এবং সহজ ইনলাইন এডিটর দিয়ে ATS-বান্ধব CV তৈরি করুন।" : "Create an ATS-friendly resume using our premium templates, AI-powered tools, and easy inline editor."}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Button size="lg" className="px-8 text-base" onClick={() => {
-                    document.getElementById("templates-section")?.scrollIntoView({ behavior: "smooth" });
-                  }}>
-                    <FileText className="h-5 w-5 mr-2" />
-                    {isBn ? "এখনই শুরু করুন" : "Start Building"}
-                    <ArrowRight className="h-5 w-5 ml-2" />
+                  <Button size="lg" className="px-8 text-base" onClick={() => { document.getElementById("templates-section")?.scrollIntoView({ behavior: "smooth" }); }}>
+                    <FileText className="h-5 w-5 mr-2" />{isBn ? "এখনই শুরু করুন" : "Start Building"}<ArrowRight className="h-5 w-5 ml-2" />
                   </Button>
-                  <Button size="lg" variant="outline" className="px-8 text-base" onClick={() => {
-                    document.getElementById("my-cvs-section")?.scrollIntoView({ behavior: "smooth" });
-                  }}>
-                    <Eye className="h-5 w-5 mr-2" />
-                    {isBn ? "আমার সিভি" : "My CVs"} ({resumes.length})
+                  <Button size="lg" variant="outline" className="px-8 text-base" onClick={() => { document.getElementById("my-cvs-section")?.scrollIntoView({ behavior: "smooth" }); }}>
+                    <Eye className="h-5 w-5 mr-2" />{isBn ? "আমার সিভি" : "My CVs"} ({resumes.length})
                   </Button>
                 </div>
               </div>
@@ -428,26 +488,18 @@ export default function CvBuilderClient() {
           <section className="py-16 border-b bg-muted/30">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center mb-12">
-                <h2 className="text-2xl md:text-3xl font-bold mb-3">
-                  {isBn ? "কিভাবে কাজ করে" : "How It Works"}
-                </h2>
-                <p className="text-muted-foreground max-w-xl mx-auto">
-                  {isBn ? "মাত্র ৩টি সহজ ধাপে আপনার পেশাদার CV তৈরি করুন" : "Create your professional CV in just 3 simple steps"}
-                </p>
+                <h2 className="text-2xl md:text-3xl font-bold mb-3">{isBn ? "কিভাবে কাজ করে" : "How It Works"}</h2>
+                <p className="text-muted-foreground max-w-xl mx-auto">{isBn ? "মাত্র ৩টি সহজ ধাপে আপনার পেশাদার CV তৈরি করুন" : "Create your professional CV in just 3 simple steps"}</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
                 {[
                   { step: "1", icon: FileText, title_en: "Choose Template", title_bn: "টেমপ্লেট বাছুন", desc_en: "Pick from professionally designed, ATS-friendly templates", desc_bn: "পেশাদার, ATS-বান্ধব টেমপ্লেট থেকে বাছুন" },
                   { step: "2", icon: PenTool, title_en: "Fill Your Details", title_bn: "তথ্য পূরণ করুন", desc_en: "Use our smart form or AI assistant to add your information", desc_bn: "আমাদের স্মার্ট ফর্ম বা AI সহকারী ব্যবহার করে তথ্য যোগ করুন" },
-                  { step: "3", icon: Download, title_en: "Download & Share", title_bn: "ডাউনলোড ও শেয়ার", desc_en: "Export as PDF or get a shareable link to send to employers", desc_bn: "PDF হিসেবে এক্সপোর্ট করুন বা নিয়োগদাতাকে পাঠানোর জন্য লিঙ্ক পান" },
+                  { step: "3", icon: Download, title_en: "Download & Share", title_bn: "ডাউনলোড ও শেয়ার", desc_en: "Export as PDF or get a shareable link to send to employers", desc_bn: "PDF হিসেবে এক্সপোর্ট করুন বা শেয়ারযোগ্য লিঙ্ক পান" },
                 ].map((item, i) => (
                   <div key={i} className="relative text-center p-6">
-                    <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                      <item.icon className="h-7 w-7 text-primary" />
-                    </div>
-                    <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center">
-                      {item.step}
-                    </div>
+                    <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4"><item.icon className="h-7 w-7 text-primary" /></div>
+                    <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center">{item.step}</div>
                     <h3 className="font-semibold text-lg mb-2">{isBn ? item.title_bn : item.title_en}</h3>
                     <p className="text-sm text-muted-foreground">{isBn ? item.desc_bn : item.desc_en}</p>
                   </div>
@@ -459,32 +511,17 @@ export default function CvBuilderClient() {
           <section id="templates-section" className="py-16">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center mb-12">
-                <h2 className="text-2xl md:text-3xl font-bold mb-3">
-                  {isBn ? "টেমপ্লেট বাছাই করুন" : "Choose a Template"}
-                </h2>
-                <p className="text-muted-foreground max-w-xl mx-auto">
-                  {isBn ? "সকল টেমপ্লেট ATS-বান্ধব এবং প্রিন্ট-অপ্টিমাইজড" : "All templates are ATS-friendly and print-optimized"}
-                </p>
+                <h2 className="text-2xl md:text-3xl font-bold mb-3">{isBn ? "টেমপ্লেট বাছাই করুন" : "Choose a Template"}</h2>
+                <p className="text-muted-foreground max-w-xl mx-auto">{isBn ? "সকল টেমপ্লেট ATS-বান্ধব" : "All templates are ATS-friendly"}</p>
               </div>
               {loading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-72 rounded-xl" />)}
-                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">{[...Array(8)].map((_, i) => <Skeleton key={i} className="h-72 rounded-xl" />)}</div>
               ) : templates.length === 0 ? (
                 <Card><CardContent className="p-12 text-center"><FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" /><p className="text-muted-foreground text-lg">{isBn ? "কোনো টেমপ্লেট পাওয়া যায়নি" : "No templates found"}</p></CardContent></Card>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {templates.map((template, idx) => (
-                    <TemplateCard
-                      key={template.id}
-                      template={template}
-                      index={idx}
-                      isBn={isBn}
-                      isPurchased={purchasedTemplateSlugs.has(template.slug)}
-                      creating={creating}
-                      onUse={handleUseTemplate}
-                      onStartEdit={startEditor}
-                    />
+                    <TemplateCard key={template.id} template={template} index={idx} isBn={isBn} isPurchased={purchasedTemplateSlugs.has(template.slug)} creating={creating} onUse={handleUseTemplate} onStartEdit={startEditor} />
                   ))}
                 </div>
               )}
@@ -493,26 +530,20 @@ export default function CvBuilderClient() {
 
           <section className="py-16 bg-muted/30 border-y">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="text-center mb-12">
-                <h2 className="text-2xl md:text-3xl font-bold mb-3">
-                  {isBn ? "কেন আমাদের সিভি বিল্ডার ব্যবহার করবেন" : "Why Use Our CV Builder"}
-                </h2>
-              </div>
+              <div className="text-center mb-12"><h2 className="text-2xl md:text-3xl font-bold mb-3">{isBn ? "কেন আমাদের CV বিল্ডার" : "Why Use Our CV Builder"}</h2></div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
                 {[
-                  { icon: Sparkles, title_en: "AI-Powered", title_bn: "AI-চালিত", desc_en: "Generate your CV content with AI. Just describe your experience and let AI build your profile.", desc_bn: "AI দিয়ে আপনার CV তৈরি করুন। শুধু আপনার অভিজ্ঞতা লিখুন।" },
-                  { icon: Shield, title_en: "ATS-Friendly", title_bn: "ATS-বান্ধব", desc_en: "Our templates are designed to pass Applicant Tracking Systems used by top companies.", desc_bn: "আমাদের টেমপ্লেট শীর্ষ কোম্পানির ATS পাস করতে ডিজাইন করা।" },
-                  { icon: Eye, title_en: "Live Preview", title_bn: "লাইভ প্রিভিউ", desc_en: "See your changes in real-time as you fill in your details.", desc_bn: "তথ্য পূরণ করার সাথে সাথে পরিবর্তন দেখুন।" },
-                  { icon: Download, title_en: "PDF Export", title_bn: "PDF এক্সপোর্ট", desc_en: "Download your resume as a high-quality, print-ready PDF file.", desc_bn: "সেকেন্ডের মধ্যে উচ্চ মানের PDF ফাইল ডাউনলোড করুন।" },
-                  { icon: Share2, title_en: "Shareable Links", title_bn: "শেয়ারযোগ্য লিঙ্ক", desc_en: "Generate a public link to share your CV with recruiters.", desc_bn: "রিক্রুটারদের সাথে শেয়ার করতে পাবলিক লিঙ্ক তৈরি করুন।" },
-                  { icon: Languages, title_en: "Bilingual Support", title_bn: "দ্বিভাষিক", desc_en: "Create your CV in both English and Bengali.", desc_bn: "ইংরেজি ও বাংলায় CV তৈরি করুন।" },
+                  { icon: Sparkles, t_en: "AI-Powered", t_bn: "AI-চালিত", d_en: "Generate CV content with AI.", d_bn: "AI দিয়ে CV তৈরি করুন।" },
+                  { icon: Shield, t_en: "ATS-Friendly", t_bn: "ATS-বান্ধব", d_en: "Templates pass Applicant Tracking Systems.", d_bn: "টেমপ্লেট ATS পাস করে।" },
+                  { icon: Eye, t_en: "Live Preview", t_bn: "লাইভ প্রিভিউ", d_en: "See changes in real-time.", d_bn: "রিয়েল-টাইমে পরিবর্তন দেখুন।" },
+                  { icon: Download, t_en: "PDF Export", t_bn: "PDF এক্সপোর্ট", d_en: "Download as print-ready PDF.", d_bn: "PDF ডাউনলোড করুন।" },
+                  { icon: Share2, t_en: "Shareable Links", t_bn: "শেয়ারযোগ্য লিঙ্ক", d_en: "Share CV with recruiters.", d_bn: "রিক্রুটারদের সাথে শেয়ার করুন।" },
+                  { icon: Languages, t_en: "Bilingual", t_bn: "দ্বিভাষিক", d_en: "English & Bengali CV.", d_bn: "ইংরেজি ও বাংলায়।" },
                 ].map((item, i) => (
                   <div key={i} className="p-6 rounded-xl bg-background border hover:shadow-md transition-shadow">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-                      <item.icon className="h-6 w-6 text-primary" />
-                    </div>
-                    <h3 className="font-semibold text-lg mb-2">{isBn ? item.title_bn : item.title_en}</h3>
-                    <p className="text-sm text-muted-foreground">{isBn ? item.desc_bn : item.desc_en}</p>
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4"><item.icon className="h-6 w-6 text-primary" /></div>
+                    <h3 className="font-semibold text-lg mb-2">{isBn ? item.t_bn : item.t_en}</h3>
+                    <p className="text-sm text-muted-foreground">{isBn ? item.d_bn : item.d_en}</p>
                   </div>
                 ))}
               </div>
@@ -523,53 +554,21 @@ export default function CvBuilderClient() {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               <div className="max-w-2xl mx-auto">
                 <Card className="border-primary/20 shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-xl">
-                      <Bot className="h-6 w-6 text-primary" />
-                      {isBn ? "AI দিয়ে CV তৈরি করুন" : "Generate CV with AI"}
-                    </CardTitle>
-                  </CardHeader>
+                  <CardHeader><CardTitle className="flex items-center gap-2 text-xl"><Bot className="h-6 w-6 text-primary" />{isBn ? "AI দিয়ে CV তৈরি করুন" : "Generate CV with AI"}</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
-                    {quota && (
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /><span className="text-sm font-medium">{isBn ? "AI ব্যবহার" : "AI Usage"}</span></div>
-                        <div className="text-sm text-muted-foreground">{quota.used}/{quota.max_limit} {isBn ? "ব্যবহৃত" : "used"}</div>
-                      </div>
-                    )}
-                    <p className="text-sm text-muted-foreground">
-                      {isBn ? "আপনার অভিজ্ঞতা, দক্ষতা এবং শিক্ষার সংক্ষিপ্ত বিবরণ লিখুন। AI আপনার জন্য একটি পেশাদার CV প্রোফাইল তৈরি করবে।"
-                        : "Describe your experience, skills, and education. AI will create a professional CV profile for you."}
-                    </p>
-                    <Textarea
-                      className="min-h-[120px]"
-                      placeholder={isBn ? "আমি একজন ৩ বছরের অভিজ্ঞতা সম্পন্ন React Developer..." : "I'm a React developer with 3 years of experience in building web applications..."}
-                      value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
-                      disabled={generating}
-                    />
+                    {quota && <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"><div className="flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /><span className="text-sm font-medium">{isBn ? "AI ব্যবহার" : "AI Usage"}</span></div><div className="text-sm text-muted-foreground">{quota.used}/{quota.max_limit} {isBn ? "ব্যবহৃত" : "used"}</div></div>}
+                    <p className="text-sm text-muted-foreground">{isBn ? "আপনার অভিজ্ঞতা লিখুন। AI CV তৈরি করবে।" : "Describe your experience. AI will build your CV."}</p>
+                    <Textarea className="min-h-[120px]" placeholder={isBn ? "আমি ৩ বছরের React Developer..." : "I'm a React developer with 3 years experience..."} value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} disabled={generating} />
                     <Button onClick={handleAiGenerate} disabled={generating || !aiPrompt.trim() || !!quotaReached} className="w-full" size="lg">
                       {generating ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" />{isBn ? "তৈরি হচ্ছে..." : "Generating..."}</> : <><Sparkles className="h-5 w-5 mr-2" />{isBn ? "সিভি তৈরি করুন" : "Generate CV"}</>}
                     </Button>
-                    {generating && (
-                      <div className="flex flex-col items-center py-8">
-                        <div className="relative">
-                          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Sparkles className="h-8 w-8 text-primary animate-pulse" />
-                          </div>
-                          <div className="absolute inset-0 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-3">{isBn ? "AI আপনার CV তৈরি করছে..." : "AI is generating your CV..."}</p>
-                      </div>
-                    )}
+                    {generating && <div className="flex flex-col items-center py-8"><div className="relative"><div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center"><Sparkles className="h-8 w-8 text-primary animate-pulse" /></div><div className="absolute inset-0 rounded-full border-2 border-primary/20 border-t-primary animate-spin" /></div><p className="text-sm text-muted-foreground mt-3">{isBn ? "AI তৈরি করছে..." : "AI generating..."}</p></div>}
                     {aiResult && (
                       <Card className="border-green-200 dark:border-green-800">
                         <CardHeader><CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-400"><CheckCircle className="h-5 w-5" />{isBn ? "জেনারেটেড প্রোফাইল" : "Generated Profile"}</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                           {aiResult.personal_info && <div><h3 className="font-semibold text-lg">{aiResult.personal_info.full_name}</h3><p className="text-sm text-muted-foreground">{aiResult.personal_info.title}</p></div>}
-                          <div className="flex gap-2">
-                            <Button onClick={handleSaveProfile}><Check className="h-4 w-4 mr-2" />{isBn ? "সংরক্ষণ ও এডিট করুন" : "Save & Edit"}</Button>
-                            <Button variant="outline" onClick={() => setAiResult(null)}><X className="h-4 w-4 mr-2" />{isBn ? "বাতিল" : "Discard"}</Button>
-                          </div>
+                          <div className="flex gap-2"><Button onClick={handleSaveProfile}><Check className="h-4 w-4 mr-2" />{isBn ? "সংরক্ষণ ও এডিট" : "Save & Edit"}</Button><Button variant="outline" onClick={() => setAiResult(null)}><X className="h-4 w-4 mr-2" />{isBn ? "বাতিল" : "Discard"}</Button></div>
                         </CardContent>
                       </Card>
                     )}
@@ -582,25 +581,15 @@ export default function CvBuilderClient() {
           {resumes.length > 0 && (
             <section id="my-cvs-section" className="py-16 bg-muted/30 border-y">
               <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between mb-8">
-                   <h2 className="text-2xl font-bold">{isBn ? `আমার সিভি (${resumes.length})` : `My CVs (${resumes.length})`}</h2>
-                  <Button variant="outline" size="sm" onClick={() => {
-                    document.getElementById("templates-section")?.scrollIntoView({ behavior: "smooth" });
-                  }}><Plus className="h-4 w-4 mr-1" />{isBn ? "নতুন তৈরি করুন" : "Create New"}</Button>
-                </div>
+                <div className="flex items-center justify-between mb-8"><h2 className="text-2xl font-bold">{isBn ? `আমার সিভি (${resumes.length})` : `My CVs (${resumes.length})`}</h2></div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {resumes.map((resume, idx) => (
                     <Card key={resume.uuid} className="group hover:shadow-lg transition-all duration-200">
                       <CardContent className="p-4 space-y-3">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${TEMPLATE_GRADIENTS[idx % TEMPLATE_GRADIENTS.length]} flex items-center justify-center shrink-0`}>
-                              <FileText className="h-5 w-5 text-white" />
-                            </div>
-                            <div className="min-w-0">
-                              <h3 className="font-medium text-sm truncate">{resume.title}</h3>
-                              <p className="text-xs text-muted-foreground capitalize">{resume.template_name || resume.template_slug || "Template"}</p>
-                            </div>
+                            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${TEMPLATE_GRADIENTS[idx % TEMPLATE_GRADIENTS.length]} flex items-center justify-center shrink-0`}><FileText className="h-5 w-5 text-white" /></div>
+                            <div className="min-w-0"><h3 className="font-medium text-sm truncate">{resume.title}</h3><p className="text-xs text-muted-foreground capitalize">{resume.template_name || resume.template_slug || "Template"}</p></div>
                           </div>
                           {resume.is_public && <Badge variant="secondary" className="text-[10px] shrink-0"><Eye className="h-2.5 w-2.5 mr-0.5" />{isBn ? "পাবলিক" : "Public"}</Badge>}
                         </div>
@@ -623,29 +612,17 @@ export default function CvBuilderClient() {
 
           <section className="py-16">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="text-center mb-12">
-                <h2 className="text-2xl md:text-3xl font-bold mb-3">
-                  {isBn ? "সচরাচর জিজ্ঞাসা" : "Frequently Asked Questions"}
-                </h2>
-              </div>
+              <div className="text-center mb-12"><h2 className="text-2xl md:text-3xl font-bold mb-3">{isBn ? "সচরাচর জিজ্ঞাসা" : "FAQ"}</h2></div>
               <div className="max-w-2xl mx-auto space-y-3">
                 {FAQ_ITEMS.map((item, i) => {
                   const isOpen = openFaq === i;
                   return (
                     <div key={i} className="border rounded-xl overflow-hidden">
-                      <button
-                        className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
-                        onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                        aria-expanded={isOpen}
-                      >
+                      <button className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors" onClick={() => setOpenFaq(openFaq === i ? null : i)} aria-expanded={isOpen}>
                         <span className="font-medium text-sm pr-4">{isBn ? item.q_bn : item.q_en}</span>
                         {isOpen ? <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
                       </button>
-                      {isOpen && (
-                        <div className="px-4 pb-4 text-sm text-muted-foreground border-t">
-                          <p className="pt-3">{isBn ? item.a_bn : item.a_en}</p>
-                        </div>
-                      )}
+                      {isOpen && <div className="px-4 pb-4 text-sm text-muted-foreground border-t"><p className="pt-3">{isBn ? item.a_bn : item.a_en}</p></div>}
                     </div>
                   );
                 })}
@@ -655,18 +632,9 @@ export default function CvBuilderClient() {
 
           <section className="py-16 bg-primary text-primary-foreground">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4">
-                {isBn ? "আজই আপনার CV তৈরি শুরু করুন" : "Start Building Your CV Today"}
-              </h2>
-              <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto">
-                {isBn ? "হাজারো চাকরির আবেদনকারী আমাদের সিভি বিল্ডার ব্যবহার করছেন।" : "Thousands of job seekers are using our CV builder to land their dream jobs."}
-              </p>
-              <Button size="lg" variant="secondary" className="px-8" onClick={() => {
-                document.getElementById("templates-section")?.scrollIntoView({ behavior: "smooth" });
-              }}>
-                {isBn ? "এখনই শুরু করুন" : "Get Started Free"}
-                <ArrowRight className="h-5 w-5 ml-2" />
-              </Button>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">{isBn ? "আজই CV তৈরি শুরু করুন" : "Start Building Today"}</h2>
+              <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto">{isBn ? "হাজারো ব্যবহারকারী আমাদের CV বিল্ডার ব্যবহার করছেন।" : "Thousands of users are building their resumes with our CV builder."}</p>
+              <Button size="lg" variant="secondary" className="px-8" onClick={() => { document.getElementById("templates-section")?.scrollIntoView({ behavior: "smooth" }); }}>{isBn ? "এখনই শুরু করুন" : "Get Started Free"}<ArrowRight className="h-5 w-5 ml-2" /></Button>
             </div>
           </section>
         </div>
@@ -674,27 +642,19 @@ export default function CvBuilderClient() {
 
       <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{isBn ? "টেমপ্লেট বাছাই করুন" : "Choose Template"}</DialogTitle>
-            <DialogDescription>{isBn ? "আপনার CV-র জন্য একটি টেমপ্লেট বাছাই করুন" : "Select a template for your CV"}</DialogDescription>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>{isBn ? "টেমপ্লেট বাছুন" : "Choose Template"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
             {templates.map((template, idx) => (
               <div key={template.id} className={`rounded-xl border-2 p-3 cursor-pointer transition-all hover:shadow-md ${selectedTemplate === template.slug ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`} onClick={() => setSelectedTemplate(template.slug)}>
                 <div className={`h-24 rounded-lg bg-gradient-to-br ${TEMPLATE_GRADIENTS[idx % TEMPLATE_GRADIENTS.length]} flex items-center justify-center mb-2`}><FileText className="h-8 w-8 text-white/70" /></div>
                 <p className="font-medium text-sm truncate">{template.name}</p>
-                <div className="flex items-center justify-between mt-1">
-                  <Badge variant="outline" className="text-[10px] capitalize">{template.category}</Badge>
-                  {template.is_premium ? <Badge className="text-[10px] bg-amber-100 text-amber-700">{formatCurrency(template.price || 0)}</Badge> : <Badge className="text-[10px] bg-green-100 text-green-700">{isBn ? "ফ্রি" : "Free"}</Badge>}
-                </div>
+                <div className="flex items-center justify-between mt-1"><Badge variant="outline" className="text-[10px] capitalize">{template.category}</Badge>{template.is_premium ? <Badge className="text-[10px] bg-amber-100 text-amber-700">{formatCurrency(template.price || 0)}</Badge> : <Badge className="text-[10px] bg-green-100 text-green-700">{isBn ? "ফ্রি" : "Free"}</Badge>}</div>
               </div>
             ))}
           </div>
           <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
             <Button variant="outline" onClick={() => setShowTemplateModal(false)}>{isBn ? "বাতিল" : "Cancel"}</Button>
-            <Button disabled={!selectedTemplate || creating} onClick={() => { const t = templates.find((t) => t.slug === selectedTemplate); if (t) { setShowTemplateModal(false); handleUseTemplate(t); } }}>
-              {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{isBn ? "টেমপ্লেট বাছাই" : "Select Template"}
-            </Button>
+            <Button disabled={!selectedTemplate || creating} onClick={() => { const t = templates.find((t) => t.slug === selectedTemplate); if (t) { setShowTemplateModal(false); handleUseTemplate(t); } }}>{creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{isBn ? "টেমপ্লেট বাছাই" : "Select"}</Button>
           </div>
         </DialogContent>
       </Dialog>
