@@ -13,7 +13,7 @@ import {
 import api from "@/lib/api-client";
 import { toast } from "sonner";
 
-const MAX_PHOTO_BYTES = 1.9 * 1024 * 1024; // 1.9MB — safely under 2MB backend limit
+const MAX_PHOTO_BYTES = 1.8 * 1024 * 1024; // 1.8MB — safely under 2MB backend limit
 
 export default function SectionForm({ section, data, onChange, isBn }: { section: string; data: any; onChange: (d: any) => void; isBn: boolean }) {
   switch (section) {
@@ -31,7 +31,7 @@ export default function SectionForm({ section, data, onChange, isBn }: { section
   }
 }
 
-/* ─── Reliable image compressor using toDataURL (no toBlob null issues) ─── */
+/* ─── Reliable image compressor using toDataURL, guaranteed under MAX_PHOTO_BYTES ─── */
 async function compressToWebp(file: File): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
 
@@ -44,12 +44,13 @@ async function compressToWebp(file: File): Promise<File> {
       el.src = url;
     });
 
-    // Try progressively smaller sizes + lower quality until under limit
+    // Start at 500px max dimension with moderate quality — aggressive from the start
     const attempts = [
-      { maxDim: 640, quality: 0.70 },
-      { maxDim: 480, quality: 0.60 },
-      { maxDim: 320, quality: 0.50 },
-      { maxDim: 240, quality: 0.45 },
+      { maxDim: 500, quality: 0.55 },
+      { maxDim: 400, quality: 0.50 },
+      { maxDim: 350, quality: 0.45 },
+      { maxDim: 300, quality: 0.40 },
+      { maxDim: 250, quality: 0.35 },
     ];
 
     for (const { maxDim, quality } of attempts) {
@@ -58,11 +59,10 @@ async function compressToWebp(file: File): Promise<File> {
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
       const ctx = canvas.getContext("2d");
-      if (!ctx) break;
+      if (!ctx) continue;
 
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      // Use toDataURL — always works, no null callbacks
       const dataUrl = canvas.toDataURL("image/webp", quality);
       const base64 = dataUrl.split(",")[1];
       const binary = atob(base64);
@@ -75,14 +75,14 @@ async function compressToWebp(file: File): Promise<File> {
       }
     }
 
-    // Last resort: smallest possible
+    // Last resort: 200x200 at 0.35 quality
     const canvas = document.createElement("canvas");
     canvas.width = 200;
     canvas.height = 200;
     const ctx = canvas.getContext("2d");
     if (!ctx) { return file; }
     ctx.drawImage(img, 0, 0, 200, 200);
-    const dataUrl = canvas.toDataURL("image/webp", 0.40);
+    const dataUrl = canvas.toDataURL("image/webp", 0.35);
     const base64 = dataUrl.split(",")[1];
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
@@ -111,11 +111,11 @@ function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, an
     setUploading(true);
     try {
       const compressed = await compressToWebp(file);
-      toast.info(`${isBn ? "সংকুচিত হয়েছে" : "Compressed"}: ${(compressed.size / 1024).toFixed(0)}KB`);
+      toast.info(`${isBn ? "সংকুচিত" : "Compressed"}: ${(compressed.size / 1024).toFixed(0)}KB`);
       const formData = new FormData();
       formData.append("photo", compressed);
       const res = await api.post("/candidate/cv/profile/upload-photo", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { "Content-Type": undefined },
       });
       const photoUrl = res.data?.data?.photo_url || res.data?.photo_url;
       if (photoUrl) onChange({ ...data, photo_url: photoUrl });
@@ -162,8 +162,8 @@ function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, an
         </div>
         <div className="flex-1 min-w-0">
           <Label className="text-xs font-medium">{isBn ? "প্রোফাইল ছবি" : "Profile Photo"}</Label>
-          <Input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploading} className="h-8 text-sm mt-1" />
-          {uploading && <p className="text-xs text-muted-foreground mt-1">{isBn ? "আপলোড হচ্ছে..." : "Compressing & uploading..."}</p>}
+          <Input type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoUpload} disabled={uploading} className="h-8 text-sm mt-1" />
+          {uploading && <p className="text-xs text-muted-foreground mt-1">{isBn ? "কম্প্রেস ও আপলোড হচ্ছে..." : "Compressing & uploading..."}</p>}
         </div>
       </div>
       {field("Full Name", "পূর্ণ নাম", "full_name", "text", isBn ? "আপনার পূর্ণ নাম" : "John Doe")}
