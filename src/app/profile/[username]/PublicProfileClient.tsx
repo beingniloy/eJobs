@@ -54,7 +54,7 @@ export default function PublicProfileClient({ username }: { username: string }) 
 
   useEffect(() => {
     if (!isAuthenticated || !profile) return;
-    api.get(`/candidate/profile/${username}/follow/check`)
+    api.get(`/candidate/profile/${username}/follow-status`)
       .then((res: any) => {
         const data = res.data;
         setFollowing(data.following ?? data.data?.following ?? false);
@@ -100,7 +100,14 @@ export default function PublicProfileClient({ username }: { username: string }) 
   );
 
   const isOwn = user && user.username === username;
-  const socialLinksData = profile.social_links || {};
+  const rawSocialLinks = profile.social_links || {};
+  const socialLinksData = Array.isArray(rawSocialLinks)
+    ? rawSocialLinks.reduce((acc: Record<string, string>, item: any) => {
+        if (item.platform && item.url) acc[item.platform + "_url"] = item.url;
+        if (item.url && item.label) acc[item.label.toLowerCase() + "_url"] = item.url;
+        return acc;
+      }, {})
+    : rawSocialLinks;
   const projects = profile.projects || [];
   const experience = profile.experience || [];
   const education = profile.education || [];
