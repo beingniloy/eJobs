@@ -28,7 +28,7 @@ export default function ProfileSectionDocuments({ documents, onUpdate }: Props) 
     <div className="space-y-4">
       {DOC_TYPES.map((dt) => {
         const existing = documents.find((d) => d.type === dt.value);
-        const previewUrl = existing ? (existing._file ? URL.createObjectURL(existing._file) : existing.url || getStorageUrl(existing.file_path)) : null;
+        const previewUrl = existing ? (existing._file ? URL.createObjectURL(existing._file) : getStorageUrl(existing.file_path) || existing.url) : null;
         const isImage = existing && (existing._file?.type.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp)$/i.test(existing.file_path || ""));
 
         return (

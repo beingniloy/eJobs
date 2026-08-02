@@ -22,7 +22,7 @@ export default function ProfileDocuments({ documents, isBn }: Props) {
         </h2>
         <div className="space-y-2">
           {documents.map((doc: any, i: number) => {
-            const docUrl = doc.url || getStorageUrl(doc.file_path) || "";
+            const docUrl = getStorageUrl(doc.file_path) || doc.url || "";
             const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.file_path || "");
             return (
               <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border/50">
