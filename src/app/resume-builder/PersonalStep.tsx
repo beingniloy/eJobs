@@ -141,6 +141,11 @@ export default function PersonalStep({ wizard, onNext }: { wizard: ReturnType<ty
         </div>
 
         <div className="space-y-1.5">
+          <Label>Professional Title</Label>
+          <div className="relative"><Input value={p.current_position} onChange={(e) => set("current_position", e.target.value, 80)} placeholder={isBn ? "যেমন: সফটওয়্যার ইঞ্জিনিয়ার" : "e.g. Software Engineer"} /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">{p.current_position.length}/80</span></div>
+        </div>
+
+        <div className="space-y-1.5">
           <Label>Email address <span className="text-destructive">*</span></Label>
           <div className="relative"><Input type="email" value={p.email} onChange={(e) => set("email", e.target.value, MAX_CHARS.email)} /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">{p.email.length}/{MAX_CHARS.email}</span></div>
         </div>

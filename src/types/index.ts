@@ -92,7 +92,7 @@ export interface CvProfile {
   experiences?: Experience[];
   educations?: Education[];
   projects?: Project[];
-  skills?: string[];
+  skills?: (string | { name: string; level?: string | null; category?: string | null })[];
   languages?: { name: string; proficiency: string }[];
   certifications?: { name: string; issuer: string; date: string }[];
   [key: string]: any;

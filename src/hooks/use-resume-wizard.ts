@@ -6,6 +6,7 @@ interface Personal {
   full_name: string;
   first_name: string;
   last_name: string;
+  current_position: string;
   email: string;
   phone: string;
   address: string;
@@ -82,7 +83,7 @@ export interface ResumeData {
 }
 
 const EMPTY_PERSONAL: Personal = {
-  full_name: "", first_name: "", last_name: "", email: "",
+  full_name: "", first_name: "", last_name: "", current_position: "", email: "",
   phone: "", address: "", zip_code: "", city: "", photo_url: "",
   dob: "", place_of_birth: "", driving_license: "", gender: "",
   nationality: "", marital_status: "", linkedin: "", website: "", additional_info: "",

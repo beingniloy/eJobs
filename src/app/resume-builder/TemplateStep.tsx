@@ -58,7 +58,7 @@ export default function TemplateStep({ wizard, onPrev }: { wizard: ReturnType<ty
       await resumeService.updateProfile({
         personal_info: {
           full_name: data.personal.first_name + " " + data.personal.last_name,
-          title: data.personal.first_name + " " + data.personal.last_name,
+          title: data.personal.current_position || "",
           email: data.personal.email, phone: data.personal.phone, address: data.personal.address,
           city: data.personal.city, photo_url: data.personal.photo_url, dob: data.personal.dob,
           place_of_birth: data.personal.place_of_birth, driving_license: data.personal.driving_license,
@@ -70,10 +70,12 @@ export default function TemplateStep({ wizard, onPrev }: { wizard: ReturnType<ty
         summary: data.resume_objective.description,
         experiences: data.work_experience.map((w) => ({ company: w.employer, position: w.job_title, location: w.city, start_date: w.start_date, end_date: w.end_date, description: w.description })),
         education: data.education.map((e) => ({ institution: e.school, degree: e.degree, location: e.city, start_date: e.start_date, end_date: e.end_date, description: e.description })),
-        skills: data.skills.map((s) => s.skill + (s.level ? ` (${s.level})` : "")),
+        skills: data.skills.map((s) => ({ name: s.skill, level: s.level || null, category: null })),
         languages: data.languages.map((l) => ({ name: l.language, proficiency: l.level })),
-        certifications: data.achievements.map((a) => ({ name: "Achievement", issuer: "", date: "", description: a.description })),
-        projects: [], awards: [], hobbies: data.interests.map((i) => i.hobby),
+        certifications: [],
+        awards: data.achievements.filter((a) => a.description.trim()).map((a) => ({ name: a.description })),
+        projects: [], hobbies: data.interests.map((i) => i.hobby),
+        custom_blocks: data.custom_sections.filter((cs) => cs.title.trim() || cs.description.trim()).map((cs) => ({ title: cs.title, content: cs.description })),
         social_links: { linkedin_url: data.personal.linkedin, portfolio_url: data.personal.website },
       });
       const resume = await resumeService.createResume({ title: data.personal.first_name + " " + data.personal.last_name + " CV", template_slug: selectedSlug });
