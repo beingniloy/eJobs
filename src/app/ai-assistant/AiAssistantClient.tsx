@@ -31,6 +31,24 @@ const QUICK_PROMPTS = [
 const MAX_PREVIEW_CHARS = 180;
 const TYPING_SPEED = 18;
 
+function cleanAiResponse(text: string): string {
+  if (!text) return text;
+  const lines = text.split('\n');
+  const cleaned = lines.filter(line => {
+    const t = line.trim();
+    if (!t) return true;
+    if (/^\*?\s*(User Question|Constraint Checklist|Confidence Score|Context|Route|Option \d|Draft \d|Self-Correction|Final Polish|Revised Draft|Revised|Note|Warning|IMPORTANT|Summary|Conclusion|Next Steps|Action Items|Verification|Sanity Check|Confidence|Assessment|Checklist):/i.test(t)) return false;
+    if (/^\d+\.\s*(Helpful assistant|NEVER echo|Answer directly|Short concise|Avoid unnecessary|Use Knowledge|Direct answer|No repetition|Concise|Accurate|Clear|Context|Constraint|Confidence)/i.test(t)) return false;
+    if (/^(Yes|No|Maybe)\.?\s*$/i.test(t)) return false;
+    if (/^---+\s*$/.test(t)) return false;
+    if (/^\*{3,}/.test(t)) return false;
+    if (/^#+\s*(Constraint|Checklist|Confidence|Plan|Analysis|Draft|Step|Summary|Conclusion)/i.test(t)) return false;
+    return true;
+  });
+  const result = cleaned.join('\n').trim();
+  return result || text;
+}
+
 export default function AiAssistantClient() {
   const { language } = useThemeStore();
   const isBn = language === "bn";
@@ -79,12 +97,13 @@ export default function AiAssistantClient() {
     setLoading(true);
     try {
       const data = await aiService.chat(msg);
-      const reply = data?.response || data || (isBn ? "দুঃখিত, উত্তর তৈরি করা যায়নি।" : "Sorry, could not generate a response.");
+      const rawReply = data?.response || data || (isBn ? "দুঃখিত, উত্তর তৈরি করা যায়নি।" : "Sorry, could not generate a response.");
+      const reply = cleanAiResponse(typeof rawReply === "string" ? rawReply : JSON.stringify(rawReply));
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (err: any) {
       const errMsg = err?.response?.data?.response || err?.response?.data?.message || err?.message || (isBn ? "একটি ত্রুটি ঘটেছে।" : "An error occurred.");
       console.error("AI Chat Error:", err);
-      setMessages((prev) => [...prev, { role: "assistant", content: errMsg }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: cleanAiResponse(errMsg) }]);
     } finally {
       setLoading(false);
       inputRef.current?.focus();
@@ -98,12 +117,13 @@ export default function AiAssistantClient() {
     setLoading(true);
     try {
       const data = await aiService.chat(userMsg);
-      const reply = data?.response || data || (isBn ? "দুঃখিত, উত্তর তৈরি করা যায়নি।" : "Sorry, could not generate a response.");
+      const rawReply = data?.response || data || (isBn ? "দুঃখিত, উত্তর তৈরি করা যায়নি।" : "Sorry, could not generate a response.");
+      const reply = cleanAiResponse(typeof rawReply === "string" ? rawReply : JSON.stringify(rawReply));
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (err: any) {
       const errMsg = err?.response?.data?.response || err?.response?.data?.message || err?.message || (isBn ? "একটি ত্রুটি ঘটেছে।" : "An error occurred.");
       console.error("AI Regenerate Error:", err);
-      setMessages((prev) => [...prev, { role: "assistant", content: errMsg }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: cleanAiResponse(errMsg) }]);
     } finally {
       setLoading(false);
       inputRef.current?.focus();
