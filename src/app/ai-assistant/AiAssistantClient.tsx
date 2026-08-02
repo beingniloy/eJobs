@@ -204,8 +204,9 @@ export default function AiAssistantClient() {
               const showTyping = isAssistant && typingIndex === i;
               const displayContent = isAssistant && showTyping ? msg.content.slice(0, msg.typedChars) : msg.content;
               const isLongReply = isAssistant && msg.content.length > MAX_PREVIEW_CHARS;
+              const isExpanded = isAssistant && (msg.typedChars ?? 0) >= msg.content.length;
               const previewText = isLongReply ? msg.content.slice(0, MAX_PREVIEW_CHARS) + "..." : msg.content;
-              const effectiveText = isAssistant && isLongReply && !showTyping ? previewText : displayContent;
+              const effectiveText = isAssistant && isLongReply && !showTyping && !isExpanded ? previewText : displayContent;
 
               return (
                 <div
@@ -244,7 +245,7 @@ export default function AiAssistantClient() {
                       {effectiveText}
                     </ReactMarkdown>
 
-                    {isAssistant && isLongReply && !showTyping && (
+                    {isAssistant && isLongReply && !showTyping && !isExpanded && (
                       <button
                         type="button"
                         onClick={() => setMessages((prev) => prev.map((m, idx) => idx === i ? { ...m, typedChars: m.content.length } : m))}
