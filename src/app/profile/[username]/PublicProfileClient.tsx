@@ -15,7 +15,7 @@ import { DefaultAvatar } from "@/components/ui/default-avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { trackBehavior, useScrollDepthTracking, useClickPatternTracking, useSessionEngagementTracking } from "@/hooks/use-behavior-tracker";
-import { getInitials } from "@/lib/utils";
+import { getInitials, getStorageUrl } from "@/lib/utils";
 import {
   MapPin, Briefcase, GraduationCap, CheckCircle, Award, Globe, Code, Calendar,
   Eye, Users, ExternalLink, LinkIcon, Shield, Zap, Trophy, Star,
@@ -128,7 +128,7 @@ export default function PublicProfileClient({ username }: { username: string }) 
           <div className="absolute inset-0 bg-[url('/images/company-bg.jpg')] bg-cover bg-center opacity-20" />
           <div className="relative p-6 md:p-8">
             <div className="flex flex-col md:flex-row items-start md:items-center gap-5">
-              <DefaultAvatar src={avatar?.startsWith("http") ? avatar : avatar ? `/storage/${avatar}` : null} name={profile.name} className="h-24 w-24 border-4 border-white/20 shadow-xl" fallback={<span className="text-2xl font-bold bg-white/10">{getInitials(profile.name || "?")}</span>} />
+              <DefaultAvatar src={getStorageUrl(avatar)} name={profile.name} className="h-24 w-24 border-4 border-white/20 shadow-xl" fallback={<span className="text-2xl font-bold bg-white/10">{getInitials(profile.name || "?")}</span>} />
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-2xl font-bold">{profile.name || profile.username || username}</h1>

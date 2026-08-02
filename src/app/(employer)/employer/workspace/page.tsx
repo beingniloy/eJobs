@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DefaultAvatar } from "@/components/ui/default-avatar";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { getStorageUrl } from "@/lib/utils";
 import {
   Briefcase,
   CheckCircle,
@@ -404,12 +405,12 @@ export default function EmployerWorkspacePage() {
                           {d.attachments.map((attPath, i) => (
                             <a
                               key={i}
-                              href={`/storage/${attPath}`}
+                              href={getStorageUrl(attPath) || `/storage/${attPath}`}
                               download
                               className="flex items-center gap-1 px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
                             >
                               {/\.(jpg|jpeg|png|gif|webp)$/i.test(attPath) ? (
-                                <img src={`/storage/${attPath}`} alt="" className="h-5 w-5 rounded object-cover" />
+                                <img src={getStorageUrl(attPath) || `/storage/${attPath}`} alt="" className="h-5 w-5 rounded object-cover" />
                               ) : (
                                 <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                               )}

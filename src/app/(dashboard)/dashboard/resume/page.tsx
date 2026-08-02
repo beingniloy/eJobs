@@ -47,7 +47,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, getStorageUrl } from "@/lib/utils";
 import { getApiErrorMessage } from "@/lib/api-client";
 import type { CvTemplate, Resume } from "@/types";
 
@@ -102,7 +102,7 @@ export default function ResumePage() {
       const p = user.profile.resume_path;
       setUploadedResume({
         path: p,
-        url: p.startsWith("http") ? p : `/storage/${p}`,
+        url: getStorageUrl(p) || p,
       });
     }
   }, [user]);

@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useThemeStore } from "@/store/theme-store";
 import { useTheme as useNextTheme } from "next-themes";
 import api from "@/lib/api-client";
+import { getStorageUrl } from "@/lib/utils";
 import PublicLayout from "@/components/layout/PublicLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -513,7 +514,7 @@ export default function HomePage() {
   const hero = hpData?.homepage_hero_section;
   const heroImage = hero?.image;
   const heroBg = heroImage
-    ? `linear-gradient(to right, rgba(28,37,65,0.95), rgba(28,37,65,0.8)), url(${heroImage.startsWith("http") ? heroImage : `/storage/${heroImage}`})`
+    ? `linear-gradient(to right, rgba(28,37,65,0.95), rgba(28,37,65,0.8)), url(${getStorageUrl(heroImage)})`
     : `linear-gradient(to right, rgba(28,37,65,0.95), rgba(28,37,65,0.8)), linear-gradient(135deg, #1C2541, #0B132B)`;
   const heroT1 = isBn ? (hero?.title_line1_bn || "বাংলাদেশের সেরা") : (hero?.title_line1 || "Bangladesh's Best");
   const heroT2 = isBn ? (hero?.title_line2_bn || "চাকরির খোঁজ এখানেই") : (hero?.title_line2 || "Job Search Here");
@@ -1028,7 +1029,7 @@ export default function HomePage() {
                     {company.logo ? (
                       <div className="h-12 flex items-center justify-center mb-2">
                         <img
-                          src={company.logo.startsWith("http") ? company.logo : `/storage/${company.logo}`}
+                          src={getStorageUrl(company.logo)!}
                           alt={company.name}
                           className="max-h-10 max-w-[80px] object-contain"
                         />

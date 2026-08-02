@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Globe, Shield, Target, FileText, Upload, ExternalLink, Loader2 } from "lucide-react";
+import { getStorageUrl } from "@/lib/utils";
 
 interface Props {
   profile: any;
@@ -71,7 +72,7 @@ export default function ProfileBottomCards({ profile, user, isPublic, isBn, onTo
                     <p className="text-xs font-medium truncate">{user.name}_Resume.pdf</p>
                     <p className="text-[10px] text-muted-foreground">PDF</p>
                   </div>
-                  <a href={resumePath.startsWith("cv/") ? `/${resumePath}` : `/storage/${resumePath}`} target="_blank" rel="noopener noreferrer">
+                  <a href={getStorageUrl(resumePath) || resumePath} target="_blank" rel="noopener noreferrer">
                     <Button variant="ghost" size="icon" className="h-8 w-8"><ExternalLink className="h-4 w-4" /></Button>
                   </a>
                 </div>

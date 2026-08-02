@@ -6,13 +6,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { useThemeStore } from "@/store/theme-store";
 import { toast } from "sonner";
 import type { CandidateEducationEntry, CandidateExperienceEntry, CandidateTrainingEntry, CandidateCertificationEntry, CandidateDocumentEntry, LanguageProficiency } from "@/types";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://127.0.0.1:8000";
-function getAssetUrl(p: string) {
-  if (!p) return "";
-  if (p.startsWith("http")) return p;
-  return `${API_BASE}/storage/${p.replace(/^\/?storage\//, "")}`;
-}
+import { getStorageUrl } from "@/lib/utils";
 
 export function useProfileForm() {
   const { user, setUser } = useAuthStore();
@@ -131,7 +125,7 @@ export function useProfileForm() {
       if (Array.isArray(p.certifications)) setCertifications(p.certifications);
       if (Array.isArray(p.documents)) setDocuments(p.documents);
       const existingAvatar = res.data.user?.avatar || p.avatar || user?.avatar || "";
-      if (existingAvatar) setAvatarExisting(getAssetUrl(existingAvatar));
+      if (existingAvatar) setAvatarExisting(getStorageUrl(existingAvatar));
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [user]);

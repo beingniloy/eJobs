@@ -7,13 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Upload, Plus, Trash2, FileIcon, X } from "lucide-react";
 import type { CandidateCertificationEntry } from "@/types";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://127.0.0.1:8000";
-function getAssetUrl(p: string) {
-  if (!p) return "";
-  if (p.startsWith("http")) return p;
-  return `${API_BASE}/storage/${p.replace(/^\/?storage\//, "")}`;
-}
+import { getStorageUrl } from "@/lib/utils";
 
 interface CertEntry extends CandidateCertificationEntry { _cert_file?: File; }
 
@@ -45,7 +39,7 @@ export default function ProfileSectionCertifications({ isBn, certifications, onU
           <div>
             <Label className="text-sm font-medium">{isBn ? "সার্টিফিকেট ফাইল" : "Certificate File"}</Label>
             <div className="flex items-center gap-3 mt-1.5">
-              {c.certificate_path && <img src={getAssetUrl(c.certificate_path)} alt="cert" className="h-14 w-14 object-cover rounded border" />}
+              {c.certificate_path && <img src={getStorageUrl(c.certificate_path)} alt="cert" className="h-14 w-14 object-cover rounded border" />}
               {c._cert_file && (
                 <div className="relative">
                   {c._cert_file.type.startsWith("image/") ? (

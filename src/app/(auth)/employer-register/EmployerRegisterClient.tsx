@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2, Upload } from "lucide-react";
 import SocialLoginButtons from "@/components/auth/social-login-buttons";
+import { getStorageUrl } from "@/lib/utils";
 
 const schema = z
   .object({
@@ -92,7 +93,7 @@ export default function EmployerRegisterClient() {
           <CardHeader className="text-center">
             <div className="mx-auto mb-4">
               {settings.site_logo ? (
-                <Image src={settings.site_logo.startsWith("http") ? settings.site_logo : `/storage/${settings.site_logo}`} alt={settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs"} width={48} height={48} className="h-12 w-auto object-contain" unoptimized />
+                <Image src={getStorageUrl(settings.site_logo)!} alt={settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs"} width={48} height={48} className="h-12 w-auto object-contain" unoptimized />
               ) : (
                 <p className="text-xl font-bold text-primary">{settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs"}</p>
               )}

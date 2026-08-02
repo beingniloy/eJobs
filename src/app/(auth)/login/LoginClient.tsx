@@ -21,6 +21,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { UserRole } from "@/types";
 import SocialLoginButtons from "@/components/auth/social-login-buttons";
+import { getStorageUrl } from "@/lib/utils";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -197,7 +198,7 @@ function LoginClientInner() {
             <CardHeader className="text-center">
               <div className="mx-auto mb-4">
                 {settings.site_logo ? (
-                  <Image src={settings.site_logo.startsWith("http") ? settings.site_logo : `/storage/${settings.site_logo}`} alt={settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs"} width={48} height={48} className="h-12 w-auto object-contain" unoptimized />
+                  <Image src={getStorageUrl(settings.site_logo)!} alt={settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs"} width={48} height={48} className="h-12 w-auto object-contain" unoptimized />
                 ) : (
                   <p className="text-xl font-bold text-primary">{settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs"}</p>
                 )}
@@ -283,7 +284,7 @@ function LoginClientInner() {
           <CardHeader className="text-center">
             <div className="mx-auto mb-4">
                 {settings.site_logo ? (
-                  <Image src={settings.site_logo.startsWith("http") ? settings.site_logo : `/storage/${settings.site_logo}`} alt={settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs"} width={48} height={48} className="h-12 w-auto object-contain" unoptimized />
+                  <Image src={getStorageUrl(settings.site_logo)!} alt={settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs"} width={48} height={48} className="h-12 w-auto object-contain" unoptimized />
                 ) : (
                   <p className="text-xl font-bold text-primary">{settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs"}</p>
                 )}

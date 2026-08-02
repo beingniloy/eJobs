@@ -14,17 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, ChevronDown, ChevronUp, User, Loader2 } from "lucide-react";
 import { compressToWebp } from "@/components/cv/sections/utils";
+import { getStorageUrl } from "@/lib/utils";
 
 const MAX_CHARS = { full_name: 80, email: 80, phone: 30, address: 100, zip_code: 20, city: 50 };
 const GENDERS = ["Male", "Female", "Other"];
 const MARITAL = ["Single", "Married", "Divorced", "Widowed"];
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://127.0.0.1:8000";
-function getStorageUrl(path: string): string {
-  if (!path) return "";
-  if (path.startsWith("http") || path.startsWith("blob:")) return path;
-  return `${API_BASE}/storage/${path}`;
-}
 
 export default function PersonalStep({ wizard, onNext }: { wizard: ReturnType<typeof useResumeWizard>; onNext: () => void }) {
   const { language } = useThemeStore();
@@ -64,7 +58,7 @@ export default function PersonalStep({ wizard, onNext }: { wizard: ReturnType<ty
       if (prof.nationality) updates.nationality = prof.nationality;
       if (prof.linkedin_url) updates.linkedin = prof.linkedin_url;
       if (prof.github_url) updates.website = prof.github_url;
-      if (prof.avatar) updates.photo_url = getStorageUrl(prof.avatar);
+      if (prof.avatar) updates.photo_url = getStorageUrl(prof.avatar) || "";
       if (prof.present_address || prof.address) updates.address = prof.present_address || prof.address;
       if (prof.marital_status) updates.marital_status = prof.marital_status;
       updatePersonal(updates);

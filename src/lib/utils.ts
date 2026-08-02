@@ -67,3 +67,32 @@ export function getInitials(name: string): string {
     .toUpperCase()
     .slice(0, 2);
 }
+
+/**
+ * Centralized storage URL builder.
+ * - Returns empty string for empty/missing paths
+ * - Passes through http/https/blob/data URLs as-is
+ * - Strips backend domain from absolute URLs (e.g. https://admin.ejobs.bd/storage/... → /storage/...)
+ * - Ensures relative paths start with /storage/
+ */
+export function getStorageUrl(path: string | null | undefined): string {
+  if (!path || typeof path !== "string") return "";
+  const trimmed = path.trim();
+  if (!trimmed) return "";
+
+  // Already a full URL or blob/data — pass through
+  if (trimmed.startsWith("http") || trimmed.startsWith("blob:") || trimmed.startsWith("data:")) {
+    return trimmed;
+  }
+
+  // Strip any leading slashes for normalization
+  const clean = trimmed.replace(/^\/+/, "");
+
+  // If it already starts with "storage/", add leading slash
+  if (clean.startsWith("storage/")) {
+    return `/${clean}`;
+  }
+
+  // Anything else — assume it's a relative path inside storage
+  return `/storage/${clean}`;
+}

@@ -21,6 +21,7 @@ import {
   Link2, Briefcase,
 } from "lucide-react";
 import { DIVISIONS_BN, DIVISIONS_EN, DISTRICTS_BN, DISTRICTS_EN } from "@/lib/bd-data";
+import { getStorageUrl } from "@/lib/utils";
 
 const COMPANY_TYPES = ["Private", "Government", "NGO", "Startup", "Multinational", "Sole Proprietorship", "Partnership", "Public Limited"];
 const COMPANY_SIZES = ["1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+"];
@@ -168,8 +169,8 @@ export default function EmployerProfilePage() {
       setCompanySize(c.size || "");
       setEmployeeCount(c.employee_count || "");
       setDescription(c.description || "");
-      setLogoPreview(c.logo ? `/storage/${c.logo}` : "");
-      setCoverPreview(c.cover_photo ? `/storage/${c.cover_photo}` : "");
+      setLogoPreview(getStorageUrl(c.logo) || "");
+      setCoverPreview(getStorageUrl(c.cover_photo) || "");
       setContactPerson(c.contact_person_name || user?.name || "");
       setContactDesignation(c.contact_person_designation || "");
       setContactPhone(c.contact_phone || "");
@@ -287,8 +288,8 @@ export default function EmployerProfilePage() {
         const c = hookCompany;
         if (c) {
           setCompany(c);
-          setLogoPreview(c.logo ? `/storage/${c.logo}` : logoPreview);
-          setCoverPreview(c.cover_photo ? `/storage/${c.cover_photo}` : coverPreview);
+          setLogoPreview(getStorageUrl(c.logo) || logoPreview);
+          setCoverPreview(getStorageUrl(c.cover_photo) || coverPreview);
         }
         if (showToast) toast.success(isBn ? "সংরক্ষিত হয়েছে!" : "Profile saved!");
         window.dispatchEvent(new Event("employer-company-saved"));

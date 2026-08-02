@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { toSafeStrings, compressToWebp, uploadPhoto } from "./utils";
+import { getStorageUrl } from "@/lib/utils";
 
 export default function PersonalSectionForm({ data, onChange, isBn }: { data: Record<string, any>; onChange: (d: any) => void; isBn: boolean }) {
   const [uploading, setUploading] = useState(false);
@@ -32,9 +33,7 @@ export default function PersonalSectionForm({ data, onChange, isBn }: { data: Re
     e.target.value = "";
   };
 
-  const photoUrl = data.photo_url
-    ? (data.photo_url.startsWith("http") ? data.photo_url : `/storage/${data.photo_url}`)
-    : null;
+  const photoUrl = getStorageUrl(data.photo_url);
 
   const field = (en: string, bn: string, key: string, type = "text", placeholder?: string, validate?: (v: string) => string | null) => (
     <div className="space-y-1.5">

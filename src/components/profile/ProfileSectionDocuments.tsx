@@ -5,13 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Upload, Trash2, FileIcon } from "lucide-react";
 import type { CandidateDocumentEntry } from "@/types";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://127.0.0.1:8000";
-function getAssetUrl(p: string) {
-  if (!p) return "";
-  if (p.startsWith("http")) return p;
-  return `${API_BASE}/storage/${p.replace(/^\/?storage\//, "")}`;
-}
+import { getStorageUrl } from "@/lib/utils";
 
 const DOC_TYPES = [
   { value: "cv", label: "CV/Resume *" },
@@ -34,7 +28,7 @@ export default function ProfileSectionDocuments({ documents, onUpdate }: Props) 
     <div className="space-y-4">
       {DOC_TYPES.map((dt) => {
         const existing = documents.find((d) => d.type === dt.value);
-        const previewUrl = existing ? (existing._file ? URL.createObjectURL(existing._file) : existing.url || getAssetUrl(existing.file_path)) : null;
+        const previewUrl = existing ? (existing._file ? URL.createObjectURL(existing._file) : existing.url || getStorageUrl(existing.file_path)) : null;
         const isImage = existing && (existing._file?.type.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp)$/i.test(existing.file_path || ""));
 
         return (

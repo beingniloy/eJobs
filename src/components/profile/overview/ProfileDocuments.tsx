@@ -3,8 +3,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText } from "lucide-react";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://127.0.0.1:8000";
+import { getStorageUrl } from "@/lib/utils";
 
 interface Props {
   documents: any[];
@@ -23,7 +22,7 @@ export default function ProfileDocuments({ documents, isBn }: Props) {
         </h2>
         <div className="space-y-2">
           {documents.map((doc: any, i: number) => {
-            const docUrl = doc.url || (doc.file_path ? `${API_BASE}/storage/${doc.file_path.replace(/^\/?storage\//, "")}` : "");
+            const docUrl = doc.url || getStorageUrl(doc.file_path) || "";
             const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.file_path || "");
             return (
               <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border/50">

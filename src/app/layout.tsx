@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import ClientProviders from "@/components/client-providers";
+import { getStorageUrl } from "@/lib/utils";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
@@ -49,8 +50,7 @@ async function fetchSeoSettings(): Promise<{
 
 function buildOgImageUrl(ogImage?: string): string | undefined {
   if (!ogImage) return undefined;
-  if (ogImage.startsWith("http")) return ogImage;
-  return `${API_URL}/storage/${ogImage}`;
+  return getStorageUrl(ogImage) || undefined;
 }
 
 export async function generateMetadata(): Promise<Metadata> {

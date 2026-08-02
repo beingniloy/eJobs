@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DefaultAvatar } from "@/components/ui/default-avatar";
 import { MapPin, Globe, Shield, Zap, ExternalLink, Edit3, CheckCircle } from "lucide-react";
+import { getStorageUrl } from "@/lib/utils";
 
 interface Props {
   profile: any;
@@ -29,7 +30,7 @@ export default function ProfileHeader({ profile, user, isPublic, activeBadges, i
       <div className="relative h-[200px] bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600">
         {profile.cover_photo && (
           <img
-            src={profile.cover_photo.startsWith("http") ? profile.cover_photo : `/storage/${profile.cover_photo}`}
+            src={getStorageUrl(profile.cover_photo)!}
             alt="Cover"
             className="absolute inset-0 w-full h-full object-cover"
           />

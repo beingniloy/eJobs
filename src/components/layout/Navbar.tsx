@@ -40,7 +40,7 @@ import {
   Megaphone, ShieldCheck, BarChart3, Headphones, Plane, Send, Calendar, Award, Shield, Receipt,
   CheckCircle, Bookmark,
 } from "lucide-react";
-import { getInitials } from "@/lib/utils";
+import { getInitials, getStorageUrl } from "@/lib/utils";
 import type { Subscription } from "@/types";
 
 export default function Navbar() {
@@ -210,7 +210,7 @@ export default function Navbar() {
         <Link href="/" className="flex items-center gap-2 font-bold text-lg shrink-0 whitespace-nowrap overflow-hidden">
           {settings.site_logo ? (
             <Image
-              src={settings.site_logo.startsWith("http") ? settings.site_logo : `/storage/${settings.site_logo}`}
+              src={getStorageUrl(settings.site_logo)!}
               alt={settings.site_name || "eJobs"}
               width={32} height={32}
               className="h-6 w-auto object-contain shrink-0" unoptimized
@@ -381,7 +381,7 @@ export default function Navbar() {
             <div className="flex items-center justify-between p-4 border-b">
               <SheetTitle className="flex items-center gap-2 text-lg font-bold">
                 {settings.site_logo ? (
-                  <Image src={settings.site_logo.startsWith("http") ? settings.site_logo : `/storage/${settings.site_logo}`}
+                  <Image src={getStorageUrl(settings.site_logo)!}
                     alt={settings.site_name || "eJobs"} width={24} height={24}
                     className="h-6 w-auto object-contain" unoptimized />
                 ) : (

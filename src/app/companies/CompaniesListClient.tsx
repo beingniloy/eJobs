@@ -20,6 +20,7 @@ import {
   ChevronDown, ChevronUp, X,
 } from "lucide-react";
 import type { Company } from "@/types";
+import { getStorageUrl } from "@/lib/utils";
 
 const INDUSTRY_COLORS: Record<string, string> = {
   technology: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
@@ -355,7 +356,7 @@ export default function CompaniesListClient() {
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3 mb-3">
                         {company.logo ? (
-                          <img src={company.logo.startsWith("http") ? company.logo : `/storage/${company.logo}`} alt={company.name} className="h-10 w-10 rounded-lg object-cover" />
+                          <img src={getStorageUrl(company.logo)!} alt={company.name} className="h-10 w-10 rounded-lg object-cover" />
                         ) : (
                           <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                             <Building2 className="h-5 w-5 text-primary" />
@@ -447,7 +448,7 @@ export default function CompaniesListClient() {
                         <div className="flex items-center gap-3 mb-3">
                           {company.logo ? (
                             <img
-                              src={company.logo.startsWith("http") ? company.logo : `/storage/${company.logo}`}
+                              src={getStorageUrl(company.logo)!}
                               alt={company.name}
                               className="h-12 w-12 rounded-lg object-cover ring-1 ring-border"
                             />

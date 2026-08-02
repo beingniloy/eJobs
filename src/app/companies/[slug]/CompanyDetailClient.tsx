@@ -20,14 +20,7 @@ import CompanyHeader from "./CompanyHeader";
 import CompanySidebar from "./CompanySidebar";
 import CompanyOverviewTab from "./CompanyOverviewTab";
 import CompanyReviewsTab from "./CompanyReviewsTab";
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api").replace(/\/api\/?$/, "");
-
-function getStorageUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
-  if (path.startsWith("http") || path.startsWith("blob:")) return path;
-  return `${API_BASE}/storage/${path.replace(/^\/?storage\//, "")}`;
-}
+import { getStorageUrl } from "@/lib/utils";
 
 function formatJobType(t: string) { return t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()); }
 

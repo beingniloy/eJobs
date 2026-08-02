@@ -18,16 +18,9 @@ import {
   Heart, Share2, Camera, Newspaper, Award,
   Download, Link2, AtSign, Hash, Send, Rss,
 } from "lucide-react";
+import { getStorageUrl } from "@/lib/utils";
 
 /* ─── Format job type: "full_time" → "Full Time" ─── */
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api").replace(/\/api\/?$/, "");
-
-function getStorageUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
-  if (path.startsWith("http") || path.startsWith("blob:")) return path;
-  return `${API_BASE}/storage/${path.replace(/^\/?storage\//, "")}`;
-}
-
 function formatJobType(t: string) {
   return t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }

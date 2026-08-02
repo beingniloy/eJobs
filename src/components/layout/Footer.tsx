@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Phone, Mail, Globe } from "lucide-react";
 import api from "@/lib/api-client";
 import { useThemeStore } from "@/store/theme-store";
+import { getStorageUrl } from "@/lib/utils";
 
 interface PublicSettings {
   support_phone?: string;
@@ -60,7 +61,7 @@ export default function Footer() {
             <Link href="/" className="flex items-center gap-2 font-bold text-lg mb-4">
               {settings.site_logo ? (
                 <Image
-                  src={settings.site_logo.startsWith("http") ? settings.site_logo : `/storage/${settings.site_logo}`}
+                  src={getStorageUrl(settings.site_logo)!}
                   alt={siteName}
                   width={20}
                   height={20}

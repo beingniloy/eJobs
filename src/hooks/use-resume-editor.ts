@@ -7,6 +7,7 @@ import { resumeService } from "@/services/resume.service";
 import { toast } from "sonner";
 import type { CvTemplate, CvProfile } from "@/types";
 import { profileDataToEditorData } from "@/lib/cv-builder-utils";
+import { getStorageUrl } from "@/lib/utils";
 
 interface UseResumeEditorOptions {
   slug: string;
@@ -176,9 +177,7 @@ function buildClientPreview(demoHtml: string, data: Record<string, any>): string
 
   // Profile photo
   if (get(p.photo_url)) {
-    const photoUrl = p.photo_url.startsWith("http") || p.photo_url.startsWith("blob:") || p.photo_url.startsWith("data:")
-      ? p.photo_url
-      : (p.photo_url.startsWith("/storage/") ? p.photo_url : `/storage/${p.photo_url}`);
+    const photoUrl = getStorageUrl(p.photo_url);
     const photoMatch = html.match(/<div class="photo-section">[\s\S]*?<\/div>/i);
     if (photoMatch) {
       html = html.replace(photoMatch[0], `<div class="photo-section"><img src="${photoUrl}" alt="${get(p.full_name)}" /></div>`);

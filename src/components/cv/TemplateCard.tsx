@@ -4,7 +4,7 @@ import { FileText, Crown, Check, Shield, PenTool, CreditCard, ArrowRight } from 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TEMPLATE_GRADIENTS } from "@/constants/cv-builder";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getStorageUrl } from "@/lib/utils";
 import type { CvTemplate } from "@/types";
 
 export default function TemplateCard({ template, index, isBn, isPurchased, creating, onUse, onStartEdit }: {
@@ -16,11 +16,7 @@ export default function TemplateCard({ template, index, isBn, isPurchased, creat
   onUse: (t: CvTemplate) => void;
   onStartEdit: (t: CvTemplate) => void;
 }) {
-  const previewSrc = template.preview_image_path
-    ? template.preview_image_path.startsWith("http")
-      ? template.preview_image_path
-      : `/storage/${template.preview_image_path}`
-    : null;
+  const previewSrc = getStorageUrl(template.preview_image_path);
 
   return (
     <div className="group relative bg-background border rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300">
