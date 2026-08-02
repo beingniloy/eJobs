@@ -33,20 +33,48 @@ const TYPING_SPEED = 18;
 
 function cleanAiResponse(text: string): string {
   if (!text) return text;
+
+  // Quick extraction: if the text contains a clean quoted answer at the end, extract it
+  const quotedMatch = text.match(/"([^"]{10,})"\s*$/);
+  if (quotedMatch && quotedMatch[1].length > 30) {
+    return quotedMatch[1];
+  }
+
+  const metaKeywords = /^(User Question|User asks|User wants|Constraint|Confidence Score|Context|Route|Option \d|Draft \d|Self-Correction|Self Correction|Final Polish|Revised|Persona|Knowledge Base|Verification|Sanity Check|Checklist|Assessment|IMPORTANT|Summary|Conclusion|Next Steps|Action Items|Analysis|Plan|Note|Warning|Helpful assistant|NEVER echo|Answer directly|Short|Avoid unnecessary|Use Knowledge|Direct answer|No repetition|Concise|Accurate|Clear|The user|Looking at|Since I|I should|General advice|Specific platform|implicit|Refining|Draft \d|Step \d|No echoing|Direct.Concise|1-3 sentences|No filler)/i;
+
   const lines = text.split('\n');
   const cleaned = lines.filter(line => {
     const t = line.trim();
     if (!t) return true;
-    if (/^\*?\s*(User Question|Constraint Checklist|Confidence Score|Context|Route|Option \d|Draft \d|Self-Correction|Final Polish|Revised Draft|Revised|Note|Warning|IMPORTANT|Summary|Conclusion|Next Steps|Action Items|Verification|Sanity Check|Confidence|Assessment|Checklist):/i.test(t)) return false;
-    if (/^\d+\.\s*(Helpful assistant|NEVER echo|Answer directly|Short concise|Avoid unnecessary|Use Knowledge|Direct answer|No repetition|Concise|Accurate|Clear|Context|Constraint|Confidence)/i.test(t)) return false;
-    if (/^(Yes|No|Maybe)\.?\s*$/i.test(t)) return false;
-    if (/^---+\s*$/.test(t)) return false;
-    if (/^\*{3,}/.test(t)) return false;
-    if (/^#+\s*(Constraint|Checklist|Confidence|Plan|Analysis|Draft|Step|Summary|Conclusion)/i.test(t)) return false;
+    // Strip any bullet/indented line with meta keywords
+    if (/^[\s]*\*+/.test(t) && metaKeywords.test(t)) return false;
+    // Strip indented sub-bullets entirely (likely reasoning)
+    if (/^\s{2,}\*/.test(t)) return false;
+    // Strip standalone boolean/verification
+    if (/^(Yes|No|Maybe|True|False)\.?\s*$/i.test(t)) return false;
+    // Strip separator lines
+    if (/^-{3,}$/.test(t) || /^\*{3,}$/.test(t)) return false;
+    // Strip lines that are just numbered items with Yes/No
+    if (/^\d+\.\s+.*\?\s*(Yes|No)\.?$/i.test(t)) return false;
+    // Strip "Constraint Checklist" block entirely
+    if (/Constraint Checklist/i.test(t)) return false;
     return true;
   });
-  const result = cleaned.join('\n').trim();
-  return result || text;
+
+  let result = cleaned.join('\n').trim();
+
+  // If still has meta patterns, try to extract last clean paragraph
+  if (metaKeywords.test(result)) {
+    const paragraphs = result.split(/\n\s*\n/);
+    const lastClean = paragraphs.filter(p => !metaKeywords.test(p) && !/^[\s]*\*/.test(p.trim()));
+    if (lastClean.length > 0) {
+      result = lastClean[lastClean.length - 1].trim();
+    }
+  }
+
+  // Final safety: if empty or too short, return original
+  if (!result || result.length < 10) return text;
+  return result;
 }
 
 export default function AiAssistantClient() {
