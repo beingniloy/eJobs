@@ -1182,12 +1182,12 @@ export default function CompanyOverviewClient() {
           {/* Career CTA Banner */}
           <Card className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border-primary/20">
             <CardContent className="p-5 text-center space-y-3">
-              <h3 className="font-bold text-sm">Looking for a career?</h3>
+              <h3 className="font-bold text-sm">{isBn ? "নতুন চাকরি পোস্ট করুন" : "Ready to hire?"}</h3>
               <p className="text-xs text-muted-foreground">
-                Explore current openings and become a part of our exciting team.
+                {isBn ? "আপনার পরবর্তী প্রতিভা খুঁজে নিন।" : "Post a new job and find your next great hire."}
               </p>
               <Button size="sm" className="w-full" asChild>
-                <Link href="/employer/manage-jobs">View All Jobs ({company.activeJobs})</Link>
+                <Link href="/employer/post-job">{isBn ? "চাকরি পোস্ট করুন" : "Post a Job"}</Link>
               </Button>
             </CardContent>
           </Card>

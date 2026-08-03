@@ -6,28 +6,23 @@ import api from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
 import { useThemeStore } from "@/store/theme-store";
 import { resumeService } from "@/services/resume.service";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Briefcase, GraduationCap, BookOpen, Code, Loader2, Edit3, ArrowRight, Plus, Award } from "lucide-react";
+import { Briefcase, GraduationCap, Code, Loader2, Plus, Award } from "lucide-react";
 
 import ProfileHeader from "@/components/profile/overview/ProfileHeader";
 import ProfileStatsBar from "@/components/profile/overview/ProfileStatsBar";
 import ProfileAbout from "@/components/profile/overview/ProfileAbout";
 import ProfileStrengthWidget from "@/components/profile/overview/ProfileStrengthWidget";
 import ProfileTimeline from "@/components/profile/overview/ProfileTimeline";
-import ProfileSkills from "@/components/profile/overview/ProfileSkills";
-import ProfileProjects from "@/components/profile/overview/ProfileProjects";
 import ProfileBadges from "@/components/profile/overview/ProfileBadges";
-import ProfileCertifications from "@/components/profile/overview/ProfileCertifications";
-import ProfileLanguages from "@/components/profile/overview/ProfileLanguages";
-import ProfileDocuments from "@/components/profile/overview/ProfileDocuments";
-import ProfileBottomCards from "@/components/profile/overview/ProfileBottomCards";
-import ProfileResumeDialog from "@/components/profile/overview/ProfileResumeDialog";
 import ProfileViewers from "@/components/profile/overview/ProfileViewers";
 import AiProfileInsightsCard from "@/components/profile/overview/AiProfileInsightsCard";
 import ProfileTopSkills from "@/components/profile/overview/ProfileTopSkills";
 import ProfileRecentActivities from "@/components/profile/overview/ProfileRecentActivities";
 import ProfileJobPreferences from "@/components/profile/overview/ProfileJobPreferences";
-import ProfileVisibilityCard from "@/components/profile/overview/ProfileVisibilityCard";
+import ProfileResumeDialog from "@/components/profile/overview/ProfileResumeDialog";
 
 export default function CandidateProfileOverviewClient() {
   const { user } = useAuth();
@@ -41,8 +36,6 @@ export default function CandidateProfileOverviewClient() {
   const [cvData, setCvData] = useState<any>({});
   const [profileViews, setProfileViews] = useState<any[]>([]);
   const [isPublic, setIsPublic] = useState(true);
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [trainings, setTrainings] = useState<any[]>([]);
   const [uploadingResume, setUploadingResume] = useState(false);
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
 
@@ -64,8 +57,6 @@ export default function CandidateProfileOverviewClient() {
       setCvData(cvRes.data?.data || {});
       setProfileViews(viewsRes.data?.data || []);
       setIsPublic(d.user?.profile?.is_public !== false);
-      setDocuments(d.user?.profile?.documents || d.documents || []);
-      setTrainings(d.user?.profile?.trainings || []);
     } finally {
       setLoading(false);
     }
@@ -90,15 +81,7 @@ export default function CandidateProfileOverviewClient() {
   };
 
   const handleResumeUpload = async (file: File) => {
-    if (!file) return;
-    if (file.type !== "application/pdf") {
-      toast.error(isBn ? "শুধুমাত্র PDF ফাইল অনুমোদিত" : "Only PDF files are allowed");
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error(isBn ? "ফাইলের সাইজ 2MB এর কম হতে হবে" : "File must be under 2MB");
-      return;
-    }
+    if (!file || file.type !== "application/pdf" || file.size > 2 * 1024 * 1024) return;
     setUploadingResume(true);
     try {
       const formData = new FormData();
@@ -148,7 +131,6 @@ export default function CandidateProfileOverviewClient() {
   const resumePath = p.resume_path || p.resume || null;
   const matchScore = p.match_score || stats?.match_score || 0;
 
-  // Profile strength calculation
   const strengthSections = [
     { label: isBn ? "মৌলিক তথ্য" : "Basic Information", done: !!(fullName && p.phone && p.city) },
     { label: isBn ? "রিজুমে যোগ" : "Resume Added", done: !!resumePath },
@@ -187,22 +169,14 @@ export default function CandidateProfileOverviewClient() {
 
   return (
     <div className="space-y-6 max-w-[1200px] mx-auto">
-      {/* ═══ Header Banner ═══ */}
       <ProfileHeader profile={p} user={user} isPublic={isPublic} activeBadges={activeBadges} isBn={isBn} />
-
-      {/* ═══ Stats Bar ═══ */}
       <ProfileStatsBar applicationsCount={applicationsCount} profileViewsCount={p.profile_views_count || profileViews.length || 0} searchAppearances={stats?.search_appearances || 0} strengthPercent={strengthPercent} isBn={isBn} profile={p} />
 
-      {/* ═══ Main 2-Column Layout ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* ─── Left Column (2/3) ─── */}
+        {/* Left Column */}
         <div className="lg:col-span-2 space-y-6">
-
-          {/* About Me */}
           <ProfileAbout bio={bio} isBn={isBn} />
 
-          {/* Work Experience */}
           <ProfileTimeline
             icon={Briefcase}
             title={isBn ? "কর্ম অভিজ্ঞতা" : "Work Experience"}
@@ -211,7 +185,6 @@ export default function CandidateProfileOverviewClient() {
             isBn={isBn}
           />
 
-          {/* Education + Projects row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ProfileTimeline
               icon={GraduationCap}
@@ -220,7 +193,6 @@ export default function CandidateProfileOverviewClient() {
               editHref="/dashboard/profile"
               isBn={isBn}
             />
-
             {projItems.length > 0 && (
               <Card className="border-0 shadow-sm">
                 <CardContent className="p-6">
@@ -230,9 +202,7 @@ export default function CandidateProfileOverviewClient() {
                       {isBn ? "প্রকল্প" : `Projects (${projItems.length})`}
                     </h2>
                     <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
-                      <Link href="/dashboard/profile">
-                        <Plus className="h-3.5 w-3.5" /> {isBn ? "যোগ" : "Add Project"}
-                      </Link>
+                      <Link href="/dashboard/profile"><Plus className="h-3.5 w-3.5" /> {isBn ? "যোগ" : "Add"}</Link>
                     </Button>
                   </div>
                   <div className="space-y-3">
@@ -258,16 +228,13 @@ export default function CandidateProfileOverviewClient() {
                     ))}
                   </div>
                   {projItems.length > 4 && (
-                    <Button variant="link" size="sm" className="w-full mt-2 text-xs">
-                      {isBn ? "সব প্রকল্প দেখুন" : "View All Projects"}
-                    </Button>
+                    <Button variant="link" size="sm" className="w-full mt-2 text-xs">{isBn ? "সব দেখুন" : "View All"}</Button>
                   )}
                 </CardContent>
               </Card>
             )}
           </div>
 
-          {/* Certifications */}
           {certifications.length > 0 && (
             <Card className="border-0 shadow-sm">
               <CardContent className="p-6">
@@ -277,9 +244,7 @@ export default function CandidateProfileOverviewClient() {
                     {isBn ? "সার্টিফিকেশন" : `Certifications (${certifications.length})`}
                   </h2>
                   <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
-                    <Link href="/dashboard/skill-center/certificates">
-                      {isBn ? "যোগ করুন" : "Add New"}
-                    </Link>
+                    <Link href="/dashboard/skill-center/certificates">{isBn ? "যোগ করুন" : "Add New"}</Link>
                   </Button>
                 </div>
                 <div className="space-y-2">
@@ -295,24 +260,15 @@ export default function CandidateProfileOverviewClient() {
                     </div>
                   ))}
                 </div>
-                {certifications.length > 3 && (
-                  <Button variant="link" size="sm" className="w-full mt-2 text-xs">
-                    {isBn ? "সব সার্টিফিকেট দেখুন" : "View All Certifications"}
-                  </Button>
-                )}
               </CardContent>
             </Card>
           )}
 
-          {/* Recent Activities */}
           <ProfileRecentActivities applications={applications} profileViews={profileViews} isBn={isBn} />
-
-          {/* Job Preferences */}
           <ProfileJobPreferences profile={p} isBn={isBn} />
 
-          {/* Resume + Visibility Row */}
+          {/* Resume + Visibility */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Resume */}
             <Card className="border-0 shadow-sm">
               <CardContent className="p-6">
                 <h2 className="text-lg font-bold mb-3">{isBn ? "রিজুমে" : "Resume"}</h2>
@@ -327,72 +283,44 @@ export default function CandidateProfileOverviewClient() {
                         <p className="text-[10px] text-muted-foreground">PDF</p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm" className="w-full" onClick={() => setResumeDialogOpen(true)}>
-                      {isBn ? "পরিবর্তন করুন" : "Update Resume"}
-                    </Button>
+                    <Button variant="outline" size="sm" className="w-full" onClick={() => setResumeDialogOpen(true)}>{isBn ? "পরিবর্তন করুন" : "Update Resume"}</Button>
                   </div>
                 ) : (
                   <div className="text-center py-4">
                     <p className="text-xs text-muted-foreground mb-3">{isBn ? "কোনো রিজুমে নেই" : "No resume uploaded"}</p>
-                    <Button variant="outline" size="sm" className="w-full" onClick={() => setResumeDialogOpen(true)}>
-                      {isBn ? "আপলোড করুন" : "Upload Resume"}
-                    </Button>
+                    <Button variant="outline" size="sm" className="w-full" onClick={() => setResumeDialogOpen(true)}>{isBn ? "আপলোড করুন" : "Upload Resume"}</Button>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Profile Visibility */}
             <Card className="border-0 shadow-sm">
               <CardContent className="p-6">
                 <h2 className="text-lg font-bold mb-3">{isBn ? "প্রোফাইল দৃশ্যমানতা" : "Profile Visibility"}</h2>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                   <div>
-                    <p className="text-sm font-medium">
-                      {isPublic ? (isBn ? "সার্বজনীন" : "Visible") : (isBn ? "গোপনীয়" : "Private")}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {isPublic ? (isBn ? "নিয়োগকর্তাদের কাছে দৃশ্যমান" : "Your profile is visible to employers") : (isBn ? "নিয়োগকর্তাদের কাছে লুকানো" : "Your profile is hidden from employers")}
-                    </p>
+                    <p className="text-sm font-medium">{isPublic ? (isBn ? "সার্বজনীন" : "Visible") : (isBn ? "গোপনীয়" : "Private")}</p>
+                    <p className="text-xs text-muted-foreground">{isPublic ? (isBn ? "নিয়োগকর্তাদের কাছে দৃশ্যমান" : "Visible to employers") : (isBn ? "নিয়োগকর্তাদের কাছে লুকানো" : "Hidden from employers")}</p>
                   </div>
-                  <button
-                    onClick={() => toggleVisibility(!isPublic)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPublic ? "bg-primary" : "bg-muted"}`}
-                  >
+                  <button onClick={() => toggleVisibility(!isPublic)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPublic ? "bg-primary" : "bg-muted"}`}>
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPublic ? "translate-x-6" : "translate-x-1"}`} />
                   </button>
                 </div>
-                <Button variant="link" size="sm" className="mt-3 text-xs">
-                  {isBn ? "প্রোফাইল লুকান" : "Make profile private"}
-                </Button>
               </CardContent>
             </Card>
           </div>
         </div>
 
-        {/* ─── Right Column (1/3) ─── */}
+        {/* Right Column */}
         <div className="space-y-4">
-          {/* AI Profile Insights */}
           <AiProfileInsightsCard matchScore={matchScore} profileStrength={strengthPercent} skills={skills} isBn={isBn} />
-
-          {/* Top Skills */}
           <ProfileTopSkills skills={skills} isBn={isBn} />
-
-          {/* Badges */}
           <ProfileBadges badges={activeBadges} isBn={isBn} />
-
-          {/* Profile Strength */}
           <ProfileStrengthWidget strengthPercent={strengthPercent} sections={strengthSections} isBn={isBn} />
-
-          {/* Who Viewed My Profile */}
           <ProfileViewers views={profileViews} isBn={isBn} />
         </div>
       </div>
 
-      {/* ═══ Quick Actions ═══ */}
-      <ProfileQuickActions isBn={isBn} />
-
-      {/* Resume Upload Dialog */}
       <ProfileResumeDialog open={resumeDialogOpen} onOpenChange={setResumeDialogOpen} uploading={uploadingResume} onUpload={handleResumeUpload} isBn={isBn} />
     </div>
   );
