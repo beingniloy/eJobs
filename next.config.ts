@@ -40,7 +40,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.maateen.me; style-src-elem 'self' 'unsafe-inline' https://fonts.maateen.me; font-src 'self' data:; img-src 'self' data: http://127.0.0.1:8000 https://*.ejobs.bd; connect-src 'self' http://127.0.0.1:8000 http://localhost:3000 wss: ws:; frame-ancestors 'none';",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.maateen.me; style-src-elem 'self' 'unsafe-inline' https://fonts.maateen.me; font-src 'self' data: https://fonts.maateen.me; img-src 'self' data: http://127.0.0.1:8000 https://*.ejobs.bd; connect-src 'self' http://127.0.0.1:8000 http://localhost:3000 wss: ws:; frame-ancestors 'none';",
           },
         ],
       },
