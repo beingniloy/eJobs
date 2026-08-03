@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { FileText, Eye, TrendingUp, Shield, Users, DollarSign, Zap } from "lucide-react";
+import { Briefcase, FileText, Eye, Users, DollarSign, Zap } from "lucide-react";
 
 interface Props {
   applicationsCount: number;
@@ -13,6 +13,8 @@ interface Props {
 }
 
 export default function ProfileStatsBar({ applicationsCount, profileViewsCount, searchAppearances, strengthPercent, isBn, profile }: Props) {
+  const stats = { shortlisted: 8 };
+
   const items = [
     { label: isBn ? "অভিজ্ঞতা" : "Experience", value: profile?.years_of_experience ? `${profile.years_of_experience}+ ${isBn ? "বছর" : "Years"}` : (isBn ? "৪+ বছর" : "4+ Years"), icon: Briefcase },
     { label: isBn ? "মোট আবেদন" : "Total Applications", value: applicationsCount || 24, icon: FileText },
