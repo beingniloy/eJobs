@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import { AuthProvider } from "@/providers/auth-provider";
+import { useTheme } from "@/hooks/use-theme";
 import PwaInstallBanner from "@/components/pwa-install-banner";
 import CookieConsent from "@/components/cookie-consent";
 import TrackingScripts from "@/components/analytics/TrackingScripts";
@@ -18,6 +19,11 @@ const Toaster = dynamic(
   { ssr: false }
 );
 
+function FontSizeInit() {
+  useTheme();
+  return null;
+}
+
 export default function ClientProviders({
   children,
 }: {
@@ -27,6 +33,7 @@ export default function ClientProviders({
     <ThemeProvider>
       <QueryProvider>
         <AuthProvider>
+          <FontSizeInit />
           <TooltipProvider>
             {children}
             <PwaInstallBanner />

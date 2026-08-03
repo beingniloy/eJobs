@@ -4,10 +4,6 @@ import { useEffect } from "react";
 import { useThemeStore } from "@/store/theme-store";
 import api from "@/lib/api-client";
 
-/**
- * Convert a hex color (e.g. "#2563EB") to an HSL string
- * suitable for use as a CSS color value (e.g. "hsl(217 92% 53%)").
- */
 function hexToHsl(hex: string): string {
   hex = hex.replace(/^#/, "");
   if (hex.length === 3) {
@@ -36,10 +32,6 @@ function hexToHsl(hex: string): string {
   return `hsl(${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%)`;
 }
 
-/**
- * Apply admin-configured brand settings to CSS custom properties
- * on `document.documentElement`.
- */
 function applySettingsToDOM(settings: Record<string, any>) {
   const root = document.documentElement;
 
@@ -54,7 +46,7 @@ function applySettingsToDOM(settings: Record<string, any>) {
   }
   const fontSize = settings.global_font_size || settings.font_size;
   if (fontSize) {
-    root.style.setProperty("--app-font-size", fontSize);
+    root.style.setProperty("--app-font-size", `${fontSize}px`);
   }
   if (settings.phone_font_size) {
     root.style.setProperty("--app-font-size-phone", settings.phone_font_size);
@@ -70,16 +62,18 @@ function applySettingsToDOM(settings: Record<string, any>) {
   }
 }
 
-/**
- * Bridge hook: syncs the Zustand theme store with next-themes and
- * applies theme settings (colors, border-radius) from the API.
- *
- * Call this once at the app root level to keep everything in sync.
- */
 export function useTheme() {
   const store = useThemeStore();
+  const cached = store.settings;
 
-  // Fetch theme settings from API on mount
+  // Instantly apply cached settings (from Zustand/persist) on mount
+  useEffect(() => {
+    if (cached && Object.keys(cached).length > 0) {
+      applySettingsToDOM(cached);
+    }
+  }, []);
+
+  // Background refresh from API
   useEffect(() => {
     api
       .get("/settings/theme")
@@ -89,21 +83,17 @@ export function useTheme() {
           store.setSettings(data);
           store.setLoadingSettings(false);
 
-          // Apply brand settings to the DOM
           applySettingsToDOM(data);
 
-          // Store admin-configured timezone in localStorage for utils
           if (data.timezone) {
             localStorage.setItem("timezone", data.timezone);
           }
 
-          // Set default language from admin if user hasn't manually toggled
           if (data.default_language && !localStorage.getItem("theme-storage")) {
             document.documentElement.lang = data.default_language;
             store.setLanguage(data.default_language as "en" | "bn");
           }
 
-          // Store AI behavior tracking toggle from admin settings
           if (data.behavior_tracking_enabled !== undefined) {
             localStorage.setItem("behavior_tracking_enabled", String(data.behavior_tracking_enabled));
           }

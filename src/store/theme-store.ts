@@ -51,6 +51,7 @@ export const useThemeStore = create<ThemeState>()(
       partialize: (state) => ({
         themeMode: state.themeMode,
         language: state.language,
+        settings: state.settings,
       }),
     }
   )
