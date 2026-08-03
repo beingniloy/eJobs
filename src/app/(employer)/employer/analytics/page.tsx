@@ -13,7 +13,6 @@ import {
   DollarSign, MessageSquare, FileText, ArrowUpRight, ArrowDownRight,
   Zap, Target, Award, CheckCircle2, AlertCircle, Plus, Star, Globe,
 } from "lucide-react";
-import { toast } from "sonner";
 
 interface AnalyticsData {
   total_jobs: number;
@@ -38,38 +37,68 @@ interface AnalyticsData {
   pending_actions: number;
 }
 
+const EMPTY_DATA: AnalyticsData = {
+  total_jobs: 0,
+  active_jobs: 0,
+  total_applicants: 0,
+  total_views: 0,
+  views_change: 0,
+  applicants_change: 0,
+  jobs_change: 0,
+  response_rate: 0,
+  avg_response_time: "-",
+  hire_rate: 0,
+  total_hires: 0,
+  conversion_rate: 0,
+  budget_spent: 0,
+  budget_remaining: 0,
+  monthly_views: [],
+  monthly_applicants: [],
+  job_status: { active: 0, paused: 0, closed: 0 },
+  top_jobs: [],
+  recent_applicants: [],
+  pending_actions: 0,
+};
+
 export default function EmployerAnalyticsPage() {
   const { language } = useThemeStore();
   const isBn = language === "bn";
-  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [data, setData] = useState<AnalyticsData>(EMPTY_DATA);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api
       .get("/employer/analytics")
-      .then((res) => setData(res.data?.data || res.data))
-      .catch(() => toast.error(isBn ? "বিশ্লেষণ তথ্য লোড করতে ব্যর্থ" : "Failed to load analytics data"))
+      .then((res) => {
+        const d = res.data?.data || res.data;
+        if (d && typeof d === "object") {
+          setData((prev) => ({ ...prev, ...d }));
+        }
+      })
+      .catch(() => {
+        // Analytics endpoint may not exist yet — use defaults silently
+      })
       .finally(() => setLoading(false));
   }, []);
 
   const statCards = [
-    { title: isBn ? "মোট পোস্ট" : "Total Jobs", value: data?.total_jobs || 0, change: data?.jobs_change || 0, icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
-    { title: isBn ? "সক্রিয়" : "Active Jobs", value: data?.active_jobs || 0, icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
-    { title: isBn ? "আবেদনকারী" : "Applicants", value: data?.total_applicants || 0, change: data?.applicants_change || 0, icon: Users, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
-    { title: isBn ? "ভিউ" : "Total Views", value: data?.total_views || 0, change: data?.views_change || 0, icon: Eye, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+    { title: isBn ? "মোট পোস্ট" : "Total Jobs", value: data.total_jobs || 0, change: data.jobs_change || 0, icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+    { title: isBn ? "সক্রিয়" : "Active Jobs", value: data.active_jobs || 0, icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+    { title: isBn ? "আবেদনকারী" : "Applicants", value: data.total_applicants || 0, change: data.applicants_change || 0, icon: Users, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+    { title: isBn ? "ভিউ" : "Total Views", value: data.total_views || 0, change: data.views_change || 0, icon: Eye, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
   ];
 
   const detailCards = [
-    { title: isBn ? "হায়ার হার" : "Hire Rate", value: `${data?.hire_rate || 0}%`, icon: Award, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
-    { title: isBn ? "মোট হায়ার" : "Total Hires", value: data?.total_hires || 0, icon: CheckCircle2, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
-    { title: isBn ? "রূপান্তর হার" : "Conversion Rate", value: `${data?.conversion_rate || 0}%`, icon: Target, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
-    { title: isBn ? "অপেক্ষমান" : "Pending Actions", value: data?.pending_actions || 0, icon: AlertCircle, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+    { title: isBn ? "হায়ার হার" : "Hire Rate", value: `${data.hire_rate || 0}%`, icon: Award, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+    { title: isBn ? "মোট হায়ার" : "Total Hires", value: data.total_hires || 0, icon: CheckCircle2, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+    { title: isBn ? "রূপান্তর হার" : "Conversion Rate", value: `${data.conversion_rate || 0}%`, icon: Target, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+    { title: isBn ? "অপেক্ষমান" : "Pending Actions", value: data.pending_actions || 0, icon: AlertCircle, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
   ];
 
   const jobStatus = [
-    { title: isBn ? "সক্রিয়" : "Active", value: data?.job_status?.active || 0, color: "bg-green-500" },
-    { title: isBn ? "বিরতি" : "Paused", value: data?.job_status?.paused || 0, color: "bg-amber-500" },
-    { title: isBn ? "বন্ধ" : "Closed", value: data?.job_status?.closed || 0, color: "bg-red-500" },
+    { title: isBn ? "সক্রিয়" : "Active", value: data.job_status?.active || 0, color: "bg-green-500" },
+    { title: isBn ? "বিরতি" : "Paused", value: data.job_status?.paused || 0, color: "bg-amber-500" },
+    { title: isBn ? "বন্ধ" : "Closed", value: data.job_status?.closed || 0, color: "bg-red-500" },
   ];
 
   const totalJobs = jobStatus.reduce((sum, s) => sum + s.value, 0);
@@ -179,15 +208,15 @@ export default function EmployerAnalyticsPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-3xl font-bold">{data?.response_rate || 0}%</span>
+                  <span className="text-3xl font-bold">{data.response_rate || 0}%</span>
                   <span className="text-sm font-bold text-muted-foreground">
-                    {isBn ? "গড় সময়:" : "Avg time:"} {data?.avg_response_time || "-"}
+                    {isBn ? "গড় সময়:" : "Avg time:"} {data.avg_response_time || "-"}
                   </span>
                 </div>
                 <div className="w-full h-3 bg-cyan-100 dark:bg-cyan-900/40 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full bg-cyan-500 transition-all"
-                    style={{ width: `${Math.min(data?.response_rate || 0, 100)}%` }}
+                    style={{ width: `${Math.min(data.response_rate || 0, 100)}%` }}
                   />
                 </div>
               </CardContent>
@@ -203,7 +232,7 @@ export default function EmployerAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {(data?.top_jobs?.length ?? 0) > 0 && data ? (
+                {(data.top_jobs?.length ?? 0) > 0 && data ? (
                   <div className="space-y-2">
                     {data.top_jobs!.slice(0, 5).map((job, i) => (
                       <div key={i} className="flex items-center justify-between text-sm">

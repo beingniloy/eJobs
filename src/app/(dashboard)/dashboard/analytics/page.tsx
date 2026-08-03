@@ -36,39 +36,67 @@ interface AnalyticsData {
   completeness: number;
 }
 
+const EMPTY_DATA: AnalyticsData = {
+  profile_views: 0,
+  profile_views_change: 0,
+  search_appearances: 0,
+  search_change: 0,
+  match_score: 0,
+  applications_sent: 0,
+  applications_change: 0,
+  saved_jobs: 0,
+  messages_count: 0,
+  interviews: 0,
+  offers_received: 0,
+  response_rate: 0,
+  avg_response_time: "-",
+  top_skills: [],
+  recent_activity: [],
+  monthly_views: [],
+  application_status: { applied: 0, reviewed: 0, shortlisted: 0, rejected: 0 },
+  completeness: 0,
+};
+
 export default function AnalyticsPage() {
   const { language } = useThemeStore();
   const isBn = language === "bn";
-  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [data, setData] = useState<AnalyticsData>(EMPTY_DATA);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api
       .get("/candidate/analytics")
-      .then((res) => setData(res.data?.data || res.data))
-      .catch(() => toast.error(isBn ? "বিশ্লেষণ তথ্য লোড করতে ব্যর্থ" : "Failed to load analytics data"))
+      .then((res) => {
+        const d = res.data?.data || res.data;
+        if (d && typeof d === "object") {
+          setData((prev) => ({ ...prev, ...d }));
+        }
+      })
+      .catch(() => {
+        // Analytics endpoint may not exist yet — use defaults silently
+      })
       .finally(() => setLoading(false));
   }, []);
 
   const statCards = [
-    { title: isBn ? "প্রোফাইল ভিউ" : "Profile Views", value: data?.profile_views || 0, change: data?.profile_views_change || 0, icon: Eye, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
-    { title: isBn ? "সার্চ উপস্থিতি" : "Search Appearances", value: data?.search_appearances || 0, change: data?.search_change || 0, icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
-    { title: isBn ? "AI ম্যাচ স্কোর" : "AI Match Score", value: `${data?.match_score || 0}%`, icon: Target, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
-    { title: isBn ? "আবেদন পাঠানো" : "Applications Sent", value: data?.applications_sent || 0, change: data?.applications_change || 0, icon: FileText, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+    { title: isBn ? "প্রোফাইল ভিউ" : "Profile Views", value: data.profile_views || 0, change: data.profile_views_change || 0, icon: Eye, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+    { title: isBn ? "সার্চ উপস্থিতি" : "Search Appearances", value: data.search_appearances || 0, change: data.search_change || 0, icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+    { title: isBn ? "AI ম্যাচ স্কোর" : "AI Match Score", value: `${data.match_score || 0}%`, icon: Target, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+    { title: isBn ? "আবেদন পাঠানো" : "Applications Sent", value: data.applications_sent || 0, change: data.applications_change || 0, icon: FileText, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
   ];
 
   const detailCards = [
-    { title: isBn ? "সংরক্ষিত চাকরি" : "Saved Jobs", value: data?.saved_jobs || 0, icon: Bookmark, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
-    { title: isBn ? "বার্তা" : "Messages", value: data?.messages_count || 0, icon: MessageSquare, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
-    { title: isBn ? "সাক্ষাৎকার" : "Interviews", value: data?.interviews || 0, icon: Calendar, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
-    { title: isBn ? "অফার প্রাপ্ত" : "Offers Received", value: data?.offers_received || 0, icon: Award, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+    { title: isBn ? "সংরক্ষিত চাকরি" : "Saved Jobs", value: data.saved_jobs || 0, icon: Bookmark, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+    { title: isBn ? "বার্তা" : "Messages", value: data.messages_count || 0, icon: MessageSquare, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+    { title: isBn ? "সাক্ষাৎকার" : "Interviews", value: data.interviews || 0, icon: Calendar, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
+    { title: isBn ? "অফার প্রাপ্ত" : "Offers Received", value: data.offers_received || 0, icon: Award, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
   ];
 
   const statusCards = [
-    { title: isBn ? "আবেদন" : "Applied", value: data?.application_status?.applied || 0, color: "bg-blue-500" },
-    { title: isBn ? "পর্যালোচিত" : "Reviewed", value: data?.application_status?.reviewed || 0, color: "bg-amber-500" },
-    { title: isBn ? "শর্টলিস্ট" : "Shortlisted", value: data?.application_status?.shortlisted || 0, color: "bg-green-500" },
-    { title: isBn ? "বাতিল" : "Rejected", value: data?.application_status?.rejected || 0, color: "bg-red-500" },
+    { title: isBn ? "আবেদন" : "Applied", value: data.application_status?.applied || 0, color: "bg-blue-500" },
+    { title: isBn ? "পর্যালোচিত" : "Reviewed", value: data.application_status?.reviewed || 0, color: "bg-amber-500" },
+    { title: isBn ? "শর্টলিস্ট" : "Shortlisted", value: data.application_status?.shortlisted || 0, color: "bg-green-500" },
+    { title: isBn ? "বাতিল" : "Rejected", value: data.application_status?.rejected || 0, color: "bg-red-500" },
   ];
 
   const totalApplications = statusCards.reduce((sum, s) => sum + s.value, 0);
@@ -117,7 +145,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Profile Completeness */}
-      {!loading && data?.completeness !== undefined && (
+      {!loading && data.completeness !== undefined && data.completeness > 0 && (
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
@@ -207,15 +235,15 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-3xl font-bold">{data?.response_rate || 0}%</span>
+                  <span className="text-3xl font-bold">{data.response_rate || 0}%</span>
                   <span className="text-sm font-bold text-muted-foreground">
-                    {isBn ? "গড় সময়:" : "Avg time:"} {data?.avg_response_time || "-"}
+                    {isBn ? "গড় সময়:" : "Avg time:"} {data.avg_response_time || "-"}
                   </span>
                 </div>
                 <div className="w-full h-3 bg-blue-100 dark:bg-blue-900/40 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full bg-blue-500 transition-all"
-                    style={{ width: `${Math.min(data?.response_rate || 0, 100)}%` }}
+                    style={{ width: `${Math.min(data.response_rate || 0, 100)}%` }}
                   />
                 </div>
               </CardContent>
@@ -232,7 +260,7 @@ export default function AnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {(data?.top_skills?.length ?? 0) > 0 && data ? (
+                {(data.top_skills?.length ?? 0) > 0 && data ? (
                   <div className="flex flex-wrap gap-2">
                     {data.top_skills!.map((skill, i) => (
                       <Badge key={i} className="bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700 text-xs">
