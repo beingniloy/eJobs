@@ -18,7 +18,7 @@ export default function ProfileBadges({ badges, isBn }: Props) {
       <CardContent className="p-6">
         <div className="flex items-center gap-2 mb-4">
           <Trophy className="h-5 w-5 text-amber-500" />
-          <h2 className="text-lg font-bold">{isBn ? "অর্জিত ব্যাজ" : "Badges"}</h2>
+          <h2 className="text-lg font-bold">{isBn ? "অর্জিত ব্যাজ" : "Earned Badges"}</h2>
         </div>
         <BadgeGrid badges={badges} size="md" />
       </CardContent>

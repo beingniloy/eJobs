@@ -33,7 +33,7 @@ export default function ProfileResumeDialog({ open, onOpenChange, uploading, onU
               ) : (
                 <>
                   <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
-                  <p className="text-xs text-muted-foreground">{isBn ? "PDF ফাইল" : "Drag PDF or click to browse"}</p>
+                  <p className="text-xs text-muted-foreground">{isBn ? "PDF ফাইল এখানে টেনে আনুন" : "Drag PDF or click to browse"}</p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">Max 2MB</p>
                 </>
               )}

@@ -22,7 +22,6 @@ interface Props {
 export default function ProfileBottomCards({ profile, user, isPublic, isBn, onToggleVisibility, onResumeUpload, onResumeDialogOpen, uploadingResume }: Props) {
   const p = profile;
   const resumeInputRef = useRef<HTMLInputElement>(null);
-
   const resumePath = p.resume_path || p.resume;
 
   return (

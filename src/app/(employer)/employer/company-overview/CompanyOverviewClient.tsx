@@ -6,7 +6,6 @@ import { useThemeStore } from "@/store/theme-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CompanyLogo } from "@/components/ui/default-avatar";
 import { companiesService } from "@/services/companies.service";
@@ -14,9 +13,10 @@ import { useEmployerCompany } from "@/hooks/use-employer-company";
 import type { CompanyReview } from "@/types";
 import {
   Building2, MapPin, Globe, Mail, ExternalLink, Star, Users, Briefcase,
-  Eye, ThumbsUp, Calendar, ArrowRight, ChevronRight, CheckCircle2,
-  Heart, Share2, Camera, Newspaper, Award,
-  Download, Link2, AtSign, Hash, Send, Rss,
+  Eye, ThumbsUp, Calendar, ArrowRight, CheckCircle2,
+  Heart, Share2, Camera, Newspaper, Award, Download, Link2, AtSign, Hash,
+  Send, Rss, FileText, Megaphone, MessageSquare, Target, Flame,
+  ShieldCheck, BookOpen,
 } from "lucide-react";
 import { getStorageUrl } from "@/lib/utils";
 
@@ -34,6 +34,22 @@ function EmptyState({ text }: { text: string }) {
     </div>
   );
 }
+
+/* ─── Left sidebar nav items ─── */
+const sidebarNavItems = [
+  { key: "overview", label: "Overview", icon: Eye },
+  { key: "jobs", label: "Jobs", icon: Briefcase },
+  { key: "about", label: "About Us", icon: Building2 },
+  { key: "people", label: "People", icon: Users },
+  { key: "reviews", label: "Reviews", icon: Star },
+  { key: "benefits", label: "Benefits", icon: ShieldCheck },
+  { key: "photos", label: "Photos", icon: Camera },
+  { key: "videos", label: "Videos", icon: Megaphone },
+  { key: "updates", label: "News & Updates", icon: Newspaper },
+  { key: "culture", label: "Work Culture", icon: Flame },
+  { key: "awards", label: "Awards", icon: Award },
+  { key: "contact", label: "Contact Us", icon: MessageSquare },
+];
 
 /* ─── Component ─── */
 export default function CompanyOverviewClient() {
@@ -75,10 +91,10 @@ export default function CompanyOverviewClient() {
           }))
         );
       }
-    }).catch(() => { /* handled */ });
+    }).catch(() => {});
   }, [companyData?.id]);
 
-  /* ── Derived data from API ── */
+  /* ── Derived data ── */
   const company = companyData
     ? {
         name: getDisplayField("name", "Your Company"),
@@ -148,14 +164,16 @@ export default function CompanyOverviewClient() {
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           {Array.from({ length: 7 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}
         </div>
-        <Skeleton className="h-10 w-full rounded-lg" />
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-3 space-y-4">
             {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 rounded-lg" />)}
           </div>
-          <div className="lg:col-span-9 space-y-6">
+          <div className="lg:col-span-6 space-y-6">
             <Skeleton className="h-64 rounded-lg" />
             <Skeleton className="h-48 rounded-lg" />
+          </div>
+          <div className="lg:col-span-3 space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 rounded-lg" />)}
           </div>
         </div>
       </div>
@@ -164,18 +182,25 @@ export default function CompanyOverviewClient() {
 
   return (
     <div className="space-y-6">
-      {/* ── Company Header Banner ── */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          COMPANY HEADER BANNER
+         ══════════════════════════════════════════════════════════════════════ */}
       <div className="relative rounded-xl overflow-hidden bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white">
         <div className="absolute inset-0 bg-[url('/images/company-bg.jpg')] bg-cover bg-center opacity-30" />
-        {getStorageUrl(company.coverPhoto) && <img src={getStorageUrl(company.coverPhoto)!} alt="" className="absolute inset-0 w-full h-full object-cover opacity-40" />}
+        {getStorageUrl(company.coverPhoto) && (
+          <img src={getStorageUrl(company.coverPhoto)!} alt="" className="absolute inset-0 w-full h-full object-cover opacity-40" />
+        )}
         <div className="relative p-6 md:p-8">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-            <div className="w-20 h-20 rounded-xl overflow-hidden">
+            {/* Logo */}
+            <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-white/20 shrink-0">
               <CompanyLogo src={company.logo} name={company.name}>
                 {company.name.substring(0, 2).toUpperCase()}
               </CompanyLogo>
             </div>
-            <div className="flex-1">
+
+            {/* Company Info */}
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl font-bold">{company.name}</h1>
                 {company.isVerified && (
@@ -186,28 +211,49 @@ export default function CompanyOverviewClient() {
                 )}
               </div>
               {company.tagline && <p className="text-white/70 mt-1">{company.tagline}</p>}
+              {company.description && (
+                <p className="text-white/50 text-sm mt-1 line-clamp-2">{company.description}</p>
+              )}
+
+              {/* Contact Info */}
               <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-white/60">
-                {company.location && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{company.location}</span>}
-                {company.website && <a href={`https://${company.website}`} className="flex items-center gap-1 hover:text-white transition-colors"><Globe className="h-3.5 w-3.5" />{company.website}</a>}
-                {company.email && <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{company.email}</span>}
+                {company.location && (
+                  <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{company.location}</span>
+                )}
+                {company.website && (
+                  <a href={`https://${company.website}`} className="flex items-center gap-1 hover:text-white transition-colors">
+                    <Globe className="h-3.5 w-3.5" />{company.website}
+                  </a>
+                )}
+                {company.email && (
+                  <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{company.email}</span>
+                )}
               </div>
+
+              {/* Social Links */}
               {socialLinks.length > 0 && (
                 <div className="flex items-center gap-2 mt-2">
                   {socialLinks.map((sl, i) => (
-                    <a key={i} href={sl.href} target="_blank" rel="noopener noreferrer" className="h-7 w-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+                    <a key={i} href={sl.href} target="_blank" rel="noopener noreferrer"
+                      className="h-7 w-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                      title={sl.label}
+                    >
                       <sl.icon className="h-3.5 w-3.5" />
                     </a>
                   ))}
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
               <Link href={`/companies/${companyData?.slug || ""}`} target="_blank">
                 <Button variant="ghost" size="icon" className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10" title="View Public Profile">
                   <ExternalLink className="h-4 w-4" />
                 </Button>
               </Link>
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10" title="Share Profile" onClick={() => { navigator.clipboard.writeText(window.location.href); }}>
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10" title="Share Profile"
+                onClick={() => { navigator.clipboard.writeText(window.location.href); }}>
                 <Share2 className="h-4 w-4" />
               </Button>
               <Button variant="outline" size="sm" className="border-white/40 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300">
@@ -221,7 +267,9 @@ export default function CompanyOverviewClient() {
         </div>
       </div>
 
-      {/* ── Stats Bar ── */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          STATS BAR
+         ══════════════════════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {[
           { icon: Calendar, label: "Founded", value: company.founded || "N/A" },
@@ -232,7 +280,7 @@ export default function CompanyOverviewClient() {
           { icon: ThumbsUp, label: "Response Rate", value: company.responseRate },
           { icon: Star, label: "Avg. Review", value: `${company.avgReview} (${company.totalReviews})` },
         ].map((s) => (
-          <Card key={s.label} className="text-center p-3">
+          <Card key={s.label} className="text-center p-3 hover:shadow-sm transition-shadow">
             <s.icon className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
             <p className="text-xs text-muted-foreground">{s.label}</p>
             <p className="text-sm font-bold mt-0.5">{s.value}</p>
@@ -240,38 +288,102 @@ export default function CompanyOverviewClient() {
         ))}
       </div>
 
-      {/* ── Tabs ── */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full justify-start h-auto flex-wrap bg-muted/50 p-1">
-          {["overview", "jobs", "about", "people", "reviews", "benefits", "photos", "videos", "more"].map((t) => (
-            <TabsTrigger key={t} value={t} className="text-xs capitalize px-3 py-1.5">
-              {t === "reviews" ? `Reviews ${company.totalReviews}` : t === "jobs" ? `Jobs ${company.activeJobs}` : t}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
-      {/* ── Main Content Grid ── */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          3-COLUMN LAYOUT
+         ══════════════════════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Sidebar */}
+
+        {/* ──────────────────────────────────────────────────────────────────
+            LEFT SIDEBAR (Navigation + Snapshot + Why Join + Brochure + Skills)
+           ────────────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-3 space-y-4">
+
+          {/* Vertical Navigation */}
+          <Card>
+            <CardContent className="p-2">
+              <nav className="space-y-0.5">
+                {sidebarNavItems.map((item) => {
+                  const isActive = activeTab === item.key;
+                  return (
+                    <button
+                      key={item.key}
+                      onClick={() => setActiveTab(item.key)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      <span>{item.label}</span>
+                      {item.key === "jobs" && company.activeJobs !== "0" && (
+                        <Badge variant={isActive ? "secondary" : "outline"} className="ml-auto text-[10px] h-5">
+                          {company.activeJobs}
+                        </Badge>
+                      )}
+                      {item.key === "reviews" && company.totalReviews !== "0" && (
+                        <Badge variant={isActive ? "secondary" : "outline"} className="ml-auto text-[10px] h-5">
+                          {company.totalReviews}
+                        </Badge>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            </CardContent>
+          </Card>
+
           {/* Company Snapshot */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Company Snapshot</CardTitle>
+              <CardTitle className="text-sm font-bold">Company Snapshot</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Founded</p><p className="font-medium">{company.founded || "Not specified"}</p></div></div>
-              <div className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Company Size</p><p className="font-medium">{company.companySize || "Not specified"}</p></div></div>
-              <div className="flex items-center gap-2"><Building2 className="h-4 w-4 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Industry</p><p className="font-medium">{company.industry || "Not specified"}</p></div></div>
-              <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Headquarters</p><p className="font-medium">{company.headquarters || "Not specified"}</p></div></div>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Founded</p>
+                  <p className="font-medium">{company.founded || "Not specified"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Company Size</p>
+                  <p className="font-medium">{company.companySize || "Not specified"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Industry</p>
+                  <p className="font-medium">{company.industry || "Not specified"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Headquarters</p>
+                  <p className="font-medium">{company.headquarters || "Not specified"}</p>
+                </div>
+              </div>
               {company.website && (
-                <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Website</p><a href={`https://${company.website}`} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline flex items-center gap-1">{company.website}<ExternalLink className="h-3 w-3" /></a></div></div>
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Website</p>
+                    <a href={`https://${company.website}`} target="_blank" rel="noopener noreferrer"
+                      className="font-medium text-primary hover:underline flex items-center gap-1">
+                      {company.website}<ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                </div>
               )}
               {socialLinks.length > 0 && (
                 <div className="flex gap-2 pt-1">
                   {socialLinks.map((sl, i) => (
-                    <a key={i} href={sl.href} target="_blank" rel="noopener noreferrer" className="h-7 w-7 rounded-full bg-muted hover:bg-primary/10 flex items-center justify-center transition-colors text-muted-foreground hover:text-primary">
+                    <a key={i} href={sl.href} target="_blank" rel="noopener noreferrer"
+                      className="h-7 w-7 rounded-full bg-muted hover:bg-primary/10 flex items-center justify-center transition-colors text-muted-foreground hover:text-primary">
                       <sl.icon className="h-3.5 w-3.5" />
                     </a>
                   ))}
@@ -283,7 +395,7 @@ export default function CompanyOverviewClient() {
           {/* Why Join Us */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Why Join Us?</CardTitle>
+              <CardTitle className="text-sm font-bold">Why Join Us?</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {company.whyJoinUs.length > 0 ? (
@@ -305,13 +417,15 @@ export default function CompanyOverviewClient() {
           {/* Company Brochure */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Company Brochure</CardTitle>
+              <CardTitle className="text-sm font-bold">Company Brochure</CardTitle>
             </CardHeader>
             <CardContent>
               {brochures.length > 0 ? (
                 brochures.map((b) => (
                   <div key={b.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 mb-2">
-                    <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center"><Building2 className="h-5 w-5 text-primary" /></div>
+                    <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium truncate">{b.title}</p>
                       <p className="text-[10px] text-muted-foreground">PDF</p>
@@ -327,20 +441,18 @@ export default function CompanyOverviewClient() {
             </CardContent>
           </Card>
 
-          {/* Top Skills */}
+          {/* Top Skills We Hire */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Top Skills We Hire</CardTitle>
+              <CardTitle className="text-sm font-bold">Top Skills We Hire</CardTitle>
             </CardHeader>
             <CardContent>
               {company.topSkills.length > 0 ? (
-                <>
-                  <div className="flex flex-wrap gap-1.5">
-                    {company.topSkills.map((skill) => (
-                      <Badge key={skill} variant="secondary" className="text-[10px]">{skill}</Badge>
-                    ))}
-                  </div>
-                </>
+                <div className="flex flex-wrap gap-1.5">
+                  {company.topSkills.map((skill) => (
+                    <Badge key={skill} variant="secondary" className="text-[10px]">{skill}</Badge>
+                  ))}
+                </div>
               ) : (
                 <EmptyState text="No skills added yet" />
               )}
@@ -348,285 +460,220 @@ export default function CompanyOverviewClient() {
           </Card>
         </div>
 
-        {/* Main Content */}
-        <div className="lg:col-span-9 space-y-6">
-          {/* ── Overview Tab ── */}
+        {/* ──────────────────────────────────────────────────────────────────
+            MAIN CONTENT (Tabbed)
+           ────────────────────────────────────────────────────────────────── */}
+        <div className="lg:col-span-6 space-y-6">
+
+          {/* ══ OVERVIEW TAB ══ */}
           {activeTab === "overview" && (
             <>
-          {/* About + Rating */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-2">
-              <h2 className="text-lg font-bold mb-2">About {company.name}</h2>
-              {company.description ? (
-                <p className="text-sm text-muted-foreground leading-relaxed">{company.description}</p>
-              ) : (
-                <p className="text-sm text-muted-foreground leading-relaxed italic">No company description added yet. Edit your profile to add one.</p>
-              )}
-            </div>
-            <div>
-              <h3 className="text-sm font-bold mb-2">Company Rating</h3>
-              <div className="flex items-baseline gap-2 mb-3">
-                <span className="text-3xl font-bold">{company.avgReview}</span>
-                <div className="flex items-center gap-0.5">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <Star key={s} className={`h-4 w-4 ${s <= Math.round(Number(company.avgReview)) ? "fill-yellow-400 text-yellow-400" : "fill-yellow-400/30 text-yellow-400/30"}`} />
-                  ))}
-                </div>
-                <span className="text-xs text-muted-foreground">({company.totalReviews} reviews)</span>
-              </div>
-              {ratingBreakdown.length > 0 && (
-                <div className="space-y-1.5">
-                  {ratingBreakdown.map((r) => (
-                    <div key={r.stars} className="flex items-center gap-2 text-xs">
-                      <span className="w-3 text-right">{r.stars}</span>
-                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden"><div className="h-full bg-yellow-400 rounded-full" style={{ width: `${r.percent}%` }} /></div>
-                      <span className="w-8 text-right text-muted-foreground">{r.percent}%</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+              {/* About Section */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-bold">About {company.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {company.description ? (
+                    <p className="text-sm text-muted-foreground leading-relaxed">{company.description}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground leading-relaxed italic">No company description added yet. Edit your profile to add one.</p>
+                  )}
+                </CardContent>
+              </Card>
 
-          {/* Mission & Vision */}
-          {(company.mission || company.vision) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {company.mission && (
-                <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-200 dark:border-blue-800">
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-2 mb-2"><div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/60 flex items-center justify-center"><Eye className="h-4 w-4 text-blue-600" /></div><h4 className="font-bold text-sm">Our Mission</h4></div>
-                    <p className="text-sm text-muted-foreground">{company.mission}</p>
-                  </CardContent>
-                </Card>
-              )}
-              {company.vision && (
-                <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20 border-purple-200 dark:border-purple-800">
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-2 mb-2"><div className="h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-900/60 flex items-center justify-center"><Globe className="h-4 w-4 text-purple-600" /></div><h4 className="font-bold text-sm">Our Vision</h4></div>
-                    <p className="text-sm text-muted-foreground">{company.vision}</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
-
-          {/* Open Jobs */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold">Open Jobs ({company.activeJobs})</h2>
-              <Button variant="link" size="sm" className="text-xs" asChild>
-                <Link href="/employer/jobs">View All Jobs <ArrowRight className="h-3 w-3 ml-1" /></Link>
-              </Button>
-            </div>
-            {apiActiveJobs.length > 0 ? (
-              <div className="space-y-2">
-                {apiActiveJobs.map((job, i) => (
-                  <Card key={i} className="hover:shadow-sm transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-semibold text-sm">{job.title}</h4>
-                            <Badge variant="outline" className="text-[10px]">{formatJobType(job.type)}</Badge>
-                            <Badge variant="secondary" className="text-[10px]">{job.mode}</Badge>
+              {/* Mission / Vision / Values */}
+              {(company.mission || company.vision || company.values) && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {company.mission && (
+                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-200 dark:border-blue-800">
+                      <CardContent className="p-5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/60 flex items-center justify-center">
+                            <Target className="h-4 w-4 text-blue-600" />
                           </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                            {job.department && <span>{job.department}</span>}
-                            {job.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{job.location}</span>}
-                            {job.experience && <span>{job.experience}</span>}
+                          <h4 className="font-bold text-sm">Our Mission</h4>
+                        </div>
+                        <p className="text-sm text-muted-foreground leading-relaxed">{company.mission}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {company.vision && (
+                    <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20 border-purple-200 dark:border-purple-800">
+                      <CardContent className="p-5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-900/60 flex items-center justify-center">
+                            <Eye className="h-4 w-4 text-purple-600" />
                           </div>
+                          <h4 className="font-bold text-sm">Our Vision</h4>
                         </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-sm font-bold text-green-600">{job.salary}</p>
-                          <p className="text-[10px] text-muted-foreground">{job.posted}</p>
+                        <p className="text-sm text-muted-foreground leading-relaxed">{company.vision}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {company.values && (
+                    <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border-emerald-200 dark:border-emerald-800">
+                      <CardContent className="p-5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 flex items-center justify-center">
+                            <BookOpen className="h-4 w-4 text-emerald-600" />
+                          </div>
+                          <h4 className="font-bold text-sm">Our Values</h4>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <EmptyState text="No active jobs posted yet" />
-            )}
-          </div>
-
-          {/* Company Highlights */}
-          {company.highlights.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Company Highlights</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {company.highlights.map((h) => (
-                    <div key={h} className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                      <span>{h}</span>
-                    </div>
-                  ))}
+                        <p className="text-sm text-muted-foreground leading-relaxed">{company.values}</p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              )}
 
-          {/* Our Culture */}
-          <div>
-            <h2 className="text-lg font-bold mb-3">Our Culture</h2>
-            {culturePhotos.length > 0 ? (
-              <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {culturePhotos.slice(0, 4).map((photo) => (
-                    <div key={photo.id} className="aspect-video rounded-lg bg-muted overflow-hidden">
-                      <img src={photo.file_url} alt={photo.caption || "Culture photo"} className="w-full h-full object-cover" />
-                    </div>
-                  ))}
+              {/* Open Jobs */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-bold">Open Jobs ({company.activeJobs})</h2>
+                  <Button variant="link" size="sm" className="text-xs" asChild>
+                    <Link href="/employer/manage-jobs">View All Jobs <ArrowRight className="h-3 w-3 ml-1" /></Link>
+                  </Button>
                 </div>
-                <Button variant="link" size="sm" className="px-0 mt-2 h-auto text-xs" onClick={() => setActiveTab("photos")}>View All Photos</Button>
-              </>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="aspect-video rounded-lg bg-muted flex items-center justify-center overflow-hidden">
-                    <Camera className="h-6 w-6 text-muted-foreground/50" />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Location */}
-          {(company.headOfficeAddress || company.headquarters) && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Location</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {companyData?.google_map_embed ? (
-                  <div className="rounded-lg overflow-hidden mb-3">
-                    <iframe src={companyData.google_map_embed} width="100%" height="200" style={{ border: 0 }} allowFullScreen loading="lazy" className="rounded-lg" />
+                {apiActiveJobs.length > 0 ? (
+                  <div className="space-y-2">
+                    {apiActiveJobs.slice(0, 5).map((job, i) => (
+                      <Card key={i} className="hover:shadow-sm transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="font-semibold text-sm">{job.title}</h4>
+                                <Badge variant="outline" className="text-[10px]">{formatJobType(job.type)}</Badge>
+                                <Badge variant="secondary" className="text-[10px]">{job.mode}</Badge>
+                              </div>
+                              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                {job.department && <span>{job.department}</span>}
+                                {job.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{job.location}</span>}
+                                {job.experience && <span>{job.experience}</span>}
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-bold text-green-600">{job.salary}</p>
+                              <p className="text-[10px] text-muted-foreground">{job.posted}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
                 ) : (
-                  <div className="aspect-[21/9] rounded-lg bg-muted flex items-center justify-center mb-3 overflow-hidden">
-                    <MapPin className="h-8 w-8 text-muted-foreground/50" />
+                  <EmptyState text="No active jobs posted yet" />
+                )}
+              </div>
+
+              {/* Our Culture */}
+              <div>
+                <h2 className="text-lg font-bold mb-3">Our Culture</h2>
+                {culturePhotos.length > 0 ? (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {culturePhotos.slice(0, 6).map((photo) => (
+                        <div key={photo.id} className="aspect-video rounded-lg bg-muted overflow-hidden">
+                          <img src={photo.file_url} alt={photo.caption || "Culture photo"} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                    <Button variant="link" size="sm" className="px-0 mt-2 h-auto text-xs" onClick={() => setActiveTab("photos")}>
+                      View All Photos
+                    </Button>
+                  </>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i} className="aspect-video rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+                        <Camera className="h-6 w-6 text-muted-foreground/50" />
+                      </div>
+                    ))}
                   </div>
                 )}
-                <p className="text-sm font-medium">{company.name}</p>
-                {company.headOfficeAddress && <p className="text-xs text-muted-foreground">{company.headOfficeAddress}</p>}
-                {company.postalCode && <p className="text-xs text-muted-foreground">{company.postalCode}</p>}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Recent Updates + Awards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="font-bold text-sm mb-3">Recent Updates</h3>
-              {recentUpdates.length > 0 ? (
-                <div className="space-y-3">
-                  {recentUpdates.map((u, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <Newspaper className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium leading-snug">{u.title}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{u.time}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState text="No recent updates" />
-              )}
-            </div>
-            <div>
-              <h3 className="font-bold text-sm mb-3">Awards & Recognition</h3>
-              {awards.length > 0 ? (
-                <div className="space-y-3">
-                  {awards.map((a, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <Award className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium leading-snug">{a.title}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{a.issuer} {a.year ? `(${a.year})` : ""}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState text="No awards added yet" />
-              )}
-            </div>
-          </div>
-
-          {/* Similar Companies */}
-          {similarCompaniesData.length > 0 && (
-            <div>
-              <h3 className="font-bold text-sm mb-3">Similar Companies</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {similarCompaniesData.map((c, i) => (
-                  <Card key={i} className="hover:shadow-sm transition-shadow">
-                    <CardContent className="p-3 flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center text-xs font-bold shrink-0">{c.name[0]}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{c.name}</p>
-                        <p className="text-[10px] text-muted-foreground">{c.type}</p>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-bold">{c.rating}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
               </div>
-            </div>
-          )}
 
-          {/* Testimonials */}
-          <div>
-            <h3 className="font-bold text-sm mb-3">What Our Employees Say</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {reviews.length > 0 ? reviews.slice(0, 3).map((t) => (
-                <Card key={t.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold">{(t.user?.name || "A")[0]}</div>
-                      <div>
-                        <p className="text-sm font-medium">{t.user?.name || "Anonymous"}</p>
-                        <p className="text-[10px] text-muted-foreground">{t.is_current_employee ? "Current Employee" : "Former Employee"}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 mb-2">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star key={s} className={`h-3 w-3 ${s <= Math.floor(Number(t.overall_rating || t.rating)) ? "fill-yellow-400 text-yellow-400" : "fill-yellow-400/30 text-yellow-400/30"}`} />
-                      ))}
-                      <span className="text-xs font-medium ml-1">{Number(t.overall_rating || t.rating).toFixed(1)}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{t.pros || t.cons || t.comment || "No comment"}</p>
-                  </CardContent>
-                </Card>
-              )) : (
-                <p className="text-sm text-muted-foreground col-span-full text-center py-8">No reviews yet</p>
-              )}
-            </div>
-          </div>
-
-          {/* CTA Banner */}
-          <Card className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border-primary/20">
-            <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+              {/* Recent Updates */}
               <div>
-                <h3 className="font-bold">Looking for a career at {company.name}?</h3>
-                <p className="text-sm text-muted-foreground mt-0.5">Explore current openings and become a part of our exciting team.</p>
+                <h2 className="text-lg font-bold mb-3">Recent Updates</h2>
+                {recentUpdates.length > 0 ? (
+                  <div className="space-y-3">
+                    {recentUpdates.map((u, i) => (
+                      <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                        <Newspaper className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium leading-snug">{u.title}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{u.time}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState text="No recent updates" />
+                )}
               </div>
-              <Button className="shrink-0" asChild>
-                <Link href="/employer/jobs">View All Jobs ({company.activeJobs})</Link>
-              </Button>
-            </CardContent>
-          </Card>
+
+              {/* Awards & Recognition */}
+              <div>
+                <h2 className="text-lg font-bold mb-3">Awards & Recognition</h2>
+                {awards.length > 0 ? (
+                  <div className="space-y-3">
+                    {awards.map((a, i) => (
+                      <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                        <Award className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium leading-snug">{a.title}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{a.issuer} {a.year ? `(${a.year})` : ""}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState text="No awards added yet" />
+                )}
+              </div>
+
+              {/* Employee Reviews / Testimonials */}
+              <div>
+                <h2 className="text-lg font-bold mb-3">What Our Employees Say</h2>
+                {reviews.length > 0 ? (
+                  <div className="space-y-3">
+                    {reviews.slice(0, 3).map((t) => (
+                      <Card key={t.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold">
+                              {(t.user?.name || "A")[0]}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">{t.user?.name || "Anonymous"}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {t.is_current_employee ? "Current Employee" : "Former Employee"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 mb-2">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star key={s} className={`h-3 w-3 ${s <= Math.floor(Number(t.overall_rating || t.rating)) ? "fill-yellow-400 text-yellow-400" : "fill-yellow-400/30 text-yellow-400/30"}`} />
+                            ))}
+                            <span className="text-xs font-medium ml-1">{Number(t.overall_rating || t.rating).toFixed(1)}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {t.pros || t.cons || t.comment || "No comment"}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState text="No reviews yet" />
+                )}
+              </div>
             </>
           )}
 
-          {/* ── Jobs Tab ── */}
+          {/* ══ JOBS TAB ══ */}
           {activeTab === "jobs" && (
             <div>
               <h2 className="text-lg font-bold mb-3">All Jobs ({company.activeJobs})</h2>
@@ -663,23 +710,33 @@ export default function CompanyOverviewClient() {
             </div>
           )}
 
-          {/* ── About Tab ── */}
+          {/* ══ ABOUT TAB ══ */}
           {activeTab === "about" && (
             <div className="space-y-6">
-              <div>
-                <h2 className="text-lg font-bold mb-2">About {company.name}</h2>
-                {company.description ? (
-                  <p className="text-sm text-muted-foreground leading-relaxed">{company.description}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground leading-relaxed italic">No company description added yet.</p>
-                )}
-              </div>
-              {(company.mission || company.vision) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-bold">About {company.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {company.description ? (
+                    <p className="text-sm text-muted-foreground leading-relaxed">{company.description}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground leading-relaxed italic">No company description added yet.</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {(company.mission || company.vision || company.values) && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {company.mission && (
                     <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-200 dark:border-blue-800">
                       <CardContent className="p-5">
-                        <div className="flex items-center gap-2 mb-2"><div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/60 flex items-center justify-center"><Eye className="h-4 w-4 text-blue-600" /></div><h4 className="font-bold text-sm">Our Mission</h4></div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/60 flex items-center justify-center">
+                            <Target className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <h4 className="font-bold text-sm">Our Mission</h4>
+                        </div>
                         <p className="text-sm text-muted-foreground">{company.mission}</p>
                       </CardContent>
                     </Card>
@@ -687,29 +744,57 @@ export default function CompanyOverviewClient() {
                   {company.vision && (
                     <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20 border-purple-200 dark:border-purple-800">
                       <CardContent className="p-5">
-                        <div className="flex items-center gap-2 mb-2"><div className="h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-900/60 flex items-center justify-center"><Globe className="h-4 w-4 text-purple-600" /></div><h4 className="font-bold text-sm">Our Vision</h4></div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-900/60 flex items-center justify-center">
+                            <Eye className="h-4 w-4 text-purple-600" />
+                          </div>
+                          <h4 className="font-bold text-sm">Our Vision</h4>
+                        </div>
                         <p className="text-sm text-muted-foreground">{company.vision}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {company.values && (
+                    <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border-emerald-200 dark:border-emerald-800">
+                      <CardContent className="p-5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 flex items-center justify-center">
+                            <BookOpen className="h-4 w-4 text-emerald-600" />
+                          </div>
+                          <h4 className="font-bold text-sm">Our Values</h4>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{company.values}</p>
                       </CardContent>
                     </Card>
                   )}
                 </div>
               )}
+
               {company.servicesProducts && (
-                <div>
-                  <h3 className="font-bold text-sm mb-2">Services & Products</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{company.servicesProducts}</p>
-                </div>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-bold">Services & Products</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{company.servicesProducts}</p>
+                  </CardContent>
+                </Card>
               )}
+
               {company.workingCulture && (
-                <div>
-                  <h3 className="font-bold text-sm mb-2">Working Culture</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{company.workingCulture}</p>
-                </div>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-bold">Working Culture</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{company.workingCulture}</p>
+                  </CardContent>
+                </Card>
               )}
             </div>
           )}
 
-          {/* ── People Tab ── */}
+          {/* ══ PEOPLE TAB ══ */}
           {activeTab === "people" && (
             <div className="text-center py-16">
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
@@ -719,7 +804,7 @@ export default function CompanyOverviewClient() {
             </div>
           )}
 
-          {/* ── Reviews Tab ── */}
+          {/* ══ REVIEWS TAB ══ */}
           {activeTab === "reviews" && (
             <div className="space-y-6">
               <h2 className="text-lg font-bold">Company Reviews</h2>
@@ -738,21 +823,27 @@ export default function CompanyOverviewClient() {
                     <div key={r.stars} className="flex items-center gap-2 text-sm">
                       <span className="w-3 text-right">{r.stars}</span>
                       <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-yellow-400 rounded-full" style={{ width: `${r.percent}%` }} /></div>
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${r.percent}%` }} />
+                      </div>
                       <span className="w-10 text-right text-muted-foreground">{r.percent}%</span>
                     </div>
                   ))}
                 </div>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
-                {reviews.length > 0 ? reviews.slice(0, 3).map((t) => (
+              <div className="space-y-3 mt-6">
+                {reviews.length > 0 ? reviews.map((t) => (
                   <Card key={t.id}>
                     <CardContent className="p-4">
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold">{(t.user?.name || "A")[0]}</div>
+                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold">
+                          {(t.user?.name || "A")[0]}
+                        </div>
                         <div>
                           <p className="text-sm font-medium">{t.user?.name || "Anonymous"}</p>
-                          <p className="text-[10px] text-muted-foreground">{t.is_current_employee ? "Current Employee" : "Former Employee"}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {t.is_current_employee ? "Current Employee" : "Former Employee"}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-1 mb-2">
@@ -761,17 +852,19 @@ export default function CompanyOverviewClient() {
                         ))}
                         <span className="text-xs font-medium ml-1">{Number(t.overall_rating || t.rating).toFixed(1)}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{t.pros || t.cons || t.comment || "No comment"}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {t.pros || t.cons || t.comment || "No comment"}
+                      </p>
                     </CardContent>
                   </Card>
                 )) : (
-                  <p className="text-sm text-muted-foreground col-span-full text-center py-8">No reviews yet</p>
+                  <EmptyState text="No reviews yet" />
                 )}
               </div>
             </div>
           )}
 
-          {/* ── Benefits Tab ── */}
+          {/* ══ BENEFITS TAB ══ */}
           {activeTab === "benefits" && (
             <div className="space-y-4">
               <h2 className="text-lg font-bold">Benefits & Perks</h2>
@@ -792,7 +885,7 @@ export default function CompanyOverviewClient() {
             </div>
           )}
 
-          {/* ── Photos Tab ── */}
+          {/* ══ PHOTOS TAB ══ */}
           {activeTab === "photos" && (
             <div className="space-y-4">
               <h2 className="text-lg font-bold">Company Photos</h2>
@@ -816,7 +909,7 @@ export default function CompanyOverviewClient() {
             </div>
           )}
 
-          {/* ── Videos Tab ── */}
+          {/* ══ VIDEOS TAB ══ */}
           {activeTab === "videos" && (
             <div className="space-y-4">
               {companyData?.company_video_url ? (
@@ -828,61 +921,276 @@ export default function CompanyOverviewClient() {
                 </>
               ) : (
                 <div className="text-center py-16">
-                  <Share2 className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <Megaphone className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                   <h3 className="text-lg font-bold">Company Videos</h3>
-                  <p className="text-sm text-muted-foreground mt-1">No video added yet. Add a YouTube URL in your profile settings.</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    No video added yet. Add a YouTube URL in your profile settings.
+                  </p>
                 </div>
               )}
             </div>
           )}
 
-          {/* ── More Tab ── */}
-          {activeTab === "more" && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-bold text-sm mb-3">Awards & Recognition</h3>
-                {awards.length > 0 ? (
-                  <div className="space-y-3">
-                    {awards.map((a, i) => (
-                      <Card key={i}>
-                        <CardContent className="p-4 flex items-start gap-3">
-                          <Award className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-sm font-medium">{a.title}</p>
-                            <p className="text-xs text-muted-foreground">{a.issuer} {a.year ? `(${a.year})` : ""}</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState text="No awards added yet" />
-                )}
-              </div>
-              {similarCompaniesData.length > 0 && (
-                <div>
-                  <h3 className="font-bold text-sm mb-3">Similar Companies</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {similarCompaniesData.map((c, i) => (
-                      <Card key={i} className="hover:shadow-sm transition-shadow">
-                        <CardContent className="p-3 flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center text-xs font-bold shrink-0">{c.name[0]}</div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{c.name}</p>
-                            <p className="text-[10px] text-muted-foreground">{c.type}</p>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                            <span className="text-sm font-bold">{c.rating}</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+          {/* ══ UPDATES TAB ══ */}
+          {activeTab === "updates" && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold">News & Updates</h2>
+              {recentUpdates.length > 0 ? (
+                <div className="space-y-3">
+                  {recentUpdates.map((u, i) => (
+                    <Card key={i}>
+                      <CardContent className="p-4 flex items-start gap-3">
+                        <Newspaper className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium leading-snug">{u.title}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{u.time}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
+              ) : (
+                <EmptyState text="No recent updates" />
               )}
             </div>
           )}
+
+          {/* ══ CULTURE TAB ══ */}
+          {activeTab === "culture" && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-bold">Work Culture</h2>
+              {company.workingCulture ? (
+                <Card>
+                  <CardContent className="p-5">
+                    <p className="text-sm text-muted-foreground leading-relaxed">{company.workingCulture}</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <EmptyState text="No work culture description added yet" />
+              )}
+              {culturePhotos.length > 0 && (
+                <>
+                  <h3 className="font-bold text-sm">Culture Photos</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {culturePhotos.map((photo) => (
+                      <div key={photo.id} className="aspect-video rounded-lg bg-muted overflow-hidden">
+                        <img src={photo.file_url} alt={photo.caption || "Culture photo"} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ══ AWARDS TAB ══ */}
+          {activeTab === "awards" && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold">Awards & Recognition</h2>
+              {awards.length > 0 ? (
+                <div className="space-y-3">
+                  {awards.map((a, i) => (
+                    <Card key={i}>
+                      <CardContent className="p-4 flex items-start gap-3">
+                        <Award className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium">{a.title}</p>
+                          <p className="text-xs text-muted-foreground">{a.issuer} {a.year ? `(${a.year})` : ""}</p>
+                          {a.description && <p className="text-xs text-muted-foreground mt-1">{a.description}</p>}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState text="No awards added yet" />
+              )}
+            </div>
+          )}
+
+          {/* ══ CONTACT TAB ══ */}
+          {activeTab === "contact" && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-bold">Contact Us</h2>
+              <Card>
+                <CardContent className="p-5 space-y-4">
+                  {company.name && (
+                    <div className="flex items-center gap-3">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">{company.name}</span>
+                    </div>
+                  )}
+                  {company.headOfficeAddress && (
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{company.headOfficeAddress}{company.postalCode ? `, ${company.postalCode}` : ""}</span>
+                    </div>
+                  )}
+                  {company.email && (
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <a href={`mailto:${company.email}`} className="text-sm text-primary hover:underline">{company.email}</a>
+                    </div>
+                  )}
+                  {company.phone && (
+                    <div className="flex items-center gap-3">
+                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                      <a href={`tel:${company.phone}`} className="text-sm text-primary hover:underline">{company.phone}</a>
+                    </div>
+                  )}
+                  {company.website && (
+                    <div className="flex items-center gap-3">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <a href={`https://${company.website}`} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
+                        {company.website}
+                      </a>
+                    </div>
+                  )}
+                  {socialLinks.length > 0 && (
+                    <div className="flex gap-2 pt-2">
+                      {socialLinks.map((sl, i) => (
+                        <a key={i} href={sl.href} target="_blank" rel="noopener noreferrer"
+                          className="h-8 w-8 rounded-full bg-muted hover:bg-primary/10 flex items-center justify-center transition-colors text-muted-foreground hover:text-primary">
+                          <sl.icon className="h-4 w-4" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
+
+        {/* ──────────────────────────────────────────────────────────────────
+            RIGHT SIDEBAR (Rating + Highlights + Location + Similar + CTA)
+           ────────────────────────────────────────────────────────────────── */}
+        <div className="lg:col-span-3 space-y-4">
+
+          {/* Company Rating */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-bold">Company Rating</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-baseline gap-2 mb-3">
+                <span className="text-3xl font-bold">{company.avgReview}</span>
+                <div className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star key={s} className={`h-4 w-4 ${s <= Math.round(Number(company.avgReview)) ? "fill-yellow-400 text-yellow-400" : "fill-yellow-400/30 text-yellow-400/30"}`} />
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">({company.totalReviews} reviews)</p>
+              {ratingBreakdown.length > 0 && (
+                <div className="space-y-1.5">
+                  {ratingBreakdown.map((r) => (
+                    <div key={r.stars} className="flex items-center gap-2 text-xs">
+                      <span className="w-3 text-right">{r.stars}</span>
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${r.percent}%` }} />
+                      </div>
+                      <span className="w-8 text-right text-muted-foreground">{r.percent}%</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Company Highlights */}
+          {company.highlights.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-bold">Company Highlights</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {company.highlights.map((h) => (
+                    <div key={h} className="flex items-center gap-2 text-sm">
+                      <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                      <span>{h}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Location */}
+          {(company.headOfficeAddress || company.headquarters) && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-bold">Location</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {companyData?.google_map_embed ? (
+                  <div className="rounded-lg overflow-hidden mb-3">
+                    <iframe
+                      src={companyData.google_map_embed}
+                      width="100%"
+                      height="200"
+                      style={{ border: 0 }}
+                      allowFullScreen
+                      loading="lazy"
+                      className="rounded-lg"
+                    />
+                  </div>
+                ) : (
+                  <div className="aspect-[21/9] rounded-lg bg-muted flex items-center justify-center mb-3 overflow-hidden">
+                    <MapPin className="h-8 w-8 text-muted-foreground/50" />
+                  </div>
+                )}
+                <p className="text-sm font-medium">{company.name}</p>
+                {company.headOfficeAddress && (
+                  <p className="text-xs text-muted-foreground">{company.headOfficeAddress}</p>
+                )}
+                {company.postalCode && (
+                  <p className="text-xs text-muted-foreground">{company.postalCode}</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Similar Companies */}
+          {similarCompaniesData.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-bold">Similar Companies</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {similarCompaniesData.map((c, i) => (
+                  <Link key={i} href={`/companies/${c.slug}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors">
+                    <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center text-xs font-bold shrink-0">
+                      {c.name[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{c.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{c.type}</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                      <span className="text-sm font-bold">{c.rating}</span>
+                    </div>
+                  </Link>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Career CTA Banner */}
+          <Card className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border-primary/20">
+            <CardContent className="p-5 text-center space-y-3">
+              <h3 className="font-bold text-sm">Looking for a career?</h3>
+              <p className="text-xs text-muted-foreground">
+                Explore current openings and become a part of our exciting team.
+              </p>
+              <Button size="sm" className="w-full" asChild>
+                <Link href="/employer/manage-jobs">View All Jobs ({company.activeJobs})</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
