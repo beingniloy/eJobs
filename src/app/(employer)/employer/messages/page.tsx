@@ -60,14 +60,14 @@ function EmployerMessagesContent() {
     setLoadingMsgs(true);
     api.get(`/messages/direct/${targetUserId}`).then((res) => {
       const conv = res.data?.conversation;
+      const msgs = res.data?.data?.messages || [];
       if (conv?.uuid) {
         setSelectedId(conv.uuid);
         setSelectedConv(conv);
-        // Load messages
-        messagesService.getMessages(conv.uuid).then((msgRes: any) => {
-          setMessages(msgRes?.messages || []);
-        }).catch(() => toast.error("Failed to load messages"))
-          .finally(() => { setLoadingMsgs(false); setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), 50); });
+        // Use messages from the direct endpoint — no second fetch needed
+        setMessages(msgs);
+        setLoadingMsgs(false);
+        setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
         // Load sidebar in background (non-blocking)
         messagesService.getConversations().then((list) => {
           setConversations((list || []).filter((c: any) => c?.uuid));
