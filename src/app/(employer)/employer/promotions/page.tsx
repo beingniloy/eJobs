@@ -53,16 +53,30 @@ interface CampaignAnalytics {
 }
 
 /* ── Helpers ── */
+function toMidnight(dateStr: string): number {
+  const d = new Date(dateStr);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
 function getTimeRemaining(start: string, end: string) {
   const now = Date.now();
-  const s = new Date(start).getTime();
-  const e = new Date(end).getTime();
-  const total = Math.max(e - s, 1);
-  const elapsed = Math.max(0, now - s);
-  const remaining = Math.max(0, e - now);
+  const startMs = toMidnight(start);
+  const endMs = toMidnight(end) + 86400000; // include the end day fully
+  const total = Math.max(endMs - startMs, 1);
+  const elapsed = Math.max(0, now - startMs);
+  const remaining = Math.max(0, endMs - now);
   const percent = Math.min(100, Math.round((elapsed / total) * 100));
-  const days = Math.ceil(remaining / 86400000);
-  return { percent, days, isExpired: remaining <= 0 };
+
+  // Calendar days remaining
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const endDate = new Date(end);
+  endDate.setHours(23, 59, 59, 999);
+  const diffMs = endDate.getTime() - today.getTime();
+  const days = Math.max(0, Math.ceil(diffMs / 86400000));
+
+  const isActive = new Date().getTime() <= endMs;
+  return { percent, days, isExpired: !isActive, isActive };
 }
 
 function getBoostLabel(type: string, isBn: boolean) {
@@ -104,8 +118,8 @@ export default function PromotionsPage() {
   const [now, setNow] = useState(Date.now());
   const [filter, setFilter] = useState("all");
 
-  // Refresh every 30s for live timers
-  useEffect(() => { const iv = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(iv); }, []);
+  // Refresh every 60s for live timers
+  useEffect(() => { const iv = setInterval(() => setNow(Date.now()), 60000); return () => clearInterval(iv); }, []);
 
   // Create dialog
   const [createOpen, setCreateOpen] = useState(false);
@@ -239,8 +253,9 @@ export default function PromotionsPage() {
         <div className="space-y-4">
           {filtered.map((p) => {
             const tr = getTimeRemaining(p.start_date, p.end_date);
-            const isExpired = tr.isExpired && p.status === "active";
-            const progressColor = isExpired ? "bg-red-500" : tr.days <= 3 ? "bg-amber-500" : "bg-primary";
+            const isExpired = tr.isExpired;
+            const isPaused = p.status === "paused";
+            const progressColor = isExpired || isPaused ? "bg-muted" : tr.days <= 3 ? "bg-amber-500" : "bg-primary";
 
             return (
               <Card key={p.id} className="overflow-hidden">
@@ -260,8 +275,13 @@ export default function PromotionsPage() {
                         <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           {formatDate(p.start_date)} → {formatDate(p.end_date)}
-                          {p.status === "active" && !isExpired && <span className="ml-2 text-amber-600 font-medium">{tr.days} {isBn ? "দিন বাকি" : "days left"}</span>}
-                          {isExpired && <span className="ml-2 text-red-500 font-medium">{isBn ? "মেয়াদোত্তীর্ণ" : "Expired"}</span>}
+                          {p.status === "active" && !isExpired && (
+                            <span className="ml-2 text-amber-600 font-medium">
+                              {tr.days > 0 ? `${tr.days} ${isBn ? "দিন বাকি" : "days left"}` : (isBn ? "আজ শেষ" : "Ends today")}
+                            </span>
+                          )}
+                          {(isExpired || isPaused) && p.status === "active" && <span className="ml-2 text-red-500 font-medium">{isBn ? "মেয়াদোত্তীর্ণ" : "Expired"}</span>}
+                          {isPaused && <span className="ml-2 text-muted-foreground font-medium">{isBn ? "বিরতি" : "Paused"}</span>}
                         </p>
                       </div>
                     </div>
@@ -279,7 +299,7 @@ export default function PromotionsPage() {
                   </div>
 
                   {/* Time Progress Bar */}
-                  {p.status === "active" && (
+                  {p.status === "active" && !isExpired && (
                     <div className="mt-3">
                       <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
                         <span className="flex items-center gap-1"><Clock className="h-2.5 w-2.5" />{isBn ? "সময়কাল" : "Duration"}</span>
@@ -290,7 +310,7 @@ export default function PromotionsPage() {
                       </div>
                       <div className="flex items-center justify-between text-[10px] mt-0.5">
                         <span className="text-muted-foreground">{Math.round(tr.percent)}%</span>
-                        <span className={isExpired ? "text-red-500" : tr.days <= 3 ? "text-amber-500" : "text-green-500"}>
+                        <span className={tr.days <= 3 ? "text-amber-500" : "text-green-500"}>
                           {isBn ? `${tr.days} দিন বাকি` : `${tr.days}d remaining`}
                         </span>
                       </div>

@@ -61,6 +61,11 @@ function getJobType(job: any): string {
   return raw.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
 }
 
+function toMidnight(dateStr: string): number {
+  const d = new Date(dateStr);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
 export default function ManageJobsPage() {
   const { language, settings } = useThemeStore();
   const isBn = language === "bn";
@@ -170,14 +175,23 @@ export default function ManageJobsPage() {
   const getBoostInfo = (jobId: number): PromotionInfo | null => promoMap.get(jobId) || null;
 
   const getBoostTimeRemaining = (promo: PromotionInfo) => {
-    const start = new Date(promo.start_date).getTime();
-    const end = new Date(promo.end_date).getTime();
-    const total = end - start;
-    const elapsed = Math.max(0, now - start);
-    const remaining = Math.max(0, end - now);
-    const percent = Math.min(100, Math.round((elapsed / Math.max(total, 1)) * 100));
-    const days = Math.ceil(remaining / (1000 * 60 * 60 * 24));
-    if (promo.status !== "active") return { days: 0, percent: 100, label: promo.status, color: "text-muted-foreground" };
+    const endMs = toMidnight(promo.end_date) + 86400000; // include end day fully
+    const now2 = new Date();
+    now2.setHours(0, 0, 0, 0);
+
+    const isActive = promo.status === "active";
+    if (!isActive || now2.getTime() > endMs) return { days: 0, percent: 100, label: promo.status, color: "text-muted-foreground" };
+
+    const endDate = new Date(promo.end_date);
+    endDate.setHours(23, 59, 59, 999);
+    const diffMs = endDate.getTime() - Date.now();
+    const days = Math.max(0, Math.ceil(diffMs / 86400000));
+
+    const startMs = toMidnight(promo.start_date);
+    const total = Math.max(endMs - startMs, 1);
+    const elapsed = Math.max(0, Date.now() - startMs);
+    const percent = Math.min(100, Math.round((elapsed / total) * 100));
+
     if (days <= 1) return { days, percent, label: `${days}d left`, color: "text-red-500" };
     if (days <= 3) return { days, percent, label: `${days}d left`, color: "text-amber-500" };
     return { days, percent, label: `${days}d left`, color: "text-green-500" };
