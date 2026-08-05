@@ -59,13 +59,21 @@ export default function BoostJobDialog({
   useEffect(() => {
     if (open) {
       setLoadingWallet(true);
+      setDailyBudget("");
+      setDuration("7");
+      setBoostType("featured");
+      setShowConfirmation(false);
       api
         .get("/employer/wallet")
         .then((res) => {
-          const data = res.data.data || res.data;
-          setWalletBalance(data.balance ?? data);
+          const d = res.data;
+          const raw = d?.wallet?.balance ?? d?.data?.balance ?? d?.balance ?? 0;
+          setWalletBalance(Number(raw) || 0);
         })
-        .catch(() => setWalletBalance(null))
+        .catch((err) => {
+          console.error("[BoostJob] Wallet fetch failed:", err);
+          setWalletBalance(0);
+        })
         .finally(() => setLoadingWallet(false));
     }
   }, [open]);
@@ -99,32 +107,18 @@ export default function BoostJobDialog({
       setShowConfirmation(false);
       onOpenChange(false);
       onComplete?.();
-    } catch {
-      toast.error(isBn ? "বুস্ট করতে ব্যর্থ" : "Failed to boost job");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || (isBn ? "বুস্ট করতে ব্যর্থ" : "Failed to boost job");
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
   const boostTypes = [
-    {
-      value: "featured",
-      label: isBn ? "বৈশিষ্ট্যযুক্ত" : "Featured",
-      description: isBn ? "সার্চে শীর্ষে" : "Top of search results",
-      icon: Star,
-    },
-    {
-      value: "sponsored",
-      label: isBn ? "স্পনসরড" : "Sponsored",
-      description: isBn ? "বিজ্ঞাপন ব্যানার" : "Ad banner placement",
-      icon: Megaphone,
-    },
-    {
-      value: "both",
-      label: isBn ? "উভয়" : "Both",
-      description: isBn ? "বৈশিষ্ট্যযুক্ত + স্পনসরড" : "Featured + Sponsored",
-      icon: Zap,
-    },
+    { value: "featured", label: isBn ? "বৈশিষ্ট্যযুক্ত" : "Featured", description: isBn ? "সার্চে শীর্ষে" : "Top of search results", icon: Star },
+    { value: "sponsored", label: isBn ? "স্পনসরড" : "Sponsored", description: isBn ? "বিজ্ঞাপন ব্যানার" : "Ad banner placement", icon: Megaphone },
+    { value: "both", label: isBn ? "উভয়" : "Both", description: isBn ? "বৈশিষ্ট্যযুক্ত + স্পনসরড" : "Featured + Sponsored", icon: Zap },
   ];
 
   return (
