@@ -26,7 +26,7 @@ import {
   MapPin, Briefcase, DollarSign, Calendar, ArrowLeft, Share2,
   Building2, CheckCircle, Clock, Send, ExternalLink, Sparkles, Loader2,
   Wallet, AlertTriangle, Shield, Flag, Target, Users, Star, Zap,
-  Globe, Award, TrendingUp, Rocket, Megaphone,
+  Globe, Award, TrendingUp, Rocket, Megaphone, Bookmark,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/utils";
