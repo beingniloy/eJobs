@@ -171,7 +171,6 @@ export default function JobsListClient() {
 
   return (
     <PublicLayout>
-      {/* Hero */}
       <section className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-b">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <h1 className="text-2xl md:text-3xl font-bold mb-1">{isBn ? "চাকরি খুঁজুন" : "Find Jobs"}</h1>
@@ -190,7 +189,6 @@ export default function JobsListClient() {
         </div>
       </section>
 
-      {/* Categories */}
       <div className="border-b bg-white dark:bg-card">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-1 overflow-x-auto py-3 scrollbar-hide">
@@ -205,7 +203,6 @@ export default function JobsListClient() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="bg-muted/30 border-b">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
@@ -225,10 +222,8 @@ export default function JobsListClient() {
         </div>
       </div>
 
-      {/* Main 3-Column */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-[var(--left)_1fr_var(--right)] lg:gap-6" style={{ '--left': leftOpen ? '220px' : '36px', '--right': rightOpen ? '280px' : '36px' } as React.CSSProperties}>
-          {/* Left Sidebar */}
           <aside className="space-y-5 min-w-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -248,7 +243,6 @@ export default function JobsListClient() {
             </>)}
           </aside>
 
-          {/* Center */}
           <main className="space-y-4">
             <div className="flex gap-2 lg:hidden">
               <Button variant="outline" size="sm" onClick={() => setLeftOpen(!leftOpen)} className="flex-1 text-xs">{leftOpen ? (isBn ? "ফিল্টার লুকান" : "Hide Filters") : (isBn ? "ফিল্টার দেখান" : "Show Filters")}</Button>
@@ -336,7 +330,6 @@ export default function JobsListClient() {
             )}
           </main>
 
-          {/* Right Sidebar */}
           <aside className="space-y-6 min-w-0">
             <div className="flex items-center gap-2 mb-3">
               <button onClick={() => setRightOpen(!rightOpen)} className="shrink-0 h-6 w-6 rounded hover:bg-muted flex items-center justify-center">{rightOpen ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}</button>
@@ -363,7 +356,6 @@ export default function JobsListClient() {
         </div>
       </div>
 
-      {/* Categories Grid */}
       <section className="border-t bg-muted/20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <h2 className="text-lg font-bold mb-1">{isBn ? "ক্যাটাগরি অনুযায়ী চাকরি" : "Browse by Category"}</h2>
