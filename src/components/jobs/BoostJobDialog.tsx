@@ -78,6 +78,14 @@ export default function BoostJobDialog({
     }
   }, [open]);
 
+  const boostTypes = [
+    { value: "featured", label: isBn ? "বৈশিষ্ট্যযুক্ত" : "Featured", description: isBn ? "সার্চে শীর্ষে" : "Top of search results", icon: Star },
+    { value: "sponsored", label: isBn ? "স্পনসরড" : "Sponsored", description: isBn ? "বিজ্ঞাপন ব্যানার" : "Ad banner placement", icon: Megaphone },
+    { value: "both", label: isBn ? "উভয়" : "Both", description: isBn ? "বৈশিষ্ট্যযুক্ত + স্পনসরড" : "Featured + Sponsored", icon: Zap },
+  ];
+
+  const getBoostLabel = () => boostTypes.find((bt) => bt.value === boostType)?.label || "Boost";
+
   const handleSubmit = async () => {
     if (!dailyBudget || parseFloat(dailyBudget) <= 0) {
       toast.error(isBn ? "দৈনিক বাজেট দিন" : "Please enter a daily budget");
@@ -93,9 +101,11 @@ export default function BoostJobDialog({
     const now = new Date();
     const endDate = new Date(now);
     endDate.setDate(endDate.getDate() + parseInt(duration, 10));
+    const title = `${jobTitle} - ${getBoostLabel()}`;
 
     try {
       await api.post("/employer/promotions", {
+        title,
         job_id: jobId,
         type: boostType,
         daily_budget: parseFloat(dailyBudget),
@@ -114,12 +124,6 @@ export default function BoostJobDialog({
       setSubmitting(false);
     }
   };
-
-  const boostTypes = [
-    { value: "featured", label: isBn ? "বৈশিষ্ট্যযুক্ত" : "Featured", description: isBn ? "সার্চে শীর্ষে" : "Top of search results", icon: Star },
-    { value: "sponsored", label: isBn ? "স্পনসরড" : "Sponsored", description: isBn ? "বিজ্ঞাপন ব্যানার" : "Ad banner placement", icon: Megaphone },
-    { value: "both", label: isBn ? "উভয়" : "Both", description: isBn ? "বৈশিষ্ট্যযুক্ত + স্পনসরড" : "Featured + Sponsored", icon: Zap },
-  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -197,7 +201,7 @@ export default function BoostJobDialog({
 
             {/* Daily Budget */}
             <div className="space-y-2">
-              <Label>{isBn ? "দৈনিক বাজেট" : "Daily Budget"}</Label>
+              <Label>{isBn ? "দৈনিক বাজেট" : "Daily Budget (BDT)"}</Label>
               <Input
                 type="number"
                 min="0"
@@ -231,8 +235,12 @@ export default function BoostJobDialog({
             </h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
+                <span className="text-muted-foreground">{isBn ? "চাকরি" : "Job"}</span>
+                <span className="font-medium truncate max-w-[200px]">{jobTitle}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-muted-foreground">{isBn ? "ধরন" : "Type"}</span>
-                <Badge variant="outline" className="capitalize">{boostType}</Badge>
+                <Badge variant="outline" className="capitalize">{getBoostLabel()}</Badge>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{isBn ? "সময়কাল" : "Duration"}</span>

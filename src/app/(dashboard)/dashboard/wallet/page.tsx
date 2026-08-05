@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import api from "@/lib/api-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,9 @@ import { toast } from "sonner";
 import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, TrendingUp, CreditCard, Shield, Clock, CheckCircle, AlertCircle, Info, Copy } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
-export default function WalletPage() {
+function WalletPageInner() {
+  const searchParams = useSearchParams();
+  const paymentStatus = searchParams.get("payment");
   const [wallet, setWallet] = useState<any>(null);
   const [depositMethods, setDepositMethods] = useState<any[]>([]);
   const [withdrawalMethods, setWithdrawalMethods] = useState<any[]>([]);
@@ -46,6 +49,19 @@ export default function WalletPage() {
       setFinancialSettings(r.data?.data || r.data || {});
     }).catch(() => toast.error("Failed to load financial settings"));
   }, []);
+
+  // Handle payment callback status
+  useEffect(() => {
+    if (paymentStatus === "success") {
+      toast.success("Payment successful! Your wallet has been credited.");
+    } else if (paymentStatus === "failed") {
+      toast.error("Payment failed. Please try again.");
+    } else if (paymentStatus === "error") {
+      toast.error("Payment processing error. Please contact support.");
+    } else if (paymentStatus === "already_processed") {
+      toast.info("This payment was already processed.");
+    }
+  }, [paymentStatus]);
 
   const selDG = depositMethods.find((g: any) => String(g.id) === addGatewayId);
   const selWG = withdrawalMethods.find((g: any) => String(g.id) === withdrawGatewayId);
