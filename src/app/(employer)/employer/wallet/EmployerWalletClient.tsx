@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import api from "@/lib/api-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,9 @@ import { toast } from "sonner";
 import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, TrendingUp, Shield, Clock, Copy, CheckCircle } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
-export default function EmployerWalletClient() {
+function EmployerWalletClientInner() {
+  const searchParams = useSearchParams();
+  const paymentStatus = searchParams.get("payment");
   const [wallet, setWallet] = useState<any>(null);
   const [gateways, setGateways] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -34,6 +37,19 @@ export default function EmployerWalletClient() {
       setTransactions(d.transactions || []);
     }).catch(() => toast.error("Failed to load wallet")).finally(() => setLoading(false));
   }, []);
+
+  // Handle payment callback status
+  useEffect(() => {
+    if (paymentStatus === "success") {
+      toast.success("Payment successful! Your wallet has been credited.");
+    } else if (paymentStatus === "failed") {
+      toast.error("Payment failed. Please try again.");
+    } else if (paymentStatus === "error") {
+      toast.error("Payment processing error. Please contact support.");
+    } else if (paymentStatus === "already_processed") {
+      toast.info("This payment was already processed.");
+    }
+  }, [paymentStatus]);
 
   const selG = gateways.find((g: any) => String(g.id) === addGatewayId);
   const depFee = selG ? (Number(addAmount || 0) * Number(selG.percent_charge || 0)) / 100 : 0;
@@ -163,5 +179,13 @@ export default function EmployerWalletClient() {
         </CardContent></Card></TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function EmployerWalletClient() {
+  return (
+    <Suspense fallback={<div className="space-y-6"><Skeleton className="h-8 w-48" /><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><Skeleton className="h-32" /><Skeleton className="h-32" /></div></div>}>
+      <EmployerWalletClientInner />
+    </Suspense>
   );
 }

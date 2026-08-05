@@ -45,7 +45,7 @@ export default function BoostJobDialog({
   const isBn = language === "bn";
 
   const [duration, setDuration] = useState("7");
-  const [boostType, setBoostType] = useState("featured");
+  const [boostType, setBoostType] = useState("sponsored_job");
   const [dailyBudget, setDailyBudget] = useState("");
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [loadingWallet, setLoadingWallet] = useState(true);
@@ -61,7 +61,7 @@ export default function BoostJobDialog({
       setLoadingWallet(true);
       setDailyBudget("");
       setDuration("7");
-      setBoostType("featured");
+      setBoostType("sponsored_job");
       setShowConfirmation(false);
       api
         .get("/employer/wallet")
@@ -70,21 +70,17 @@ export default function BoostJobDialog({
           const raw = d?.wallet?.balance ?? d?.data?.balance ?? d?.balance ?? 0;
           setWalletBalance(Number(raw) || 0);
         })
-        .catch((err) => {
-          console.error("[BoostJob] Wallet fetch failed:", err);
-          setWalletBalance(0);
-        })
+        .catch(() => setWalletBalance(0))
         .finally(() => setLoadingWallet(false));
     }
   }, [open]);
 
   const boostTypes = [
-    { value: "featured", label: isBn ? "বৈশিষ্ট্যযুক্ত" : "Featured", description: isBn ? "সার্চে শীর্ষে" : "Top of search results", icon: Star },
-    { value: "sponsored", label: isBn ? "স্পনসরড" : "Sponsored", description: isBn ? "বিজ্ঞাপন ব্যানার" : "Ad banner placement", icon: Megaphone },
-    { value: "both", label: isBn ? "উভয়" : "Both", description: isBn ? "বৈশিষ্ট্যযুক্ত + স্পনসরড" : "Featured + Sponsored", icon: Zap },
+    { value: "sponsored_job", label: isBn ? "স্পনসরড চাকরি" : "Sponsored Job", description: isBn ? "সার্চে শীর্ষে প্রদর্শন" : "Top placement in search results", icon: Star },
+    { value: "awareness_ad", label: isBn ? "ব্র্যান্ড অ্যাওয়্যারনেস" : "Brand Awareness", description: isBn ? "বিজ্ঞাপন ব্যানার প্লেসমেন্ট" : "Ad banner across the platform", icon: Megaphone },
   ];
 
-  const getBoostLabel = () => boostTypes.find((bt) => bt.value === boostType)?.label || "Boost";
+  const getBoostLabel = () => boostTypes.find((bt) => bt.value === boostType)?.label || "Promotion";
 
   const handleSubmit = async () => {
     if (!dailyBudget || parseFloat(dailyBudget) <= 0) {
@@ -133,39 +129,25 @@ export default function BoostJobDialog({
             <Zap className="h-5 w-5 text-primary" />
             {isBn ? "চাকরি বুস্ট করুন" : "Boost Job"}
           </DialogTitle>
-          <DialogDescription className="line-clamp-1">
-            {jobTitle}
-          </DialogDescription>
+          <DialogDescription className="line-clamp-1">{jobTitle}</DialogDescription>
         </DialogHeader>
 
-        {/* Wallet Balance */}
         <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
           <div className="flex items-center gap-2 text-sm">
             <Wallet className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">
-              {isBn ? "ওয়ালেট ব্যালেন্স" : "Wallet Balance"}
-            </span>
+            <span className="text-muted-foreground">{isBn ? "ওয়ালেট ব্যালেন্স" : "Wallet Balance"}</span>
           </div>
           <span className="font-semibold">
-            {loadingWallet ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : walletBalance !== null ? (
-              formatCurrency(walletBalance)
-            ) : (
-              "--"
-            )}
+            {loadingWallet ? <Loader2 className="h-4 w-4 animate-spin" /> : walletBalance !== null ? formatCurrency(walletBalance) : "--"}
           </span>
         </div>
 
         {!showConfirmation ? (
           <div className="space-y-4">
-            {/* Duration */}
             <div className="space-y-2">
               <Label>{isBn ? "সময়কাল" : "Duration"}</Label>
               <Select value={duration} onValueChange={setDuration}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="7">{isBn ? "৭ দিন" : "7 Days"}</SelectItem>
                   <SelectItem value="14">{isBn ? "১৪ দিন" : "14 Days"}</SelectItem>
@@ -174,9 +156,8 @@ export default function BoostJobDialog({
               </Select>
             </div>
 
-            {/* Boost Type */}
             <div className="space-y-2">
-              <Label>{isBn ? "বুস্ট ধরন" : "Boost Type"}</Label>
+              <Label>{isBn ? "প্রচারণার ধরন" : "Promotion Type"}</Label>
               <div className="grid grid-cols-1 gap-2">
                 {boostTypes.map((bt) => (
                   <button
@@ -184,9 +165,7 @@ export default function BoostJobDialog({
                     type="button"
                     onClick={() => setBoostType(bt.value)}
                     className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
-                      boostType === bt.value
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:bg-muted/50"
+                      boostType === bt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
                     }`}
                   >
                     <bt.icon className={`h-5 w-5 shrink-0 ${boostType === bt.value ? "text-primary" : "text-muted-foreground"}`} />
@@ -199,61 +178,29 @@ export default function BoostJobDialog({
               </div>
             </div>
 
-            {/* Daily Budget */}
             <div className="space-y-2">
               <Label>{isBn ? "দৈনিক বাজেট" : "Daily Budget (BDT)"}</Label>
-              <Input
-                type="number"
-                min="0"
-                step="10"
-                placeholder="0"
-                value={dailyBudget}
-                onChange={(e) => setDailyBudget(e.target.value)}
-              />
+              <Input type="number" min="0" step="10" placeholder="0" value={dailyBudget} onChange={(e) => setDailyBudget(e.target.value)} />
             </div>
 
-            {/* Total Budget */}
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
-              <span className="text-sm text-muted-foreground">
-                {isBn ? "মোট খরচ" : "Total Cost"}
-              </span>
-              <span className="font-semibold text-lg">
-                {formatCurrency(totalBudget)}
-              </span>
+              <span className="text-sm text-muted-foreground">{isBn ? "মোট খরচ" : "Total Cost"}</span>
+              <span className="font-semibold text-lg">{formatCurrency(totalBudget)}</span>
             </div>
 
             {walletBalance !== null && totalBudget > 0 && totalBudget > walletBalance && (
-              <p className="text-sm text-destructive">
-                {isBn ? "অপর্যাপ্ত ব্যালেন্স। অনুগ্রহ করে ওয়ালেটে টাকা যোগ করুন।" : "Insufficient balance. Please add funds to your wallet."}
-              </p>
+              <p className="text-sm text-destructive">{isBn ? "অপর্যাপ্ত ব্যালেন্স" : "Insufficient balance."}</p>
             )}
           </div>
         ) : (
           <div className="space-y-3 p-3 rounded-lg border">
-            <h4 className="font-medium text-sm">
-              {isBn ? "নিশ্চিতকরণ" : "Confirm Boost"}
-            </h4>
+            <h4 className="font-medium text-sm">{isBn ? "নিশ্চিতকরণ" : "Confirm"}</h4>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{isBn ? "চাকরি" : "Job"}</span>
-                <span className="font-medium truncate max-w-[200px]">{jobTitle}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{isBn ? "ধরন" : "Type"}</span>
-                <Badge variant="outline" className="capitalize">{getBoostLabel()}</Badge>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{isBn ? "সময়কাল" : "Duration"}</span>
-                <span>{duration} {isBn ? "দিন" : "days"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{isBn ? "দৈনিক বাজেট" : "Daily"}</span>
-                <span>{formatCurrency(parseFloat(dailyBudget || "0"))}</span>
-              </div>
-              <div className="flex justify-between font-semibold border-t pt-2">
-                <span>{isBn ? "মোট" : "Total"}</span>
-                <span>{formatCurrency(totalBudget)}</span>
-              </div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{isBn ? "চাকরি" : "Job"}</span><span className="font-medium truncate max-w-[200px]">{jobTitle}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{isBn ? "ধরন" : "Type"}</span><Badge variant="outline">{getBoostLabel()}</Badge></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{isBn ? "সময়কাল" : "Duration"}</span><span>{duration} {isBn ? "দিন" : "days"}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{isBn ? "দৈনিক" : "Daily"}</span><span>{formatCurrency(parseFloat(dailyBudget || "0"))}</span></div>
+              <div className="flex justify-between font-semibold border-t pt-2"><span>{isBn ? "মোট" : "Total"}</span><span>{formatCurrency(totalBudget)}</span></div>
             </div>
           </div>
         )}
@@ -261,21 +208,14 @@ export default function BoostJobDialog({
         <DialogFooter>
           {showConfirmation ? (
             <>
-              <Button variant="outline" onClick={() => setShowConfirmation(false)} disabled={submitting}>
-                {isBn ? "ফিরুন" : "Back"}
-              </Button>
+              <Button variant="outline" onClick={() => setShowConfirmation(false)} disabled={submitting}>{isBn ? "ফিরুন" : "Back"}</Button>
               <Button onClick={handleSubmit} disabled={submitting}>
                 {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 {isBn ? "নিশ্চিত করুন" : "Confirm"}
               </Button>
             </>
           ) : (
-            <Button
-              onClick={() => setShowConfirmation(true)}
-              disabled={!dailyBudget || parseFloat(dailyBudget) <= 0}
-            >
-              {isBn ? "পরবর্তী" : "Next"}
-            </Button>
+            <Button onClick={() => setShowConfirmation(true)} disabled={!dailyBudget || parseFloat(dailyBudget) <= 0}>{isBn ? "পরবর্তী" : "Next"}</Button>
           )}
         </DialogFooter>
       </DialogContent>

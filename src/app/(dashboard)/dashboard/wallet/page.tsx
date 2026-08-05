@@ -251,3 +251,11 @@ function WalletPageInner() {
     </div>
   );
 }
+
+export default function WalletPage() {
+  return (
+    <Suspense fallback={<div className="space-y-6"><Skeleton className="h-8 w-48" /><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><Skeleton className="h-32" /><Skeleton className="h-32" /><Skeleton className="h-32" /></div></div>}>
+      <WalletPageInner />
+    </Suspense>
+  );
+}
