@@ -13,20 +13,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   MapPin, Briefcase, DollarSign, Calendar, ArrowLeft, Share2,
   Building2, CheckCircle, Clock, Send, ExternalLink, Sparkles, Loader2,
-  Wallet, AlertTriangle, Shield, Flag, Target, Users, Star, Zap,
-  Globe, Award, TrendingUp, Rocket, Megaphone, Bookmark, Search,
+  AlertTriangle, Shield, Flag, Target, Users, Star, Zap,
+  Globe, Award, Rocket, Megaphone, Bookmark, Search, Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -68,28 +64,19 @@ export default function JobDetailClient({ jobId }: Props) {
   const [portfolioLink, setPortfolioLink] = useState("");
   const [generatingCover, setGeneratingCover] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const [applyFee, setApplyFee] = useState({ enabled: false, amount: 0 });
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [reportDescription, setReportDescription] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
-  const [complaintPhone, setComplaintPhone] = useState("");
-  const [complaintEmail, setComplaintEmail] = useState("");
   const [activeTab, setActiveTab] = useState<"overview" | "requirements" | "company">("overview");
 
   useEffect(() => {
-    api.get("/settings/public").then((r) => {
-      const s = r.data?.data || r.data || {};
-      if (s.support_phone) setComplaintPhone(s.support_phone);
-      if (s.support_email) setComplaintEmail(s.support_email);
-      if (s.regular_job_apply_fee_enabled) setApplyFee({ enabled: s.regular_job_apply_fee_enabled === "1" || s.regular_job_apply_fee_enabled === "true", amount: Number(s.regular_job_apply_fee || 0) });
-    }).catch(() => {});
     if (isAuthenticated && user?.role === "candidate") {
       api.get("/candidate/wallet").then((r) => {
         const d = r.data;
         setWalletBalance(Number(d.wallet?.balance ?? d.balance ?? d.data?.balance ?? 0));
-      }).catch(() => toast.error(isBn ? "ওয়ালেট লোড করতে ব্যর্থ" : "Failed to load wallet balance"));
+      }).catch(() => {});
     }
   }, [isAuthenticated, user]);
 
@@ -97,12 +84,16 @@ export default function JobDetailClient({ jobId }: Props) {
     const data: Record<string, any> = { cover_letter: coverLetter };
     if (portfolioLink) data.portfolio_link = portfolioLink;
     if (job?.is_remote_project) data.delivery_days = Number(deliveryDays) || 7;
-    applyMutation.mutate({ jobId: Number(jobId), data }, { onSuccess: () => { setShowApplyDialog(false); setCoverLetter(""); setDeliveryDays(""); setPortfolioLink(""); } });
+    applyMutation.mutate({ jobId: Number(jobId), data }, {
+      onSuccess: () => { setShowApplyDialog(false); setCoverLetter(""); setDeliveryDays(""); setPortfolioLink(""); },
+    });
   };
 
   const handleApplyClick = () => {
     if (!user?.is_verified) {
-      toast.warning(isBn ? "আগে যাচাই করুন" : "Verify your profile first", { action: { label: isBn ? "যাচাই" : "Verify", onClick: () => router.push("/dashboard/verify") } });
+      toast.warning(isBn ? "আগে যাচাই করুন" : "Verify your profile first", {
+        action: { label: isBn ? "যাচাই" : "Verify", onClick: () => router.push("/dashboard/verify") },
+      });
       return;
     }
     setShowApplyDialog(true);
@@ -111,7 +102,11 @@ export default function JobDetailClient({ jobId }: Props) {
   const handleGenerateCoverLetter = async () => {
     setGeneratingCover(true);
     try {
-      const res = await aiService.generateCoverLetter({ job_title: job?.title || "", company_name: (typeof job?.company === "object" ? job?.company?.name : job?.company) || "", job_description: job?.description || "" });
+      const res = await aiService.generateCoverLetter({
+        job_title: job?.title || "",
+        company_name: (typeof job?.company === "object" ? job?.company?.name : job?.company) || "",
+        job_description: job?.description || "",
+      });
       if (res.cover_letter) { setCoverLetter(res.cover_letter); toast.success(isBn ? "কভার লেটার তৈরি!" : "Cover letter generated!"); }
     } catch { toast.error(isBn ? "কভার লেটার তৈরি করতে ব্যর্থ" : "Failed to generate cover letter"); }
     finally { setGeneratingCover(false); }
@@ -141,17 +136,41 @@ export default function JobDetailClient({ jobId }: Props) {
     finally { setSubmittingReport(false); }
   };
 
-  if (isLoading) return <PublicLayout><div className="bg-gradient-to-br from-primary/5 via-primary/10 to-background py-12"><div className="container mx-auto px-4 sm:px-6 lg:px-8"><Skeleton className="h-6 w-32 mb-4" /><Skeleton className="h-10 w-2/3 mb-3" /><Skeleton className="h-5 w-1/2" /></div></div><div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8"><div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_300px] gap-6"><div className="space-y-4"><Skeleton className="h-64 w-full" /><Skeleton className="h-48 w-full" /></div><div className="space-y-4"><Skeleton className="h-8 w-1/2" /><Skeleton className="h-64 w-full" /></div><div className="space-y-4"><Skeleton className="h-48 w-full" /><Skeleton className="h-32 w-full" /></div></div></div></PublicLayout>;
+  if (isLoading) {
+    return (
+      <PublicLayout>
+        <div className="bg-gradient-to-br from-primary/5 via-primary/10 to-background py-12">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <Skeleton className="h-6 w-32 mb-4" /><Skeleton className="h-10 w-2/3 mb-3" /><Skeleton className="h-5 w-1/2" />
+          </div>
+        </div>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_300px] gap-6">
+            <div className="space-y-4"><Skeleton className="h-64 w-full" /><Skeleton className="h-48 w-full" /></div>
+            <div className="space-y-4"><Skeleton className="h-8 w-1/2" /><Skeleton className="h-64 w-full" /></div>
+            <div className="space-y-4"><Skeleton className="h-48 w-full" /><Skeleton className="h-32 w-full" /></div>
+          </div>
+        </div>
+      </PublicLayout>
+    );
+  }
 
-  if (!job) return <PublicLayout><div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center"><h2 className="text-2xl font-bold mb-4">{isBn ? "চাকরি পাওয়া যায়নি" : "Job not found"}</h2><Button asChild><Link href="/jobs"><ArrowLeft className="h-4 w-4 mr-2" />Back</Link></Button></div></PublicLayout>;
+  if (!job) {
+    return (
+      <PublicLayout>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+          <h2 className="text-2xl font-bold mb-4">{isBn ? "চাকরি পাওয়া যায়নি" : "Job not found"}</h2>
+          <Button asChild><Link href="/jobs"><ArrowLeft className="h-4 w-4 mr-2" />Back</Link></Button>
+        </div>
+      </PublicLayout>
+    );
+  }
 
   const promoInfo = getPromotionInfo(job);
   const promoBadge = promoInfo ? getPromotionBadgeConfig(promoInfo.type, isBn) : null;
   const matchScore = matchData?.score || matchData?.match_score;
   const matchedSkills = matchData?.matched_skills || matchData?.analysis?.matched_skills || [];
   const missingSkills = matchData?.missing_skills || matchData?.analysis?.missing_skills || [];
-  const matchAdvice = matchData?.advice || matchData?.analysis?.advice || "";
-  const profileStrength = matchData?.profile_strength || matchData?.analysis?.profile_strength;
   const companyName = typeof job.company === "object" ? job.company?.name : job.company;
   const companySlug = typeof job.company === "object" ? job.company?.slug : "";
   const companyLogo = typeof job.company === "object" ? job.company?.logo : null;
@@ -168,21 +187,17 @@ export default function JobDetailClient({ jobId }: Props) {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <Button variant="ghost" size="sm" asChild className="mb-3"><Link href="/jobs"><ArrowLeft className="h-4 w-4 mr-1" />{isBn ? "ফিরে যান" : "Back to Jobs"}</Link></Button>
 
-          {/* Promotion Badge */}
           {promoBadge && (
             <div className={`flex items-center gap-3 p-3 rounded-xl mb-4 ${promoBadge.color} text-white shadow-md`}>
               <promoBadge.icon className="h-5 w-5 shrink-0" />
-              <div className="flex-1">
-                <p className="font-bold text-sm">{promoBadge.label}</p>
-                <p className="text-xs text-white/80">{promoBadge.desc}</p>
-              </div>
+              <div className="flex-1"><p className="font-bold text-sm">{promoBadge.label}</p><p className="text-xs text-white/80">{promoBadge.desc}</p></div>
               <Badge className="bg-white/20 text-white border-0 text-[10px] shrink-0">{isBn ? "প্রচারিত" : "Promoted"}</Badge>
             </div>
           )}
 
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="flex items-start gap-4">
-              {companyLogo && <img src={companyLogo} alt={companyName} className="w-14 h-14 rounded-xl object-cover border shadow-sm" />}
+              {companyLogo && <img src={companyLogo} alt={companyName || ""} className="w-14 h-14 rounded-xl object-cover border shadow-sm" />}
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold">{job.title}</h1>
                 <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
@@ -288,7 +303,7 @@ export default function JobDetailClient({ jobId }: Props) {
             {activeTab === "company" && (<div className="space-y-6">
               {typeof job.company === "object" && job.company ? (
                 <Card><CardContent className="p-6"><div className="flex items-start gap-4">
-                  {companyLogo && <img src={companyLogo} alt={companyName} className="w-16 h-16 rounded-xl object-cover border" />}
+                  {companyLogo && <img src={companyLogo} alt={companyName || ""} className="w-16 h-16 rounded-xl object-cover border" />}
                   <div className="flex-1"><h3 className="text-lg font-bold">{companyName}</h3>{companyLocation && <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1"><MapPin className="h-3.5 w-3.5" />{companyLocation}</p>}
                     <div className="flex gap-2 mt-4"><Button variant="outline" size="sm" asChild><Link href={`/companies/${companySlug}`}><ExternalLink className="h-3.5 w-3.5 mr-1" />{isBn ? "প্রোফাইল" : "View Profile"}</Link></Button></div>
                   </div>
@@ -313,7 +328,7 @@ export default function JobDetailClient({ jobId }: Props) {
           <div className="space-y-4 order-1 lg:order-1">
             {typeof job.company === "object" && job.company && (
               <Card><CardContent className="p-5"><h3 className="font-semibold mb-3 text-sm">{isBn ? "কোম্পানি" : "Company"}</h3><Link href={`/companies/${companySlug}`} className="flex items-center gap-3 group">
-                {companyLogo && <img src={companyLogo} alt={companyName} className="w-12 h-12 rounded-lg object-cover border" />}
+                {companyLogo && <img src={companyLogo} alt={companyName || ""} className="w-12 h-12 rounded-lg object-cover border" />}
                 <div className="flex-1 min-w-0"><p className="font-medium text-sm group-hover:text-primary transition-colors truncate">{companyName}</p>{companyLocation && <p className="text-xs text-muted-foreground">{companyLocation}</p>}</div>
                 <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
               </Link></CardContent></Card>
