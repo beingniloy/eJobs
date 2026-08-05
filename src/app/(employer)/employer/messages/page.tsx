@@ -52,23 +52,34 @@ function EmployerMessagesContent() {
     }).catch(() => { setLoading(false); });
   }, []);
 
-  // Handle ?to= param — open chat instantly, load sidebar in background
+  // Handle ?to= param — show chat UI instantly, load data in background
   useEffect(() => {
     if (!targetUserId) return;
+    // Show chat panel immediately with loading state
+    setShowChat(true);
+    setLoadingMsgs(true);
     api.get(`/messages/direct/${targetUserId}`).then((res) => {
       const conv = res.data?.conversation;
       if (conv?.uuid) {
-        // Show chat IMMEDIATELY — don't wait for sidebar
-        selectConv(conv);
-        // Load sidebar in background
-        fetchConvs();
+        setSelectedId(conv.uuid);
+        setSelectedConv(conv);
+        // Load messages
+        messagesService.getMessages(conv.uuid).then((msgRes: any) => {
+          setMessages(msgRes?.messages || []);
+        }).catch(() => toast.error("Failed to load messages"))
+          .finally(() => { setLoadingMsgs(false); setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), 50); });
+        // Load sidebar in background (non-blocking)
+        messagesService.getConversations().then((list) => {
+          setConversations((list || []).filter((c: any) => c?.uuid));
+          setLoading(false);
+        }).catch(() => {});
       }
-    }).catch(() => {});
+    }).catch(() => { setLoadingMsgs(false); });
   }, [targetUserId]);
 
   // Load sidebar only when no ?to= param (normal browsing)
   useEffect(() => {
-    if (targetUserId) return; // skip if ?to= handler will fetch
+    if (targetUserId) return;
     if (!fetchedRef.current) { fetchedRef.current = true; fetchConvs(); }
   }, [fetchConvs, targetUserId]);
 
@@ -213,10 +224,15 @@ function EmployerMessagesContent() {
 
       {/* ═══ RIGHT: Chat ═══ */}
       <div className={`${!showChat ? "hidden md:flex" : "flex"} flex-col flex-1 min-w-0 bg-background`}>
-        {!selectedConv ? (
+        {!selectedConv && !targetUserId ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
             <MessageSquare className="h-12 w-12 text-muted-foreground/30 mb-3" />
             <p className="text-muted-foreground">{isBn ? "একটি কথোপকথন নির্বাচন করুন" : "Select a conversation"}</p>
+          </div>
+        ) : !selectedConv && targetUserId ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
+            <Loader2 className="h-8 w-8 text-muted-foreground animate-spin mb-3" />
+            <p className="text-sm text-muted-foreground">{isBn ? "কথোপকথন খুঁজে বের করা হচ্ছে..." : "Opening conversation..."}</p>
           </div>
         ) : (
           <>

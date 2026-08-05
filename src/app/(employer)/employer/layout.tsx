@@ -12,7 +12,7 @@ import { DefaultAvatar } from "@/components/ui/default-avatar";
 import {
   LayoutDashboard, Briefcase, Users, Plus, CreditCard, Settings,
   Bell, User, MessageSquare, BarChart3, Megaphone, FolderKanban,
-  ShieldCheck, Wallet, Headphones, ShoppingCart, Building2, Plane, FileText,
+  ShieldCheck, Wallet, Headphones, ShoppingCart, Building2, Plane, FileText, LogOut,
 } from "lucide-react";
 
 type SidebarGroup = { group: string; groupBn: string; color: string; items: typeof sidebarItems };
@@ -106,11 +106,10 @@ export default function EmployerDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isLoading, isAuthenticated, role } = useAuth();
+  const { isLoading, isAuthenticated, role, logout } = useAuth();
   const { language } = useThemeStore();
   const isBn = language === "bn";
 
-  // Lock body/html scroll — only the <main> area scrolls
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -152,6 +151,29 @@ export default function EmployerDashboardLayout({
       <Navbar />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
+        {/* Mobile bottom nav with logout */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border p-2 flex items-center justify-between safe-area-inset">
+          <Link href="/employer/dashboard" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:bg-muted transition-colors">
+            <LayoutDashboard className="h-4 w-4" />
+            {isBn ? "হোম" : "Home"}
+          </Link>
+          <Link href="/employer/manage-jobs" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:bg-muted transition-colors">
+            <Briefcase className="h-4 w-4" />
+            {isBn ? "চাকরি" : "Jobs"}
+          </Link>
+          <Link href="/employer/messages" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:bg-muted transition-colors">
+            <MessageSquare className="h-4 w-4" />
+            {isBn ? "বার্তা" : "Messages"}
+          </Link>
+          <Link href="/employer/wallet" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:bg-muted transition-colors">
+            <Wallet className="h-4 w-4" />
+            {isBn ? "ওয়ালেট" : "Wallet"}
+          </Link>
+          <button onClick={logout} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors">
+            <LogOut className="h-4 w-4" />
+            {isBn ? "লগআউট" : "Logout"}
+          </button>
+        </div>
         <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 lg:pb-6 main-surface">
           <Suspense
             fallback={
