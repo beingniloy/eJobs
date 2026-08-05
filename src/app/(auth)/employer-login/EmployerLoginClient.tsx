@@ -150,7 +150,7 @@ function EmployerLoginInner() {
   });
 
   const onSubmit = (data: LoginForm) => {
-    login.mutate(data);
+    login.mutate({ data, expectedRole: "employer" });
   };
 
   if (ssoToken && ssoRole) {
@@ -170,14 +170,20 @@ function EmployerLoginInner() {
           if (result.status) {
             const { setAuth } = useAuthStore.getState();
             const userRole = (result.role || result.user?.role || "candidate") as UserRole;
+
+            // Role validation for employer login page
+            if (userRole === "candidate") {
+              toast.error(isBn ? "এটি একটি প্রার্থী অ্যাকাউন্ট। প্রার্থী লগইন ব্যবহার করুন।" : "This is a candidate account. Please use the candidate login page.");
+              router.push("/login");
+              return;
+            }
+
             setAuth(result.user ?? null, result.token || "", userRole);
             toast.success(isBn ? "লগইন সফল!" : "Login successful!");
-            if (userRole === "employer") {
-              router.push("/employer/dashboard");
-            } else if (userRole === "admin") {
+            if (userRole === "admin") {
               router.push("/admin/dashboard");
             } else {
-              router.push("/dashboard");
+              router.push("/employer/dashboard");
             }
           } else {
             toast.error(result.message || (isBn ? "যাচাইকরণ ব্যর্থ" : "Verification failed"));
@@ -186,7 +192,7 @@ function EmployerLoginInner() {
           toast.error(isBn ? "যাচাইকরণ ব্যর্থ" : "Verification failed");
         }
       } else {
-        verify2fa.mutate({ temp_token: tempToken, code: otpCode });
+        verify2fa.mutate({ data: { temp_token: tempToken, code: otpCode }, expectedRole: "employer" });
       }
     };
 

@@ -151,7 +151,7 @@ function LoginClientInner() {
   });
 
   const onSubmit = (data: LoginForm) => {
-    login.mutate(data);
+    login.mutate({ data, expectedRole: "candidate" });
   };
 
   if (ssoToken && ssoRole) {
@@ -171,11 +171,17 @@ function LoginClientInner() {
           if (result.status) {
             const { setAuth } = useAuthStore.getState();
             const userRole = (result.role || result.user?.role || "candidate") as UserRole;
+
+            // Role validation for candidate login page
+            if (userRole === "employer") {
+              toast.error(isBn ? "এটি একটি নিয়োগকর্তা অ্যাকাউন্ট। নিয়োগকর্তা লগইন ব্যবহার করুন।" : "This is an employer account. Please use the employer login page.");
+              router.push("/employer/login");
+              return;
+            }
+
             setAuth(result.user ?? null, result.token || "", userRole);
             toast.success(isBn ? "লগইন সফল!" : "Login successful!");
-            if (userRole === "employer") {
-              router.push("/employer/dashboard");
-            } else if (userRole === "admin") {
+            if (userRole === "admin") {
               router.push("/admin/dashboard");
             } else {
               router.push("/dashboard");
@@ -187,7 +193,7 @@ function LoginClientInner() {
           toast.error(isBn ? "যাচাইকরণ ব্যর্থ" : "Verification failed");
         }
       } else {
-        verify2fa.mutate({ temp_token: tempToken, code: otpCode });
+        verify2fa.mutate({ data: { temp_token: tempToken, code: otpCode }, expectedRole: "candidate" });
       }
     };
 

@@ -26,8 +26,6 @@ interface Props {
 }
 
 export default function ProfileTimeline({ icon: Icon, title, items, editHref, isBn }: Props) {
-  if (!items.length) return null;
-
   return (
     <Card className="border-0 shadow-sm">
       <CardContent className="p-6">
@@ -42,6 +40,19 @@ export default function ProfileTimeline({ icon: Icon, title, items, editHref, is
             </Link>
           </Button>
         </div>
+        {!items.length ? (
+          <div className="text-center py-6">
+            <Icon className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground mb-3">
+              {isBn ? "এখনো কোনো তথ্য যোগ করা হয়নি" : "No information added yet"}
+            </p>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={editHref}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> {isBn ? "যোগ করুন" : "Add Now"}
+              </Link>
+            </Button>
+          </div>
+        ) : (
         <div className="space-y-0">
           {items.map((item, i) => (
             <div key={i} className="relative pl-8 pb-6 last:pb-0">
@@ -81,6 +92,7 @@ export default function ProfileTimeline({ icon: Icon, title, items, editHref, is
             </div>
           ))}
         </div>
+        )}
       </CardContent>
     </Card>
   );

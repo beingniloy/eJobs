@@ -9,7 +9,7 @@ import { resumeService } from "@/services/resume.service";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Briefcase, GraduationCap, Code, Loader2, Plus, Award } from "lucide-react";
+import { Briefcase, GraduationCap, Code, Loader2, Plus, Award, BookOpen } from "lucide-react";
 
 import ProfileHeader from "@/components/profile/overview/ProfileHeader";
 import ProfileStatsBar from "@/components/profile/overview/ProfileStatsBar";
@@ -23,6 +23,7 @@ import ProfileTopSkills from "@/components/profile/overview/ProfileTopSkills";
 import ProfileRecentActivities from "@/components/profile/overview/ProfileRecentActivities";
 import ProfileJobPreferences from "@/components/profile/overview/ProfileJobPreferences";
 import ProfileResumeDialog from "@/components/profile/overview/ProfileResumeDialog";
+import ProfileLanguages from "@/components/profile/overview/ProfileLanguages";
 
 export default function CandidateProfileOverviewClient() {
   const { user } = useAuth();
@@ -35,6 +36,8 @@ export default function CandidateProfileOverviewClient() {
   const [activeBadges, setActiveBadges] = useState<any[]>([]);
   const [cvData, setCvData] = useState<any>({});
   const [profileViews, setProfileViews] = useState<any[]>([]);
+  const [languages, setLanguages] = useState<any[]>([]);
+  const [trainings, setTrainings] = useState<any[]>([]);
   const [isPublic, setIsPublic] = useState(true);
   const [uploadingResume, setUploadingResume] = useState(false);
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
@@ -56,6 +59,8 @@ export default function CandidateProfileOverviewClient() {
       setActiveBadges(d.user?.profile?.active_badges || []);
       setCvData(cvRes.data?.data || {});
       setProfileViews(viewsRes.data?.data || []);
+      setLanguages(Array.isArray(profileData.language_proficiency) ? profileData.language_proficiency : []);
+      setTrainings(Array.isArray(profileData.trainings) ? profileData.trainings : []);
       setIsPublic(d.user?.profile?.is_public !== false);
     } finally {
       setLoading(false);
@@ -122,8 +127,8 @@ export default function CandidateProfileOverviewClient() {
   const cv = cvData || {};
   const fullName = p.full_name_en || user.name || "";
   const skills = Array.isArray(p.skills) ? p.skills : [];
-  const experience = Array.isArray(p.experience) ? p.experience : (Array.isArray(cv.experience) ? cv.experience : []);
-  const education = Array.isArray(p.education) ? p.education : (Array.isArray(cv.education) ? cv.education : []);
+  const experience = Array.isArray(p.experience) ? p.experience : (Array.isArray(p.experiences) ? p.experiences : (Array.isArray(cv.experience) ? cv.experience : []));
+  const education = Array.isArray(p.education) ? p.education : (Array.isArray(p.educations) ? p.educations : (Array.isArray(cv.education) ? cv.education : []));
   const projects = Array.isArray(p.projects) ? p.projects : (Array.isArray(cv.projects) ? cv.projects : []);
   const certifications = Array.isArray(p.certifications) ? p.certifications : [];
   const applicationsCount = stats?.applied || applications.length || 0;
@@ -137,27 +142,36 @@ export default function CandidateProfileOverviewClient() {
     { label: isBn ? "স্কিল যোগ" : "Skills Added", done: skills.length > 0 },
     { label: isBn ? "অভিজ্ঞতা যোগ" : "Experience Added", done: experience.length > 0 },
     { label: isBn ? "শিক্ষা যোগ" : "Education Added", done: education.length > 0 },
+    { label: isBn ? "ভাষা যোগ" : "Languages Added", done: languages.length > 0 },
     { label: isBn ? "প্রোফাইল ফটো" : "Profile Photo", done: !!p.avatar },
   ];
   const strengthPercent = Math.round((strengthSections.filter((s) => s.done).length / strengthSections.length) * 100);
 
   const expItems = experience.map((e: any) => ({
-    title: e.position || e.job_title,
-    subtitle: e.company || e.company_name,
+    title: e.designation || e.position || e.job_title,
+    subtitle: e.company_name || e.company || e.organization,
     location: e.location,
     startDate: e.start_date,
     endDate: e.end_date || (e.is_current ? "Present" : ""),
-    description: e.description,
+    description: e.responsibilities || e.description,
     is_current: e.is_current,
   }));
 
   const eduItems = education.map((e: any) => ({
-    title: e.degree || e.degree_name || e.level,
-    subtitle: e.institution || e.school_name,
-    location: e.field_of_study,
+    title: e.degree_name || e.degree || e.level || e.group_or_subject,
+    subtitle: e.institute_name || e.institution || e.school_name,
+    location: e.board || e.field_of_study,
     startDate: e.start_date,
-    endDate: e.end_date || e.graduation_year || "",
-    extra: e.gpa || e.result ? `GPA: ${e.gpa || e.result}` : undefined,
+    endDate: e.end_date || e.passing_year || e.graduation_year || "",
+    extra: e.gpa_or_cgpa || e.gpa || e.result ? `GPA: ${e.gpa_or_cgpa || e.gpa || e.result}` : undefined,
+  }));
+
+  const trainingItems = trainings.map((t: any) => ({
+    title: t.title || t.course_name,
+    subtitle: t.institute_name || t.organization || "",
+    startDate: t.year || "",
+    endDate: t.duration || "",
+    description: t.description,
   }));
 
   const projItems = projects.map((proj: any) => ({
@@ -263,6 +277,16 @@ export default function CandidateProfileOverviewClient() {
               </CardContent>
             </Card>
           )}
+
+          <ProfileLanguages languages={languages} isBn={isBn} />
+
+          <ProfileTimeline
+            icon={BookOpen}
+            title={isBn ? "প্রশিক্ষণ" : "Training"}
+            items={trainingItems}
+            editHref="/dashboard/profile"
+            isBn={isBn}
+          />
 
           <ProfileRecentActivities applications={applications} profileViews={profileViews} isBn={isBn} />
           <ProfileJobPreferences profile={p} isBn={isBn} />

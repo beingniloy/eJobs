@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DefaultAvatar } from "@/components/ui/default-avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { trackBehavior, useScrollDepthTracking, useClickPatternTracking, useSessionEngagementTracking } from "@/hooks/use-behavior-tracker";
 import { getInitials, getStorageUrl } from "@/lib/utils";
@@ -33,7 +32,6 @@ export default function PublicProfileClient({ username }: { username: string }) 
   const [followLoading, setFollowLoading] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
-  const [activeTab, setActiveTab] = useState("experience");
 
   useScrollDepthTracking();
   useClickPatternTracking();
@@ -109,9 +107,12 @@ export default function PublicProfileClient({ username }: { username: string }) 
       }, {})
     : rawSocialLinks;
   const projects = profile.projects || [];
-  const experience = profile.experience || [];
-  const education = profile.education || [];
+  const experience = profile.experience || profile.experiences || [];
+  const education = profile.education || profile.educations || [];
   const skills = profile.skills || [];
+  const languages = profile.language_proficiency || [];
+  const trainings = profile.trainings || [];
+  const certifications = profile.certifications || [];
   const activeBadges = profile.active_badges || [];
   const lockedBadges = profile.locked_badges || [];
   const avatar = profile.avatar || "";
@@ -197,16 +198,8 @@ export default function PublicProfileClient({ username }: { username: string }) 
           ))}
         </div>
 
-        {/* ── Tabs ── */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full justify-start h-auto flex-wrap bg-muted/50 p-1">
-            {["experience", "education", "skills", "portfolio", "badges", "social"].map((t) => (
-              <TabsTrigger key={t} value={t} className="text-xs capitalize px-3 py-1.5">
-                {t === "experience" ? `Experience ${experience.length}` : t === "education" ? `Education ${education.length}` : t === "skills" ? `Skills ${skills.length}` : t === "portfolio" ? `Projects ${projects.length}` : t}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        {/* ── Section Divider ── */}
+        <div className="border-b border-border/50" />
 
         {/* ── Main Content Grid ── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -261,104 +254,157 @@ export default function PublicProfileClient({ username }: { username: string }) 
             )}
 
             {/* Experience */}
-            {activeTab === "experience" && (
+            {experience.length > 0 && (
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-5 w-5" />Work Experience</CardTitle></CardHeader>
                 <CardContent>
-                  {experience.length > 0 ? (
-                    <div className="space-y-4">
-                      {experience.map((exp: any, i: number) => (
-                        <div key={i} className="relative pl-6 pb-4 border-l-2 border-primary/20 last:border-0">
-                          <div className="absolute -left-1.5 top-0 h-3 w-3 rounded-full bg-primary" />
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h4 className="font-semibold text-sm">{exp.position || exp.job_title}</h4>
-                              <p className="text-sm text-muted-foreground">{exp.company || exp.company_name}</p>
-                              {exp.location && <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5"><MapPin className="h-3 w-3" />{exp.location}</p>}
-                            </div>
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">{exp.start_date} - {exp.end_date || (exp.is_current ? "Present" : "")}</span>
+                  <div className="space-y-4">
+                    {experience.map((exp: any, i: number) => (
+                      <div key={i} className="relative pl-6 pb-4 border-l-2 border-primary/20 last:border-0">
+                        <div className="absolute -left-1.5 top-0 h-3 w-3 rounded-full bg-primary" />
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="font-semibold text-sm">{exp.designation || exp.position || exp.job_title}</h4>
+                            <p className="text-sm text-muted-foreground">{exp.company_name || exp.company}</p>
+                            {exp.location && <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5"><MapPin className="h-3 w-3" />{exp.location}</p>}
                           </div>
-                          {exp.description && <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{exp.description}</p>}
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">{exp.start_date} - {exp.end_date || (exp.is_current ? "Present" : "")}</span>
                         </div>
-                      ))}
-                    </div>
-                  ) : <p className="text-sm text-muted-foreground text-center py-8">No experience listed</p>}
+                        {(exp.responsibilities || exp.description) && <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{exp.responsibilities || exp.description}</p>}
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}
 
             {/* Education */}
-            {activeTab === "education" && (
+            {education.length > 0 && (
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><GraduationCap className="h-5 w-5" />Education</CardTitle></CardHeader>
                 <CardContent>
-                  {education.length > 0 ? (
-                    <div className="space-y-4">
-                      {education.map((edu: any, i: number) => (
-                        <div key={i} className="relative pl-6 pb-4 border-l-2 border-primary/20 last:border-0">
-                          <div className="absolute -left-1.5 top-0 h-3 w-3 rounded-full bg-primary" />
-                          <h4 className="font-semibold text-sm">{edu.degree || edu.degree_name || edu.level}</h4>
-                          <p className="text-sm text-muted-foreground">{edu.institution || edu.school_name}</p>
-                          {edu.field_of_study && <p className="text-xs text-muted-foreground">{edu.field_of_study}</p>}
-                          <p className="text-xs text-muted-foreground mt-1">{edu.start_date ? `${edu.start_date} - ` : ""}{edu.end_date || edu.graduation_year || ""}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : <p className="text-sm text-muted-foreground text-center py-8">No education listed</p>}
+                  <div className="space-y-4">
+                    {education.map((edu: any, i: number) => (
+                      <div key={i} className="relative pl-6 pb-4 border-l-2 border-primary/20 last:border-0">
+                        <div className="absolute -left-1.5 top-0 h-3 w-3 rounded-full bg-primary" />
+                        <h4 className="font-semibold text-sm">{edu.degree_name || edu.degree || edu.level || edu.group_or_subject}</h4>
+                        <p className="text-sm text-muted-foreground">{edu.institute_name || edu.institution || edu.school_name}</p>
+                        {(edu.board || edu.field_of_study) && <p className="text-xs text-muted-foreground">{edu.board || edu.field_of_study}</p>}
+                        <p className="text-xs text-muted-foreground mt-1">{edu.passing_year || edu.end_date || ""}{edu.gpa_or_cgpa ? ` — GPA: ${edu.gpa_or_cgpa}` : edu.gpa ? ` — GPA: ${edu.gpa}` : ""}</p>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}
 
             {/* Skills */}
-            {activeTab === "skills" && (
+            {skills.length > 0 && (
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Code className="h-5 w-5" />Skills</CardTitle></CardHeader>
                 <CardContent>
-                  {skills.length > 0 ? (
-                    <div className="space-y-2">
-                      {skills.map((s: any, i: number) => {
-                        const name = typeof s === "string" ? s : s.name;
-                        const level = typeof s === "object" ? s.level : null;
-                        return (
-                          <div key={i} className="flex items-center justify-between text-sm">
-                            <span>{name}</span>
-                            {level && <Badge variant="outline" className="text-xs">{level}</Badge>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : <p className="text-sm text-muted-foreground text-center py-8">No skills listed</p>}
+                  <div className="flex flex-wrap gap-2">
+                    {skills.map((s: any, i: number) => {
+                      const name = typeof s === "string" ? s : s.name;
+                      const level = typeof s === "object" ? s.level : null;
+                      return (
+                        <Badge key={i} variant="secondary" className="text-sm px-3 py-1">
+                          {name}{level ? ` — ${level}` : ""}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Languages */}
+            {languages.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Globe className="h-5 w-5" />Languages</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {languages.map((lang: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-border/50">
+                        <span className="font-medium text-sm">{lang.name}</span>
+                        <div className="flex gap-1.5">
+                          {lang.read && <Badge variant="secondary" className="text-[10px]">Read</Badge>}
+                          {lang.write && <Badge variant="secondary" className="text-[10px]">Write</Badge>}
+                          {lang.speak && <Badge variant="secondary" className="text-[10px]">Speak</Badge>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Training */}
+            {trainings.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><FileText className="h-5 w-5" />Training</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {trainings.map((t: any, i: number) => (
+                      <div key={i} className="relative pl-6 pb-4 border-l-2 border-primary/20 last:border-0">
+                        <div className="absolute -left-1.5 top-0 h-3 w-3 rounded-full bg-primary" />
+                        <h4 className="font-semibold text-sm">{t.title}</h4>
+                        {t.institute_name && <p className="text-sm text-muted-foreground">{t.institute_name}</p>}
+                        <p className="text-xs text-muted-foreground mt-1">{[t.duration, t.year].filter(Boolean).join(" · ")}</p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Certifications */}
+            {certifications.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Award className="h-5 w-5" />Certifications</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {certifications.map((cert: any, i: number) => (
+                      <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border/50">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <Award className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{cert.name || cert.title}</p>
+                          <p className="text-xs text-muted-foreground">{cert.issuer || cert.organization} {cert.year ? `(${cert.year})` : ""}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}
 
             {/* Portfolio */}
-            {activeTab === "portfolio" && (
+            {projects.length > 0 && (
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><BriefcaseBusiness className="h-5 w-5" />Projects</CardTitle></CardHeader>
                 <CardContent>
-                  {projects.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {projects.map((proj: any, i: number) => (
-                        <Card key={i} className="p-3">
-                          <h4 className="font-semibold text-sm">{proj.name || proj.project_name}</h4>
-                          {proj.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{proj.description}</p>}
-                          {proj.technologies && proj.technologies.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {proj.technologies.map((t: string, j: number) => <Badge key={j} variant="outline" className="text-[10px]">{t}</Badge>)}
-                            </div>
-                          )}
-                          {proj.url && <a href={proj.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline mt-2 inline-flex items-center gap-1"><ExternalLink className="h-3 w-3" />View</a>}
-                        </Card>
-                      ))}
-                    </div>
-                  ) : <p className="text-sm text-muted-foreground text-center py-8">No projects listed</p>}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {projects.map((proj: any, i: number) => (
+                      <Card key={i} className="p-3">
+                        <h4 className="font-semibold text-sm">{proj.name || proj.project_name}</h4>
+                        {proj.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{proj.description}</p>}
+                        {proj.technologies && proj.technologies.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {proj.technologies.map((t: string, j: number) => <Badge key={j} variant="outline" className="text-[10px]">{t}</Badge>)}
+                          </div>
+                        )}
+                        {proj.url && <a href={proj.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline mt-2 inline-flex items-center gap-1"><ExternalLink className="h-3 w-3" />View</a>}
+                      </Card>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}
 
             {/* Badges */}
-            {activeTab === "badges" && (
+            {(activeBadges.length > 0 || lockedBadges.length > 0) && (
               <div className="space-y-4">
                 {activeBadges.length > 0 && (
                   <Card>
@@ -402,33 +448,31 @@ export default function PublicProfileClient({ username }: { username: string }) 
             )}
 
             {/* Social */}
-            {activeTab === "social" && (
-              <Card>
-                <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Globe className="h-5 w-5" />Social Links</CardTitle></CardHeader>
-                <CardContent>
-                  {(() => {
-                    const links = [
-                      { label: "LinkedIn", url: socialLinksData.linkedin_url || profile.linkedin_url, icon: <Briefcase className="h-4 w-4" /> },
-                      { label: "GitHub", url: socialLinksData.github_url || profile.github_url, icon: <Code className="h-4 w-4" /> },
-                      { label: "Portfolio", url: socialLinksData.portfolio_url || profile.portfolio_url, icon: <LinkIcon className="h-4 w-4" /> },
-                      { label: "Website", url: socialLinksData.website_url || profile.website_url, icon: <Globe className="h-4 w-4" /> },
-                    ].filter((l) => l.url);
-                    if (links.length === 0) return <p className="text-sm text-muted-foreground text-center py-8">No social links provided</p>;
-                    return (
-                      <div className="space-y-3">
-                        {links.map((link, i) => (
-                          <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-                            <span className="text-muted-foreground">{link.icon}</span>
-                            <span className="font-medium text-sm">{link.label}</span>
-                            <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
-                          </a>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </CardContent>
-              </Card>
-            )}
+            {(() => {
+              const links = [
+                { label: "LinkedIn", url: socialLinksData.linkedin_url || profile.linkedin_url, icon: <Briefcase className="h-4 w-4" /> },
+                { label: "GitHub", url: socialLinksData.github_url || profile.github_url, icon: <Code className="h-4 w-4" /> },
+                { label: "Portfolio", url: socialLinksData.portfolio_url || profile.portfolio_url, icon: <LinkIcon className="h-4 w-4" /> },
+                { label: "Website", url: socialLinksData.website_url || profile.website_url, icon: <Globe className="h-4 w-4" /> },
+              ].filter((l) => l.url);
+              if (links.length === 0) return null;
+              return (
+                <Card>
+                  <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Globe className="h-5 w-5" />Social Links</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {links.map((link, i) => (
+                        <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                          <span className="text-muted-foreground">{link.icon}</span>
+                          <span className="font-medium text-sm">{link.label}</span>
+                          <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
+                        </a>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
           </div>
         </div>
       </div>
