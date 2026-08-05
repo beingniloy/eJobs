@@ -6,12 +6,11 @@ import api from "@/lib/api-client";
 import { useThemeStore } from "@/store/theme-store";
 import PublicLayout from "@/components/layout/PublicLayout";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DefaultAvatar } from "@/components/ui/default-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { DefaultAvatar } from "@/components/ui/default-avatar";
 import {
   Trophy,
   Medal,
@@ -20,11 +19,14 @@ import {
   Briefcase,
   TrendingUp,
   CheckCircle,
-  DollarSign,
-  ChevronLeft,
-  ChevronRight,
   Users,
   Building2,
+  ChevronLeft,
+  ChevronRight,
+  ArrowRight,
+  Zap,
+  Shield,
+  Heart,
 } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 
@@ -58,72 +60,68 @@ const CATEGORIES = [
   { key: "earnings", labelEn: "Earnings", labelBn: "আয়", icon: TrendingUp },
 ] as const;
 
-function PodiumCard({
-  entry,
-  rank,
-  isBn,
-}: {
-  entry: LeaderboardEntry;
-  rank: 1 | 2 | 3;
-  isBn: boolean;
-}) {
-  const colors = {
+function PodiumCard({ entry, rank, isBn }: { entry: LeaderboardEntry; rank: 1 | 2 | 3; isBn: boolean }) {
+  const styles = {
     1: {
-      bg: "from-amber-50 to-yellow-100 dark:from-amber-950/30 dark:to-yellow-900/20",
+      bg: "from-amber-50 via-yellow-50 to-amber-100 dark:from-amber-950/40 dark:via-yellow-950/30 dark:to-amber-900/30",
       border: "border-amber-300 dark:border-amber-600/50",
-      text: "text-amber-700 dark:text-amber-300",
-      shadow: "shadow-amber-200/50 dark:shadow-amber-900/20",
-      medal: "fill-amber-400 text-amber-500",
+      ring: "ring-amber-200 dark:ring-amber-700/40",
+      shadow: "shadow-lg shadow-amber-200/40 dark:shadow-amber-900/20",
+      medal: "text-amber-500",
       crown: true,
     },
     2: {
-      bg: "from-slate-50 to-gray-100 dark:from-slate-900/30 dark:to-gray-800/20",
+      bg: "from-slate-50 via-gray-50 to-slate-100 dark:from-slate-900/40 dark:via-gray-900/30 dark:to-slate-800/30",
       border: "border-slate-300 dark:border-slate-600/50",
-      text: "text-slate-600 dark:text-slate-300",
-      shadow: "shadow-slate-200/50 dark:shadow-slate-900/20",
-      medal: "fill-slate-400 text-slate-500",
+      ring: "ring-slate-200 dark:ring-slate-700/40",
+      shadow: "shadow-md shadow-slate-200/40 dark:shadow-slate-900/20",
+      medal: "text-slate-400 dark:text-slate-300",
       crown: false,
     },
     3: {
-      bg: "from-orange-50 to-amber-100 dark:from-orange-950/30 dark:to-amber-900/20",
+      bg: "from-orange-50 via-amber-50 to-orange-100 dark:from-orange-950/40 dark:via-amber-950/30 dark:to-orange-900/30",
       border: "border-orange-300 dark:border-orange-600/50",
-      text: "text-orange-700 dark:text-orange-300",
-      shadow: "shadow-orange-200/50 dark:shadow-orange-900/20",
-      medal: "fill-orange-400 text-orange-500",
+      ring: "ring-orange-200 dark:ring-orange-700/40",
+      shadow: "shadow-md shadow-orange-200/40 dark:shadow-orange-900/20",
+      medal: "text-orange-500",
       crown: false,
     },
   };
 
-  const c = colors[rank];
+  const s = styles[rank];
   const avatarSrc = entry.avatar || entry.logo;
   const displayName = entry.name;
-  const linkHref = entry.username
-    ? `/profile/${entry.username}`
-    : entry.slug
-      ? `/company/${entry.slug}`
-      : "#";
-  const scoreField =
-    "trust_score" in entry ? entry.trust_score : undefined;
+  const linkHref = entry.username ? `/profile/${entry.username}` : entry.slug ? `/company/${entry.slug}` : "#";
+  const scoreField = "trust_score" in entry ? entry.trust_score : undefined;
   const jobCount = entry.completed_jobs_count;
 
   return (
     <Link href={linkHref} className="group block">
       <Card
-        className={`relative overflow-hidden bg-gradient-to-b ${c.bg} ${c.border} ${c.shadow} shadow-lg border-2 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 ${
-          rank === 1 ? "md:scale-105 z-10" : ""
+        className={`relative overflow-hidden bg-gradient-to-b ${s.bg} ${s.border} ${s.shadow} ring-1 ${s.ring} border-2 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 ${
+          rank === 1 ? "md:scale-[1.03] z-10" : ""
         }`}
       >
         <CardContent className="p-6 text-center">
           <div className="flex justify-center mb-3">
-            {c.crown ? (
+            {s.crown ? (
               <Crown className="h-8 w-8 text-amber-500 drop-shadow-sm" />
             ) : (
-              <Medal className={`h-7 w-7 ${c.medal}`} />
+              <Medal className={`h-7 w-7 ${s.medal} fill-current opacity-80`} />
             )}
           </div>
 
           <div className="relative mx-auto mb-3 w-fit">
-            <DefaultAvatar src={avatarSrc} name={displayName} className="h-16 w-16 ring-4 ring-background shadow-md mx-auto" fallback={<span className="text-base font-semibold bg-primary/10 text-primary">{getInitials(displayName)}</span>} />
+            <DefaultAvatar
+              src={avatarSrc}
+              name={displayName}
+              className="h-16 w-16 ring-4 ring-background shadow-md mx-auto"
+              fallback={
+                <span className="text-base font-semibold bg-primary/10 text-primary">
+                  {getInitials(displayName)}
+                </span>
+              }
+            />
             <div className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-foreground flex items-center justify-center text-xs font-bold text-background shadow-sm">
               {rank}
             </div>
@@ -137,14 +135,9 @@ function PodiumCard({
             <div className="mt-2">
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                <span className="text-lg font-extrabold tabular-nums">
-                  {scoreField}
-                </span>
+                <span className="text-lg font-extrabold tabular-nums">{scoreField}</span>
               </div>
-              <Progress
-                value={scoreField}
-                className="h-1 bg-background/60"
-              />
+              <Progress value={scoreField} className="h-1 bg-background/60" />
             </div>
           )}
 
@@ -163,13 +156,11 @@ function PodiumCard({
                   className={`h-2.5 w-2.5 ${
                     i < Math.round(entry.rating!)
                       ? "fill-amber-400 text-amber-400"
-                      : "fill-background/40 text-muted-foreground/30"
+                      : "fill-muted/40 text-muted-foreground/30"
                   }`}
                 />
               ))}
-              <span className="text-[10px] text-muted-foreground ml-1">
-                ({entry.rating})
-              </span>
+              <span className="text-[10px] text-muted-foreground ml-1">({entry.rating})</span>
             </div>
           )}
         </CardContent>
@@ -178,21 +169,9 @@ function PodiumCard({
   );
 }
 
-function ListCard({
-  entry,
-  rank,
-  isBn,
-}: {
-  entry: LeaderboardEntry;
-  rank: number;
-  isBn: boolean;
-}) {
+function ListCard({ entry, rank, isBn }: { entry: LeaderboardEntry; rank: number; isBn: boolean }) {
   const avatarSrc = entry.avatar || entry.logo;
-  const linkHref = entry.username
-    ? `/profile/${entry.username}`
-    : entry.slug
-      ? `/company/${entry.slug}`
-      : "#";
+  const linkHref = entry.username ? `/profile/${entry.username}` : entry.slug ? `/company/${entry.slug}` : "#";
   const scoreField = entry.trust_score;
 
   return (
@@ -209,7 +188,16 @@ function ListCard({
             </span>
           </div>
 
-          <DefaultAvatar src={avatarSrc} name={entry.name} className="h-10 w-10 ring-2 ring-background shadow-sm shrink-0" fallback={<span className="text-xs font-semibold bg-primary/10 text-primary">{getInitials(entry.name)}</span>} />
+          <DefaultAvatar
+            src={avatarSrc}
+            name={entry.name}
+            className="h-10 w-10 ring-2 ring-background shadow-sm shrink-0"
+            fallback={
+              <span className="text-xs font-semibold bg-primary/10 text-primary">
+                {getInitials(entry.name)}
+              </span>
+            }
+          />
 
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-sm truncate group-hover:text-primary transition-colors">
@@ -232,16 +220,14 @@ function ListCard({
               </div>
             )}
 
-            {entry.trust_score !== undefined && (
+            {scoreField !== undefined && (
               <div className="text-right min-w-[60px]">
                 <p className="text-xs text-muted-foreground">
                   {isBn ? "স্কোর" : "Score"}
                 </p>
                 <div className="flex items-center gap-1 justify-end">
                   <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                  <span className="font-bold text-sm tabular-nums">
-                    {entry.trust_score}
-                  </span>
+                  <span className="font-bold text-sm tabular-nums">{scoreField}</span>
                 </div>
               </div>
             )}
@@ -253,8 +239,9 @@ function ListCard({
 }
 
 export default function LeaderboardClient() {
-  const { language } = useThemeStore();
+  const { language, settings } = useThemeStore();
   const isBn = language === "bn";
+  const siteName = settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs";
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
@@ -262,24 +249,21 @@ export default function LeaderboardClient() {
   const [category, setCategory] = useState<string>("trust");
   const [page, setPage] = useState(1);
 
-  const fetchData = useCallback(
-    async (t: string, cat: string, p: number) => {
-      setLoading(true);
-      try {
-        const res = await api.get("/leaderboard", {
-          params: { type: t, category: cat, page: p, per_page: 10 },
-        });
-        setEntries(res.data.data || []);
-        setPagination(res.data.pagination || null);
-      } catch {
-        setEntries([]);
-        setPagination(null);
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
+  const fetchData = useCallback(async (t: string, cat: string, p: number) => {
+    setLoading(true);
+    try {
+      const res = await api.get("/leaderboard", {
+        params: { type: t, category: cat, page: p, per_page: 10 },
+      });
+      setEntries(res.data.data || []);
+      setPagination(res.data.pagination || null);
+    } catch {
+      setEntries([]);
+      setPagination(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchData(type, category, page);
@@ -303,9 +287,11 @@ export default function LeaderboardClient() {
   return (
     <PublicLayout>
       <div className="min-h-screen bg-surface-page">
-        <div className="bg-gradient-to-b from-primary/[0.04] to-transparent border-b border-border/50">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 text-center">
-            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-200/50 dark:shadow-amber-900/20">
+        {/* ── Hero Header ── */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-primary/10 to-background border-b border-border/50">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.03]" />
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 text-center relative">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-200/40 dark:shadow-amber-900/30 mb-4">
               <Trophy className="h-7 w-7 text-white" />
             </div>
             <h1 className="text-3xl font-bold tracking-tight mb-1.5">
@@ -320,7 +306,7 @@ export default function LeaderboardClient() {
         </div>
 
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-4xl">
-          {/* Type Toggle */}
+          {/* ── Type Toggle ── */}
           <div className="flex items-center justify-center mb-6">
             <div className="inline-flex items-center bg-muted rounded-lg p-1 gap-0">
               <button
@@ -348,7 +334,7 @@ export default function LeaderboardClient() {
             </div>
           </div>
 
-          {/* Category Tabs */}
+          {/* ── Category Tabs ── */}
           <div className="flex items-center justify-center gap-2 mb-8">
             {CATEGORIES.map((cat) => {
               const Icon = cat.icon;
@@ -357,7 +343,7 @@ export default function LeaderboardClient() {
                 <button
                   key={cat.key}
                   onClick={() => handleCategoryChange(cat.key)}
-                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-all duration-200 ${
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                     active
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -404,7 +390,7 @@ export default function LeaderboardClient() {
             </div>
           ) : (
             <>
-              {/* Top 3 Podium */}
+              {/* ── Top 3 Podium ── */}
               {page === 1 && top3.length > 0 && (
                 <div className="mb-10">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end max-w-3xl mx-auto">
@@ -427,7 +413,7 @@ export default function LeaderboardClient() {
                 </div>
               )}
 
-              {/* Rest of the list */}
+              {/* ── Rest of the list ── */}
               <div className="space-y-2">
                 {entries.map((entry, idx) => {
                   const globalRank = (page - 1) * 10 + idx + 1;
@@ -443,7 +429,7 @@ export default function LeaderboardClient() {
                 })}
               </div>
 
-              {/* Pagination */}
+              {/* ── Pagination ── */}
               {pagination && pagination.last_page > 1 && (
                 <div className="flex items-center justify-center gap-1 mt-8">
                   <Button
@@ -458,23 +444,16 @@ export default function LeaderboardClient() {
 
                   {Array.from({ length: pagination.last_page }, (_, i) => i + 1)
                     .filter((p) => {
-                      if (
-                        p === 1 ||
-                        p === pagination.last_page ||
-                        Math.abs(p - page) <= 1
-                      )
+                      if (p === 1 || p === pagination.last_page || Math.abs(p - page) <= 1)
                         return true;
                       return false;
                     })
                     .map((p, idx, arr) => {
-                      const showEllipsis =
-                        idx > 0 && p - arr[idx - 1] > 1;
+                      const showEllipsis = idx > 0 && p - arr[idx - 1] > 1;
                       return (
                         <React.Fragment key={p}>
                           {showEllipsis && (
-                            <span className="px-1 text-muted-foreground text-sm">
-                              ...
-                            </span>
+                            <span className="px-1 text-muted-foreground text-sm">...</span>
                           )}
                           <Button
                             variant={p === page ? "default" : "outline"}
@@ -500,7 +479,7 @@ export default function LeaderboardClient() {
                 </div>
               )}
 
-              {/* Summary */}
+              {/* ── Summary ── */}
               {pagination && (
                 <p className="text-xs text-muted-foreground text-center mt-4">
                   {isBn
