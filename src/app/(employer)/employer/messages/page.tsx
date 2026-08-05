@@ -56,14 +56,20 @@ function EmployerMessagesContent() {
     if (!fetchedRef.current) { fetchedRef.current = true; fetchConvs(); }
   }, [fetchConvs]);
 
-  // Handle ?to= param
+  // Handle ?to= param — create/get conversation then select it
   useEffect(() => {
     if (!targetUserId) return;
     api.get(`/messages/direct/${targetUserId}`).then((res) => {
       const conv = res.data?.conversation;
       if (conv?.uuid) {
-        fetchConvs();
-        selectConv(conv);
+        // Refresh list then select so sidebar highlights correctly
+        messagesService.getConversations().then((list) => {
+          setConversations((list || []).filter((c: any) => c?.uuid));
+          setLoading(false);
+          selectConv(conv);
+        }).catch(() => {
+          selectConv(conv);
+        });
       }
     }).catch(() => {});
   }, [targetUserId]);

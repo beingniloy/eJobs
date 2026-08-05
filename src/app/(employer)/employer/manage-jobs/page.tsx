@@ -54,6 +54,13 @@ interface PromotionInfo {
   job_id: number;
 }
 
+/** Extract job type from various possible API response shapes */
+function getJobType(job: any): string {
+  const raw = job.job_type || job.employment_type || job.type || "";
+  if (!raw) return "";
+  return raw.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+}
+
 export default function ManageJobsPage() {
   const { language, settings } = useThemeStore();
   const isBn = language === "bn";
@@ -76,7 +83,6 @@ export default function ManageJobsPage() {
   const [deleting, setDeleting] = useState(false);
   const [now, setNow] = useState(Date.now());
 
-  // Promotions map: job_id -> promotion
   const [promoMap, setPromoMap] = useState<Map<number, PromotionInfo>>(new Map());
 
   useEffect(() => { const iv = setInterval(() => setNow(Date.now()), 60000); return () => clearInterval(iv); }, []);
@@ -97,11 +103,9 @@ export default function ManageJobsPage() {
       const list = Array.isArray(data) ? data : (data?.data || []);
       setJobs(list);
 
-      // Build promotion map from all promotions
       const promoList: PromotionInfo[] = promosRes.data?.data?.data || promosRes.data?.data || [];
       const map = new Map<number, PromotionInfo>();
       for (const p of promoList) {
-        // Use the most recent active promotion per job; if inactive, still show it
         if (!map.has(p.job_id) || (p.status === "active" && map.get(p.job_id)?.status !== "active")) {
           map.set(p.job_id, p);
         }
@@ -249,10 +253,11 @@ export default function ManageJobsPage() {
               {jobs.map((job: any) => {
                 const promo = getBoostInfo(job.id);
                 const boost = promo ? getBoostTimeRemaining(promo) : null;
+                const typeLabel = getJobType(job);
                 return (
                   <TableRow key={job.id}>
                     <TableCell><div className="font-medium">{job.title}</div>{job.location && <div className="text-xs text-muted-foreground sm:hidden">{job.location}</div>}</TableCell>
-                    <TableCell className="hidden sm:table-cell capitalize text-muted-foreground">{job.job_type || "—"}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">{typeLabel || "—"}</TableCell>
                     <TableCell className="text-center"><span className="text-sm text-muted-foreground">{job.applications_count || 0}</span></TableCell>
                     <TableCell className="hidden md:table-cell">
                       {promo && boost ? (
