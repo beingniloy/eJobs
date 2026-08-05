@@ -247,7 +247,7 @@ export default function ApplicantsClient() {
                           title={isBn ? "বার্তা পাঠান" : "Send Message"}
                           onClick={() => {
                             const cid = app.user?.id ?? app.id;
-                            if (cid) window.location.href = `/employer/messages?to=${cid}`;
+                            if (cid) router.push(`/employer/messages?to=${cid}`);
                           }}
                         >
                           <MessageSquare className="h-4 w-4" />
@@ -321,7 +321,7 @@ export default function ApplicantsClient() {
                             <DropdownMenuItem
                               onClick={() => {
                                 const cid = app.user?.id ?? app.id;
-                                if (cid) window.location.href = `/employer/messages?to=${cid}`;
+                                if (cid) router.push(`/employer/messages?to=${cid}`);
                               }}
                             >
                               <MessageSquare className="h-4 w-4 mr-2" />
@@ -473,7 +473,7 @@ export default function ApplicantsClient() {
                     size="sm"
                     onClick={() => {
                       const cid = selectedApp.user?.id ?? selectedApp.id;
-                      if (cid) window.location.href = `/employer/messages?to=${cid}`;
+                      if (cid) router.push(`/employer/messages?to=${cid}`);
                     }}
                   >
                     <MessageSquare className="h-4 w-4 mr-2" />
