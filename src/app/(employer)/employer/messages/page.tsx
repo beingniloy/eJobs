@@ -43,36 +43,34 @@ function EmployerMessagesContent() {
   const getName = (c: any) => c?.other_party?.name || c?.participant?.name || "User";
   const getAvatar = (c: any) => c?.other_party?.avatar || c?.other_party?.profile?.avatar || c?.participant?.avatar;
 
-  // Fetch conversations
+  // Fetch conversations (sidebar)
   const fetchConvs = useCallback(() => {
     messagesService.getConversations().then((res) => {
       const list = (res || []).filter((c: any) => c?.uuid);
       setConversations(list);
       setLoading(false);
-    }).catch(() => { toast.error("Failed to load conversations"); setLoading(false); });
+    }).catch(() => { setLoading(false); });
   }, []);
 
-  useEffect(() => {
-    if (!fetchedRef.current) { fetchedRef.current = true; fetchConvs(); }
-  }, [fetchConvs]);
-
-  // Handle ?to= param — create/get conversation then select it
+  // Handle ?to= param — open chat instantly, load sidebar in background
   useEffect(() => {
     if (!targetUserId) return;
     api.get(`/messages/direct/${targetUserId}`).then((res) => {
       const conv = res.data?.conversation;
       if (conv?.uuid) {
-        // Refresh list then select so sidebar highlights correctly
-        messagesService.getConversations().then((list) => {
-          setConversations((list || []).filter((c: any) => c?.uuid));
-          setLoading(false);
-          selectConv(conv);
-        }).catch(() => {
-          selectConv(conv);
-        });
+        // Show chat IMMEDIATELY — don't wait for sidebar
+        selectConv(conv);
+        // Load sidebar in background
+        fetchConvs();
       }
     }).catch(() => {});
   }, [targetUserId]);
+
+  // Load sidebar only when no ?to= param (normal browsing)
+  useEffect(() => {
+    if (targetUserId) return; // skip if ?to= handler will fetch
+    if (!fetchedRef.current) { fetchedRef.current = true; fetchConvs(); }
+  }, [fetchConvs, targetUserId]);
 
   // Select conversation
   const selectConv = (conv: any) => {
