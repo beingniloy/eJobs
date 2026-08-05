@@ -5,6 +5,15 @@ const cleanApiUrl = rawApiUrl.replace(/\/$/, "");
 const backendUrl = cleanApiUrl.replace(/\/api\/?$/, "");
 const apiUrl = `${backendUrl}/api`;
 
+// Derive the production API hostname from the env
+const apiHostname = (() => {
+  try {
+    return new URL(apiUrl).hostname;
+  } catch {
+    return "";
+  }
+})();
+
 const nextConfig: NextConfig = {
   output: "standalone",
   typescript: {
@@ -24,9 +33,28 @@ const nextConfig: NextConfig = {
         hostname: "**.ejobs.bd",
         pathname: "/storage/**",
       },
+      {
+        protocol: "https",
+        hostname: apiHostname,
+        pathname: "/storage/**",
+      },
     ],
   },
   async headers() {
+    // Build a connect-src list that covers both dev and production
+    const connectHosts = [
+      "'self'",
+      "http://127.0.0.1:8000",
+      "http://localhost:3000",
+      "wss:",
+      "ws:",
+      "https://fonts.maateen.me",
+      "https://connect.facebook.net",
+    ];
+    if (apiHostname && apiHostname !== "127.0.0.1") {
+      connectHosts.push(`https://${apiHostname}`);
+    }
+
     return [
       {
         source: "/(.*)",
@@ -40,7 +68,16 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.maateen.me; style-src-elem 'self' 'unsafe-inline' https://fonts.maateen.me; font-src 'self' data: https://fonts.maateen.me; img-src 'self' data: http://127.0.0.1:8000 https://*.ejobs.bd; connect-src 'self' http://127.0.0.1:8000 http://localhost:3000 wss: ws:; frame-ancestors 'none';",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "style-src 'self' 'unsafe-inline' https://fonts.maateen.me",
+              "style-src-elem 'self' 'unsafe-inline' https://fonts.maateen.me",
+              "font-src 'self' data: https://fonts.maateen.me",
+              `img-src 'self' data: http://127.0.0.1:8000 https://*.ejobs.bd${apiHostname ? ` https://${apiHostname}` : ""}`,
+              `connect-src ${connectHosts.join(" ")}`,
+              "frame-ancestors 'none'",
+            ].join("; "),
           },
         ],
       },

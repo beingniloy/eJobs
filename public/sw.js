@@ -1,4 +1,4 @@
-const CACHE = "jobportal-v4";
+const CACHE = "jobportal-v5";
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -34,6 +34,6 @@ self.addEventListener("fetch", (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(request))
+      .catch(() => caches.match(request).then((cached) => cached || new Response("", { status: 503 })))
   );
 });

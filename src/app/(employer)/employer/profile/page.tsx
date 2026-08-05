@@ -111,6 +111,8 @@ export default function EmployerProfilePage() {
   const [whyJoinUsInput, setWhyJoinUsInput] = useState("");
   const [topSkills, setTopSkills] = useState<string[]>([]);
   const [topSkillsInput, setTopSkillsInput] = useState("");
+  const [highlights, setHighlights] = useState<string[]>([]);
+  const [highlightsInput, setHighlightsInput] = useState("");
 
   // Section 5: HR Info
   const [hrName, setHrName] = useState("");
@@ -195,6 +197,7 @@ export default function EmployerProfilePage() {
       else if (wju && typeof wju === "object" && wju.benefits) setWhyJoinUs(wju.benefits);
       else setWhyJoinUs([]);
       setTopSkills(Array.isArray(c.top_skills) ? c.top_skills : []);
+      setHighlights(Array.isArray(c.highlights) ? c.highlights : []);
       setHrName(c.hr_manager_name || "");
       setHrPhone(c.hr_contact_number || "");
       setHrEmail(c.hr_email || "");
@@ -254,6 +257,8 @@ export default function EmployerProfilePage() {
     fd.append("working_culture", workingCulture);
     fd.append("why_join_us", JSON.stringify(whyJoinUs));
     fd.append("top_skills", JSON.stringify(topSkills));
+    fd.append("highlights", JSON.stringify(highlights));
+    fd.append("city", district);
     fd.append("hr_manager_name", hrName);
     fd.append("hr_contact_number", hrPhone);
     fd.append("hr_email", hrEmail);
@@ -283,8 +288,11 @@ export default function EmployerProfilePage() {
       const success = await updateCompany(fd);
       if (success) {
         if (hrTeam.length > 0) {
-          try { await api.post("/employer/hr-team", { members: hrTeam }); } catch {}
+          try { await api.post("/employer/hr-team", { members: hrTeam }); } catch (hrErr: any) {
+            toast.error(isBn ? "HR টিম সংরক্ষণ ব্যর্থ হয়েছে" : "HR team save failed");
+          }
         }
+        // Update previews from response (not stale hookCompany)
         const c = hookCompany;
         if (c) {
           setCompany(c);
@@ -480,6 +488,20 @@ export default function EmployerProfilePage() {
                 {topSkills.map((skill, i) => (
                   <Badge key={i} variant="secondary" className="text-xs gap-1 cursor-pointer hover:bg-destructive/10" onClick={() => setTopSkills(topSkills.filter((_, idx) => idx !== i))}>
                     {skill} <span className="text-muted-foreground ml-0.5">&times;</span>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">{isBn ? "হাইলাইটস" : "Company Highlights"}</Label>
+              <div className="flex gap-2">
+                <Input value={highlightsInput} onChange={(e) => setHighlightsInput(e.target.value)} placeholder={isBn ? "একটি হাইলাইট যোগ করুন..." : "Add a highlight..."} onKeyDown={(e) => { if (e.key === "Enter" && highlightsInput.trim()) { e.preventDefault(); setHighlights([...highlights, highlightsInput.trim()]); setHighlightsInput(""); } }} />
+                <Button type="button" size="sm" variant="outline" onClick={() => { if (highlightsInput.trim()) { setHighlights([...highlights, highlightsInput.trim()]); setHighlightsInput(""); } }}>+</Button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {highlights.map((item, i) => (
+                  <Badge key={i} variant="secondary" className="text-xs gap-1 cursor-pointer hover:bg-destructive/10" onClick={() => setHighlights(highlights.filter((_, idx) => idx !== i))}>
+                    {item} <span className="text-muted-foreground ml-0.5">&times;</span>
                   </Badge>
                 ))}
               </div>

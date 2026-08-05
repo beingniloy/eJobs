@@ -29,7 +29,17 @@ export default function CandidateAcceptedJobsPage() {
 
   useEffect(() => {
     api.get("/candidate/accepted-jobs")
-      .then((res) => setApplications(res.data.data || []))
+      .then((res) => {
+        // Handle paginated: { data: { data: [...] } } or flat: { data: [...] }
+        const raw = res.data.data;
+        if (Array.isArray(raw)) {
+          setApplications(raw);
+        } else if (raw?.data && Array.isArray(raw.data)) {
+          setApplications(raw.data);
+        } else {
+          setApplications([]);
+        }
+      })
       .catch(() => toast.error(isBn ? "গৃহীত চাকরি লোড করতে ব্যর্থ" : "Failed to load accepted jobs"))
       .finally(() => setLoading(false));
   }, []);
@@ -67,7 +77,7 @@ export default function CandidateAcceptedJobsPage() {
               <CheckCircle className="h-12 w-12 text-blue-400 mx-auto mb-4" />
               <p className="text-lg font-semibold">{isBn ? "কোনো গৃহীত চাকরি নেই" : "No accepted jobs yet"}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                {isBn ? "শর্টলিস্ট হouincychakরiju বর্তমানে ∅" : "Shortlisted jobs will appear here"}
+                {isBn ? "শর্টলিস্ট হলে এখানে দেখাবে" : "Shortlisted jobs will appear here"}
               </p>
             </CardContent>
           </Card>

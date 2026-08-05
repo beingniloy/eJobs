@@ -16,8 +16,8 @@ import { toast } from "sonner";
 import { trackBehavior, useScrollDepthTracking, useClickPatternTracking, useSessionEngagementTracking } from "@/hooks/use-behavior-tracker";
 import { Building2, ArrowLeft, Users, Calendar, Briefcase, Star, Eye, MapPin, Link2, AtSign, Hash, Send, Rss, Globe, CheckCircle2 } from "lucide-react";
 import type { Company, CompanyReview } from "@/types";
-import CompanyHeader from "./CompanyHeader";
-import CompanySidebar from "./CompanySidebar";
+import CompanyProfileHeader from "@/components/company/CompanyProfileHeader";
+import CompanyProfileSidebar from "@/components/company/CompanyProfileSidebar";
 import CompanyOverviewTab from "./CompanyOverviewTab";
 import CompanyReviewsTab from "./CompanyReviewsTab";
 import { getStorageUrl } from "@/lib/utils";
@@ -181,7 +181,7 @@ export default function CompanyDetailClient({ slug }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", name: company.name, url: company.website, logo: company.logo, description: company.description, address: { "@type": "PostalAddress", addressLocality: company.location }, numberOfEmployees: company.size }) }} />
 
       <div className="px-6 sm:px-8 lg:px-12 space-y-6">
-        <CompanyHeader company={company} following={following} followersCount={followersCount} activeJobsCount={Number(activeJobsCount)} avgReview={avgReview} totalReviews={totalReviews} socialLinks={socialLinks} onFollow={handleFollow} isAuthenticated={isAuthenticated} isBn={isBn} getStorageUrl={getStorageUrl} />
+        <CompanyProfileHeader company={company} mode="public" following={following} followersCount={followersCount} activeJobsCount={Number(activeJobsCount)} avgReview={avgReview} totalReviews={totalReviews} socialLinks={socialLinks} onFollow={handleFollow} isAuthenticated={isAuthenticated} isBn={isBn} />
 
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
           {[
@@ -210,7 +210,17 @@ export default function CompanyDetailClient({ slug }: Props) {
         </Tabs>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <CompanySidebar company={company} whyJoinUs={whyJoinUs} brochures={brochures} topSkills={topSkills} socialLinks={socialLinks} location={location} />
+          <div className="lg:col-span-3 space-y-4">
+            <CompanyProfileSidebar
+              company={company}
+              whyJoinUs={whyJoinUs}
+              brochures={brochures}
+              topSkills={topSkills}
+              socialLinks={socialLinks}
+              highlights={highlights}
+              location={location}
+            />
+          </div>
 
           <div className="lg:col-span-9 space-y-6">
             {activeTab === "overview" && <CompanyOverviewTab company={company} slug={slug} avgReview={avgReview} totalReviews={totalReviews} ratingBreakdown={ratingBreakdown} jobs={jobs} activeJobsCount={activeJobsCount} highlights={highlights} mission={company.mission || ""} vision={company.vision || ""} reviews={reviews} isBn={isBn} />}
