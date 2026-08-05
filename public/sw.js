@@ -1,4 +1,4 @@
-const CACHE = "jobportal-v5";
+const CACHE = "jobportal-v6";
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -19,6 +19,9 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
+
+  // Skip non-http schemes (chrome-extension, moz-extension, etc.)
+  if (url.protocol !== "http:" && url.protocol !== "https:") return;
 
   // Never cache API requests, Next.js hashed assets, or HTML pages
   if (url.pathname.startsWith("/api/")) return;

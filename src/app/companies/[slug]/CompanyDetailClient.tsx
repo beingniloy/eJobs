@@ -20,7 +20,6 @@ import CompanyProfileHeader from "@/components/company/CompanyProfileHeader";
 import CompanyProfileSidebar from "@/components/company/CompanyProfileSidebar";
 import CompanyOverviewTab from "./CompanyOverviewTab";
 import CompanyReviewsTab from "./CompanyReviewsTab";
-import { getStorageUrl } from "@/lib/utils";
 
 function formatJobType(t: string) { return t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()); }
 
@@ -29,7 +28,7 @@ interface Brochure { id: number; title: string; file_url: string; }
 interface Props { slug: string; }
 
 export default function CompanyDetailClient({ slug }: Props) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { language } = useThemeStore();
   const isBn = language === "bn";
   const [activeTab, setActiveTab] = useState("overview");
@@ -89,12 +88,14 @@ export default function CompanyDetailClient({ slug }: Props) {
       .finally(() => setLoading(false));
   }, [slug]);
 
+  // Only check follow status when authenticated AND user is a candidate
   useEffect(() => {
-    if (!company || !isAuthenticated) return;
+    if (!company || !isAuthenticated || !user) return;
+    if (user.role === "employer" || user.role === "admin") return; // Employers can't follow
     api.get(`/candidate/companies/${company.id}/followers/check`)
       .then((res: any) => setFollowing(res.data.following ?? res.data.data?.following ?? false))
-      .catch(() => {});
-  }, [company, isAuthenticated]);
+      .catch(() => {}); // Non-critical
+  }, [company, isAuthenticated, user]);
 
   const handleFollow = async () => {
     if (!isAuthenticated) { toast.error(isBn ? "লগইন করুন" : "Please login first"); return; }

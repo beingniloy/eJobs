@@ -22,12 +22,12 @@ import { getStorageUrl } from "@/lib/utils";
 import CompanyProfileHeader from "@/components/company/CompanyProfileHeader";
 import CompanyProfileSidebar from "@/components/company/CompanyProfileSidebar";
 
-/* ─── Format job type: "full_time" → "Full Time" ─── */
+/* Format job type: "full_time" → "Full Time" */
 function formatJobType(t: string) {
   return t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-/* ─── Empty state helper ─── */
+/* Empty state helper */
 function EmptyState({ text }: { text: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
@@ -37,7 +37,7 @@ function EmptyState({ text }: { text: string }) {
   );
 }
 
-/* ─── Left sidebar nav items ─── */
+/* Left sidebar nav items */
 const sidebarNavItems = [
   { key: "overview", label: "Overview", icon: Eye },
   { key: "jobs", label: "Jobs", icon: Briefcase },
@@ -53,7 +53,6 @@ const sidebarNavItems = [
   { key: "contact", label: "Contact Us", icon: MessageSquare },
 ];
 
-/* ─── Component ─── */
 export default function CompanyOverviewClient() {
   const { language } = useThemeStore();
   const isBn = language === "bn";
@@ -96,7 +95,6 @@ export default function CompanyOverviewClient() {
     }).catch(() => {});
   }, [companyData?.id]);
 
-  /* ── Derived data ── */
   const company = companyData
     ? {
         name: getDisplayField("name", "Your Company"),
@@ -184,9 +182,6 @@ export default function CompanyOverviewClient() {
 
   return (
     <div className="space-y-6">
-      {/* ══════════════════════════════════════════════════════════════════════
-          COMPANY HEADER (Facebook-style cover)
-         ══════════════════════════════════════════════════════════════════════ */}
       <CompanyProfileHeader
         company={{
           ...companyData,
@@ -211,9 +206,7 @@ export default function CompanyOverviewClient() {
         isBn={isBn}
       />
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          STATS BAR
-         ══════════════════════════════════════════════════════════════════════ */}
+      {/* Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {[
           { icon: Calendar, label: "Founded", value: company.founded || "N/A" },
@@ -232,17 +225,8 @@ export default function CompanyOverviewClient() {
         ))}
       </div>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          3-COLUMN LAYOUT
-         ══════════════════════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-        {/* ──────────────────────────────────────────────────────────────────
-            LEFT SIDEBAR (Navigation + Shared Company Sidebar)
-           ────────────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-3 space-y-4">
-
-          {/* Vertical Navigation */}
           <Card>
             <CardContent className="p-2">
               <nav className="space-y-0.5">
@@ -277,7 +261,6 @@ export default function CompanyOverviewClient() {
             </CardContent>
           </Card>
 
-          {/* Shared Company Sidebar (Snapshot, Why Join, Highlights, Brochures, Skills) */}
           <CompanyProfileSidebar
             company={{
               founded_year: company.founded,
@@ -294,15 +277,9 @@ export default function CompanyOverviewClient() {
           />
         </div>
 
-        {/* ──────────────────────────────────────────────────────────────────
-            MAIN CONTENT (Tabbed)
-           ────────────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-6 space-y-6">
-
-          {/* ══ OVERVIEW TAB ══ */}
           {activeTab === "overview" && (
             <>
-              {/* About Section */}
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-bold">About {company.name}</CardTitle>
@@ -311,12 +288,11 @@ export default function CompanyOverviewClient() {
                   {company.description ? (
                     <p className="text-sm text-muted-foreground leading-relaxed">{company.description}</p>
                   ) : (
-                    <p className="text-sm text-muted-foreground leading-relaxed italic">No company description added yet. Edit your profile to add one.</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed italic">No company description added yet.</p>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Mission / Vision / Values */}
               {(company.mission || company.vision || company.values) && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {company.mission && (
@@ -361,7 +337,6 @@ export default function CompanyOverviewClient() {
                 </div>
               )}
 
-              {/* Open Jobs */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-lg font-bold">Open Jobs ({company.activeJobs})</h2>
@@ -401,7 +376,6 @@ export default function CompanyOverviewClient() {
                 )}
               </div>
 
-              {/* Our Culture */}
               <div>
                 <h2 className="text-lg font-bold mb-3">Our Culture</h2>
                 {culturePhotos.length > 0 ? (
@@ -428,7 +402,6 @@ export default function CompanyOverviewClient() {
                 )}
               </div>
 
-              {/* Recent Updates */}
               <div>
                 <h2 className="text-lg font-bold mb-3">Recent Updates</h2>
                 {recentUpdates.length > 0 ? (
@@ -448,7 +421,6 @@ export default function CompanyOverviewClient() {
                 )}
               </div>
 
-              {/* Awards & Recognition */}
               <div>
                 <h2 className="text-lg font-bold mb-3">Awards & Recognition</h2>
                 {awards.length > 0 ? (
@@ -468,7 +440,6 @@ export default function CompanyOverviewClient() {
                 )}
               </div>
 
-              {/* Employee Reviews / Testimonials */}
               <div>
                 <h2 className="text-lg font-bold mb-3">What Our Employees Say</h2>
                 {reviews.length > 0 ? (
@@ -507,7 +478,6 @@ export default function CompanyOverviewClient() {
             </>
           )}
 
-          {/* ══ JOBS TAB ══ */}
           {activeTab === "jobs" && (
             <div>
               <h2 className="text-lg font-bold mb-3">All Jobs ({company.activeJobs})</h2>
@@ -544,7 +514,6 @@ export default function CompanyOverviewClient() {
             </div>
           )}
 
-          {/* ══ ABOUT TAB ══ */}
           {activeTab === "about" && (
             <div className="space-y-6">
               <Card>
@@ -628,7 +597,6 @@ export default function CompanyOverviewClient() {
             </div>
           )}
 
-          {/* ══ PEOPLE TAB ══ */}
           {activeTab === "people" && (
             <div className="text-center py-16">
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
@@ -638,7 +606,6 @@ export default function CompanyOverviewClient() {
             </div>
           )}
 
-          {/* ══ REVIEWS TAB ══ */}
           {activeTab === "reviews" && (
             <div className="space-y-6">
               <h2 className="text-lg font-bold">Company Reviews</h2>
@@ -698,7 +665,6 @@ export default function CompanyOverviewClient() {
             </div>
           )}
 
-          {/* ══ BENEFITS TAB ══ */}
           {activeTab === "benefits" && (
             <div className="space-y-4">
               <h2 className="text-lg font-bold">Benefits & Perks</h2>
@@ -719,7 +685,6 @@ export default function CompanyOverviewClient() {
             </div>
           )}
 
-          {/* ══ PHOTOS TAB ══ */}
           {activeTab === "photos" && (
             <div className="space-y-4">
               <h2 className="text-lg font-bold">Company Photos</h2>
@@ -743,7 +708,6 @@ export default function CompanyOverviewClient() {
             </div>
           )}
 
-          {/* ══ VIDEOS TAB ══ */}
           {activeTab === "videos" && (
             <div className="space-y-4">
               {companyData?.company_video_url ? (
@@ -765,7 +729,6 @@ export default function CompanyOverviewClient() {
             </div>
           )}
 
-          {/* ══ UPDATES TAB ══ */}
           {activeTab === "updates" && (
             <div className="space-y-4">
               <h2 className="text-lg font-bold">News & Updates</h2>
@@ -789,7 +752,6 @@ export default function CompanyOverviewClient() {
             </div>
           )}
 
-          {/* ══ CULTURE TAB ══ */}
           {activeTab === "culture" && (
             <div className="space-y-6">
               <h2 className="text-lg font-bold">Work Culture</h2>
@@ -817,7 +779,6 @@ export default function CompanyOverviewClient() {
             </div>
           )}
 
-          {/* ══ AWARDS TAB ══ */}
           {activeTab === "awards" && (
             <div className="space-y-4">
               <h2 className="text-lg font-bold">Awards & Recognition</h2>
@@ -842,7 +803,6 @@ export default function CompanyOverviewClient() {
             </div>
           )}
 
-          {/* ══ CONTACT TAB ══ */}
           {activeTab === "contact" && (
             <div className="space-y-6">
               <h2 className="text-lg font-bold">Contact Us</h2>
@@ -896,12 +856,7 @@ export default function CompanyOverviewClient() {
           )}
         </div>
 
-        {/* ──────────────────────────────────────────────────────────────────
-            RIGHT SIDEBAR (Rating + Highlights + Location + Similar + CTA)
-           ────────────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-3 space-y-4">
-
-          {/* Company Rating */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-bold">Company Rating</CardTitle>
@@ -933,7 +888,6 @@ export default function CompanyOverviewClient() {
             </CardContent>
           </Card>
 
-          {/* Company Highlights */}
           {company.highlights.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
@@ -952,7 +906,6 @@ export default function CompanyOverviewClient() {
             </Card>
           )}
 
-          {/* Location */}
           {(company.headOfficeAddress || company.headquarters) && (
             <Card>
               <CardHeader className="pb-3">
@@ -987,7 +940,6 @@ export default function CompanyOverviewClient() {
             </Card>
           )}
 
-          {/* Similar Companies */}
           {similarCompaniesData.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
@@ -1013,7 +965,6 @@ export default function CompanyOverviewClient() {
             </Card>
           )}
 
-          {/* Career CTA Banner */}
           <Card className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border-primary/20">
             <CardContent className="p-5 text-center space-y-3">
               <h3 className="font-bold text-sm">{isBn ? "নতুন চাকরি পোস্ট করুন" : "Ready to hire?"}</h3>

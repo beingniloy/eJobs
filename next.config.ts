@@ -5,7 +5,6 @@ const cleanApiUrl = rawApiUrl.replace(/\/$/, "");
 const backendUrl = cleanApiUrl.replace(/\/api\/?$/, "");
 const apiUrl = `${backendUrl}/api`;
 
-// Derive the production API hostname from the env
 const apiHostname = (() => {
   try {
     return new URL(apiUrl).hostname;
@@ -22,26 +21,12 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["laravel-echo", "pusher-js"],
   images: {
     remotePatterns: [
-      {
-        protocol: "http",
-        hostname: "127.0.0.1",
-        port: "8000",
-        pathname: "/storage/**",
-      },
-      {
-        protocol: "https",
-        hostname: "**.ejobs.bd",
-        pathname: "/storage/**",
-      },
-      {
-        protocol: "https",
-        hostname: apiHostname,
-        pathname: "/storage/**",
-      },
+      { protocol: "http", hostname: "127.0.0.1", port: "8000", pathname: "/storage/**" },
+      { protocol: "https", hostname: "**.ejobs.bd", pathname: "/storage/**" },
+      { protocol: "https", hostname: apiHostname, pathname: "/storage/**" },
     ],
   },
   async headers() {
-    // Build a connect-src list that covers both dev and production
     const connectHosts = [
       "'self'",
       "http://127.0.0.1:8000",
@@ -55,6 +40,18 @@ const nextConfig: NextConfig = {
       connectHosts.push(`https://${apiHostname}`);
     }
 
+    const imgHosts = [
+      "'self'",
+      "data:",
+      "http://127.0.0.1:8000",
+      "https://*.ejobs.bd",
+      "https://fonts.maateen.me",
+      "blob:",
+    ];
+    if (apiHostname && apiHostname !== "127.0.0.1") {
+      imgHosts.push(`https://${apiHostname}`);
+    }
+
     return [
       {
         source: "/(.*)",
@@ -62,10 +59,7 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          {
-            key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
-          },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
           {
             key: "Content-Security-Policy",
             value: [
@@ -74,7 +68,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.maateen.me",
               "style-src-elem 'self' 'unsafe-inline' https://fonts.maateen.me",
               "font-src 'self' data: https://fonts.maateen.me",
-              `img-src 'self' data: http://127.0.0.1:8000 https://*.ejobs.bd${apiHostname ? ` https://${apiHostname}` : ""}`,
+              `img-src ${imgHosts.join(" ")}`,
               `connect-src ${connectHosts.join(" ")}`,
               "frame-ancestors 'none'",
             ].join("; "),
@@ -85,22 +79,10 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
-      {
-        source: "/api/:path*",
-        destination: `${apiUrl}/:path*`,
-      },
-      {
-        source: "/storage/:path*",
-        destination: `${backendUrl}/storage/:path*`,
-      },
-      {
-        source: "/sanctum/:path*",
-        destination: `${backendUrl}/sanctum/:path*`,
-      },
-      {
-        source: "/cv/share/:path*",
-        destination: `${backendUrl}/cv/share/:path*`,
-      },
+      { source: "/api/:path*", destination: `${apiUrl}/:path*` },
+      { source: "/storage/:path*", destination: `${backendUrl}/storage/:path*` },
+      { source: "/sanctum/:path*", destination: `${backendUrl}/sanctum/:path*` },
+      { source: "/cv/share/:path*", destination: `${backendUrl}/cv/share/:path*` },
     ];
   },
 };

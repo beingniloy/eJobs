@@ -44,20 +44,19 @@ export default function CompanyProfileHeader({
 }: Props) {
   const logo = company.logo;
   const coverRaw = company.cover_image || company.cover_photo;
-  const cover = getStorageUrl(coverRaw);
+  const cover = coverRaw ? getStorageUrl(coverRaw) : "";
   const location = [company.location || company.city].filter(Boolean).join(", ");
 
   return (
     <div className="rounded-xl overflow-hidden bg-background border">
-      {/* ── Cover Image (Facebook-style: fixed height at top) ── */}
-      <div className="relative h-48 md:h-64 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
-        <div className="absolute inset-0 bg-[url('/images/company-bg.jpg')] bg-cover bg-center opacity-30" />
+      {/* Cover Image — no external asset dependency */}
+      <div className="relative h-48 md:h-64 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800">
         {cover && (
           <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover" />
         )}
       </div>
 
-      {/* ── Profile Info (overlaps cover bottom) ── */}
+      {/* Profile Info (overlaps cover bottom) */}
       <div className="relative px-6 md:px-8 pb-6 -mt-10 z-10">
         <div className="flex flex-col md:flex-row items-start md:items-end gap-4">
           {/* Logo — overlaps cover */}
