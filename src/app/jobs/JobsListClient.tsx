@@ -18,7 +18,7 @@ import {
   Search, Globe, Send, ChevronLeft, ChevronRight, Briefcase, MapPin,
   Users, Clock, Star, Building2, ChevronDown, ChevronUp, Zap, Target,
   Eye, Bookmark, BookmarkCheck, ShieldCheck, CheckCircle2, Award, CreditCard,
-  MessageSquare, Banknote, Filter, Mail, Rocket, Flame, Sparkles,
+  MessageSquare, Banknote, Filter, Mail, Rocket, Flame, Sparkles, DollarSign,
 } from "lucide-react";
 import { formatCurrency, truncate, stripHtml } from "@/lib/utils";
 import { trackBehavior } from "@/hooks/use-behavior-tracker";
