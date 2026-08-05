@@ -19,6 +19,7 @@ import {
   Users, Clock, Star, Building2, ChevronDown, ChevronUp, Zap, Target,
   Eye, Bookmark, BookmarkCheck, ShieldCheck, CheckCircle2, Award, CreditCard,
   MessageSquare, Banknote, Filter, Mail, Rocket, Flame, Sparkles, DollarSign, Megaphone,
+  Loader2,
 } from "lucide-react";
 import { formatCurrency, truncate, stripHtml } from "@/lib/utils";
 import { trackBehavior } from "@/hooks/use-behavior-tracker";
