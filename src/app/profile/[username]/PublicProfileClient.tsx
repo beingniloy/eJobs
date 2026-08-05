@@ -171,7 +171,7 @@ export default function PublicProfileClient({ username }: { username: string }) 
                       <Users className="h-4 w-4 mr-1" />{following ? "Following" : "Follow"} {followerCount > 0 && `(${followerCount})`}
                     </Button>
                     <Button variant="outline" size="sm" className="border-white/40 text-white hover:bg-white/10" asChild>
-                      <Link href={`/dashboard/messages?user=${profile.username}`}><MessageSquare className="h-4 w-4 mr-1" />Message</Link>
+                      <Link href={user?.role === "employer" ? `/employer/messages?to=${profile.id}` : `/dashboard/messages?to=${profile.id}`}><MessageSquare className="h-4 w-4 mr-1" />Message</Link>
                     </Button>
                   </>
                 )}
