@@ -93,9 +93,9 @@ api.interceptors.response.use(
           const currentPath = window.location.pathname;
           const authPaths = ["/login", "/employer/login", "/register", "/employer/register"];
           if (!authPaths.some((p) => currentPath.startsWith(p))) {
-            // Defer redirect so React can finish hydration before unmounting
+            const isEmployerPath = currentPath.startsWith("/employer");
             setTimeout(() => {
-              window.location.href = "/login";
+              window.location.href = isEmployerPath ? "/employer/login" : "/login";
             }, 0);
           }
         }

@@ -78,8 +78,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error: { response?: { status?: number } } | unknown) {
         if ((error as { response?: { status?: number } })?.response?.status === 401) {
           logout();
-        } else if (!(error as { response?: { status?: number } })?.response) {
-          logout();
         }
       } finally {
         setLoading(false);
@@ -101,7 +99,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isDashboard = pathname.startsWith("/dashboard") || (pathname.startsWith("/employer") && !isEmployeeAuth) || pathname.startsWith("/admin");
 
     if (!currentAuth.isAuthenticated && isDashboard) {
-      router.push("/login");
+      if (pathname.startsWith("/employer")) {
+        router.push("/employer/login");
+      } else {
+        router.push("/login");
+      }
     }
 
     if (currentAuth.isAuthenticated && isGuestOnly) {
