@@ -48,7 +48,7 @@ export default function CandidateDashboardPage() {
           applied_jobs_count: d.stats?.applied ?? d.applications?.length ?? 0,
           saved_jobs_count: d.user?.profile?.saved_jobs_count ?? 0,
           profile_views: d.user?.profile?.profile_views ?? 0,
-          match_score: d.user?.profile?.match_score ?? 0,
+          match_score: Math.round(d.user?.profile?.match_score ?? 0),
           wallet_balance: d.user?.profile?.wallet_balance ?? 0,
         });
       })

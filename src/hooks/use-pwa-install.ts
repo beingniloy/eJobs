@@ -9,13 +9,20 @@ interface BeforeInstallPromptEvent extends Event {
 
 /**
  * Shared hook for PWA install prompt.
- * Used by both Footer install banner and floating PwaInstallBanner.
+ * Shows install button for all non-installed browsers.
  */
 export function usePwaInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
+    // Register service worker if not already
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistration().then((reg) => {
+        if (!reg) navigator.serviceWorker.register("/sw.js").catch(() => {});
+      });
+    }
+
     // Already installed (standalone)
     if (window.matchMedia("(display-mode: standalone)").matches) {
       setIsInstalled(true);
@@ -42,15 +49,20 @@ export function usePwaInstall() {
   }, []);
 
   const install = useCallback(async () => {
-    if (!deferredPrompt) return false;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    setDeferredPrompt(null);
-    return outcome === "accepted";
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      setDeferredPrompt(null);
+      return outcome === "accepted";
+    }
+    // No prompt available (non-Chrome or criteria not met)
+    // Show manual instructions
+    return false;
   }, [deferredPrompt]);
 
   return {
-    canInstall: !!deferredPrompt && !isInstalled,
+    canInstall: !isInstalled,
+    hasPrompt: !!deferredPrompt,
     isInstalled,
     install,
   };

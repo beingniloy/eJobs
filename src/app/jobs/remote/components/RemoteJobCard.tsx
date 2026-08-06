@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Star, MapPin, Send, Eye, Bookmark, Clock, Users, Briefcase, Globe } from "lucide-react";
+import { Building2, Star, MapPin, Send, Eye, Bookmark, Clock, Users, Briefcase, Globe, DollarSign } from "lucide-react";
 import { formatCurrency, truncate, stripHtml } from "@/lib/utils";
 import type { Job } from "@/types";
 
@@ -40,8 +40,22 @@ export default function RemoteJobCard({ job, isBn, onApply }: Props) {
               </div>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-lg font-bold text-primary">{formatCurrency(job.salary_min || 0)}</p>
-              <p className="text-xs text-muted-foreground">{job.job_type === "hourly" ? "Hourly" : "Fixed Price"}</p>
+              <p className="text-lg font-bold text-primary">{formatCurrency(job.budget || job.salary_min || 0)}</p>
+              <p className="text-xs text-muted-foreground">
+                {(() => {
+                  const typeMap: Record<string, { en: string; bn: string }> = {
+                    fixed: { en: "Fixed Price", bn: "ফিক্সড" },
+                    hourly: { en: "Hourly", bn: "প্রতি ঘণ্টা" },
+                    daily: { en: "Daily", bn: "প্রতি দিন" },
+                    monthly: { en: "Monthly", bn: "প্রতি মাস" },
+                    "6_months": { en: "6 Months", bn: "৬ মাস" },
+                    "1_year": { en: "1 Year", bn: "১ বছর" },
+                    full_project: { en: "Full Project", bn: "ফুল প্রজেক্ট" },
+                  };
+                  const t = typeMap[job.budget_type] || typeMap[job.job_type] || { en: "Fixed Price", bn: "ফিক্সড" };
+                  return isBn ? t.bn : t.en;
+                })()}
+              </p>
             </div>
           </div>
           <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{truncate(description, 200)}</p>

@@ -8,20 +8,16 @@ import { usePwaInstall } from "@/hooks/use-pwa-install";
 
 export default function PwaInstallBanner() {
   const [showBanner, setShowBanner] = useState(false);
-  const { canInstall, isInstalled, install } = usePwaInstall();
+  const { hasPrompt, isInstalled, install } = usePwaInstall();
   const settings = useThemeStore((s) => s.settings);
   const appName = settings?.site_name || process.env.NEXT_PUBLIC_APP_NAME || "JobPortal";
 
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
-    }
-
-    if (canInstall) {
+    if (hasPrompt) {
       const timer = setTimeout(() => setShowBanner(true), 3000);
       return () => clearTimeout(timer);
     }
-  }, [canInstall]);
+  }, [hasPrompt]);
 
   const handleInstall = async () => {
     const accepted = await install();
@@ -33,7 +29,7 @@ export default function PwaInstallBanner() {
     sessionStorage.setItem("pwa-dismissed", "1");
   };
 
-  if (isInstalled || !showBanner || !canInstall) return null;
+  if (isInstalled || !showBanner || !hasPrompt) return null;
   if (typeof window !== "undefined" && sessionStorage.getItem("pwa-dismissed") === "1") return null;
 
   return (
