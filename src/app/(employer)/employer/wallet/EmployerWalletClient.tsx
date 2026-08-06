@@ -11,8 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, TrendingUp, Shield, Clock, Copy, CheckCircle } from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, TrendingUp, Shield, Clock, Copy, CheckCircle, CircleDot } from "lucide-react";
+import { formatCurrency, formatDate, getStorageUrl } from "@/lib/utils";
+import Image from "next/image";
 
 function EmployerWalletClientInner() {
   const searchParams = useSearchParams();
@@ -128,7 +129,27 @@ function EmployerWalletClientInner() {
         </TabsContent>
         <TabsContent value="add"><Card><CardHeader><CardTitle>Add Money</CardTitle></CardHeader><CardContent className="space-y-4">
           {gateways.length === 0 ? <p className="text-muted-foreground">No payment methods available</p> : <>
-            <div className="space-y-2"><Label>Payment Method</Label><Select value={addGatewayId} onValueChange={(v) => { setAddGatewayId(v); setAddTxId(""); }}><SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger><SelectContent>{gateways.map((g: any) => <SelectItem key={g.id} value={String(g.id)}>{g.display_name || g.name}{Number(g.percent_charge) > 0 ? " (" + g.percent_charge + "% fee)" : ""}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-2"><Label>Payment Method</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {gateways.map((g: any) => {
+                  const logo = getStorageUrl(g.logo);
+                  const isSelected = String(g.id) === addGatewayId;
+                  return (
+                    <button key={g.id} type="button" onClick={() => { setAddGatewayId(String(g.id)); setAddTxId(""); }}
+                      className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${isSelected ? "border-primary bg-primary/5 shadow-md" : "border-border hover:border-primary/40 hover:bg-muted/50"}`}>
+                      {logo ? (
+                        <Image src={logo} alt={g.display_name || g.name} width={48} height={48} className="object-contain h-12 w-12" />
+                      ) : (
+                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center"><CircleDot className="h-6 w-6 text-primary" /></div>
+                      )}
+                      <span className="text-sm font-medium text-center">{g.display_name || g.name}</span>
+                      {Number(g.percent_charge) > 0 && <span className="text-xs text-muted-foreground">{g.percent_charge}% fee</span>}
+                      {isSelected && <div className="absolute top-2 right-2"><CheckCircle className="h-4 w-4 text-primary" /></div>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             
             <div className="space-y-2"><Label>Amount (BDT)</Label><Input type="number" placeholder="Enter amount" value={addAmount} onChange={(e) => setAddAmount(e.target.value)} min="10" />
               {selG && <p className="text-xs text-muted-foreground">Min: {formatCurrency(selG.min_amount)} - Max: {formatCurrency(selG.max_amount)}</p>}</div>
