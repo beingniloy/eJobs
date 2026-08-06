@@ -65,6 +65,7 @@ export default function ApplyDialog({ open, onOpenChange, job, isBn, resumeFromP
 
   const handleSubmit = async () => {
     if (!job || !coverLetter.trim()) { toast.error(isBn ? "কভার লেটার লিখুন" : "Please write a cover letter"); return; }
+    if (coverLetter.trim().length < 10) { toast.error(isBn ? "কভার লেটার কমপক্ষে ১০ অক্ষর হতে হবে" : "Cover letter must be at least 10 characters"); return; }
     if (!deliveryDays || Number(deliveryDays) < 1) { toast.error(isBn ? "ডেলিভারি দিন লিখুন" : "Please enter delivery days"); return; }
     setSubmitting(true);
     try {

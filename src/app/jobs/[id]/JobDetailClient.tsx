@@ -81,6 +81,8 @@ export default function JobDetailClient({ jobId }: Props) {
   }, [isAuthenticated, user]);
 
   const handleApply = () => {
+    if (!coverLetter.trim()) { toast.error(isBn ? "কভার লেটার লিখুন" : "Please write a cover letter"); return; }
+    if (coverLetter.trim().length < 10) { toast.error(isBn ? "কভার লেটার কমপক্ষে ১০ অক্ষর হতে হবে" : "Cover letter must be at least 10 characters"); return; }
     const data: Record<string, any> = { cover_letter: coverLetter };
     if (portfolioLink) data.portfolio_link = portfolioLink;
     if (job?.is_remote_project) data.delivery_days = Number(deliveryDays) || 7;

@@ -75,7 +75,7 @@ export default function SkillsClient() {
               <h1 className="text-3xl md:text-4xl font-bold">Skill Center</h1>
             </div>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Professional skill training courses powered by AMCO. Get certified and boost your career.
+              Professional skill training courses powered by {process.env.NEXT_PUBLIC_APP_NAME || "eJobs"}. Get certified and boost your career.
             </p>
           </div>
 
