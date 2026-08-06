@@ -74,10 +74,27 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ message?: string }>) => {
+  (error: AxiosError<{ message?: string; security_status?: string }>) => {
     const status = error.response?.status;
 
     if (typeof window !== "undefined") {
+      // Handle 403 banned/suspended — redirect to restricted page
+      if (status === 403) {
+        const securityStatus = error.response?.data?.security_status;
+        if (securityStatus === "banned" || securityStatus === "suspended") {
+          const currentPath = window.location.pathname;
+          if (!currentPath.startsWith("/account-restricted")) {
+            const isEmployerPath = currentPath.startsWith("/employer");
+            setTimeout(() => {
+              window.location.href = isEmployerPath
+                ? "/account-restricted?status=banned"
+                : "/account-restricted?status=suspended";
+            }, 0);
+          }
+          return Promise.reject(error);
+        }
+      }
+
       if (status === 401 || status === 419) {
         clearAuthStore();
         delete api.defaults.headers.common["Authorization"];

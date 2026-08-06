@@ -31,6 +31,7 @@ const PUBLIC_ROUTES = [
   "/support",
   "/invoices",
   "/auth/callback",
+  "/account-restricted",
 ];
 
 const GUEST_ONLY_ROUTES = ["/login", "/register", "/employer/login", "/employer/register"];
