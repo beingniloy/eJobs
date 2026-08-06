@@ -177,16 +177,6 @@ function EmployerWalletClientInner() {
             {/* Step 2: Personal gateway — instructions + txid */}
             {isPersonal && personalStep === 2 && selG && (
               <>
-                <button type="button" onClick={() => setPersonalStep(1)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  <ArrowLeft className="h-4 w-4" /> Change method or amount
-                </button>
-
-                <div className="space-y-2">
-                  <Label>Amount (BDT)</Label>
-                  <Input type="number" placeholder="Enter amount" value={addAmount} onChange={(e) => setAddAmount(e.target.value)} min="10" />
-                  {selG && <p className="text-xs text-muted-foreground">Min: {formatCurrency(selG.min_amount)} - Max: {formatCurrency(selG.max_amount)}</p>}
-                </div>
-
                 <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-3">
                   <p className="text-sm font-semibold text-primary">Send Money To:</p>
                   <div className="flex items-center gap-2 bg-background p-3 rounded-lg border">
