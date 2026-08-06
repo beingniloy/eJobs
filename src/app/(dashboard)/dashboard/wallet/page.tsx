@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, TrendingUp, CreditCard, Shield, Clock, CheckCircle, AlertCircle, Info, Copy, CircleDot } from "lucide-react";
+import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, TrendingUp, CreditCard, Shield, Clock, CheckCircle, AlertCircle, Info, Copy, CircleDot, ArrowRight, ArrowLeft } from "lucide-react";
 import { formatCurrency, formatDate, getStorageUrl } from "@/lib/utils";
 import Image from "next/image";
 
@@ -32,11 +32,13 @@ function WalletPageInner() {
   const [addTxId, setAddTxId] = useState("");
   const [copied, setCopied] = useState(false);
   const [copiedTotal, setCopiedTotal] = useState(false);
+  const [personalStep, setPersonalStep] = useState<1 | 2>(1);
   const [withdrawGatewayId, setWithdrawGatewayId] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawInputs, setWithdrawInputs] = useState<Record<string, string>>({});
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [financialSettings, setFinancialSettings] = useState<any>(null);
+
   useEffect(() => {
     api.get("/candidate/wallet").then((r) => {
       const d = r.data;
@@ -51,7 +53,6 @@ function WalletPageInner() {
     }).catch(() => toast.error("Failed to load financial settings"));
   }, []);
 
-  // Handle payment callback status
   useEffect(() => {
     if (paymentStatus === "success") {
       toast.success("Payment successful! Your wallet has been credited.");
@@ -81,23 +82,17 @@ function WalletPageInner() {
         payload.transaction_id = addTxId;
       }
       const res = await api.post("/candidate/deposit", payload);
-      
-      // Handle bKash merchant payment
+
       if (res.data.requires_redirect && res.data.payment_id) {
         sessionStorage.setItem('bkash_payment_id', res.data.payment_id);
         sessionStorage.setItem('bkash_trx_id', payload.transaction_id || '');
-        
-        if (res.data.payment_url) {
-          window.location.href = res.data.payment_url;
-          return;
-        }
-        
+        if (res.data.payment_url) { window.location.href = res.data.payment_url; return; }
         toast.info("Please complete payment in bKash popup");
       }
-      
+
       if (res.data.redirect_url) { window.location.href = res.data.redirect_url; return; }
       toast.success(res.data.message || "Deposit submitted");
-      setAddAmount(""); setAddGatewayId(""); setAddTxId(""); setTab("overview");
+      setAddAmount(""); setAddGatewayId(""); setAddTxId(""); setPersonalStep(1); setTab("overview");
     } catch (e: any) { toast.error(e.response?.data?.message || "Failed"); } finally { setAddLoading(false); }
   };
 
@@ -124,6 +119,7 @@ function WalletPageInner() {
   const balance = Number(wallet?.balance || 0);
   const locked = Number(wallet?.locked_balance || 0);
   const withdrawable = Number(wallet?.withdrawable_balance || 0);
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">My Wallet</h1>
@@ -147,7 +143,7 @@ function WalletPageInner() {
           </CardContent>
         </Card>
       )}
-      <Tabs value={tab} onValueChange={setTab}>
+      <Tabs value={tab} onValueChange={(v) => { setTab(v); if (v === "add") { setPersonalStep(1); } }}>
         <TabsList className="flex-wrap">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="add"><Plus className="h-4 w-4 mr-1" />Add Money</TabsTrigger>
@@ -173,73 +169,116 @@ function WalletPageInner() {
             </div>
           ))}</div></CardContent></Card>}
         </TabsContent>
+
+        {/* ADD MONEY TAB */}
         <TabsContent value="add"><Card><CardHeader><CardTitle>Add Money</CardTitle></CardHeader><CardContent className="space-y-4">
           {depositMethods.length === 0 ? <p className="text-muted-foreground">No payment methods available</p> : <>
-            <div className="space-y-2"><Label>Payment Method</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {depositMethods.map((g: any) => {
-                  const logo = getStorageUrl(g.logo);
-                  const isSelected = String(g.id) === addGatewayId;
-                  return (
-                    <button key={g.id} type="button" onClick={() => { setAddGatewayId(String(g.id)); setAddTxId(""); }}
-                      className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${isSelected ? "border-primary bg-primary/5 shadow-md" : "border-border hover:border-primary/40 hover:bg-muted/50"}`}>
-                      {logo ? (
-                        <Image src={logo} alt={g.display_name || g.name} width={48} height={48} className="object-contain h-12 w-12" />
-                      ) : (
-                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center"><CircleDot className="h-6 w-6 text-primary" /></div>
-                      )}
-                      <span className="text-sm font-medium text-center">{g.display_name || g.name}</span>
-                      {Number(g.percent_charge) > 0 && <span className="text-xs text-muted-foreground">{g.percent_charge}% fee</span>}
-                      {isSelected && <div className="absolute top-2 right-2"><CheckCircle className="h-4 w-4 text-primary" /></div>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            
-            <div className="space-y-2"><Label>Amount (BDT)</Label><Input type="number" placeholder="Enter amount" value={addAmount} onChange={(e) => setAddAmount(e.target.value)} min="10" />
-              {selDG && <p className="text-xs text-muted-foreground">Min: {formatCurrency(selDG.min_amount)} - Max: {formatCurrency(selDG.max_amount)}</p>}</div>
 
-            {Number(addAmount) > 0 && selDG && <div className="p-3 bg-muted rounded-lg space-y-1">
-              <div className="flex justify-between text-sm"><span>Amount</span><span>{formatCurrency(Number(addAmount))}</span></div>
-              {depFee > 0 && <div className="flex justify-between text-sm"><span>Fee</span><span>{formatCurrency(depFee)}</span></div>}
-              <div className="flex justify-between text-sm font-semibold border-t pt-1"><span>Total</span><span>{formatCurrency(Number(addAmount) + depFee)}</span></div>
-            </div>}
-
-            {/* Personal Gateway: Show number, instructions, and total */}
-            {isPersonal && selDG && (
-              <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-3">
-                <p className="text-sm font-semibold text-primary">Send Money To:</p>
-                <div className="flex items-center gap-2 bg-background p-3 rounded-lg border">
-                  <span className="text-lg font-mono font-bold flex-1">{selDG.personal_number}</span>
-                  <Button variant="ghost" size="sm" onClick={copyNumber}>
-                    {copied ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                  </Button>
+            {/* Step 1: Gateway selection + Amount */}
+            {(!isPersonal || personalStep === 1) && (
+              <>
+                <div className="space-y-3">
+                  <Label>Payment Method</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {depositMethods.map((g: any) => {
+                      const logo = getStorageUrl(g.logo);
+                      const isSelected = String(g.id) === addGatewayId;
+                      return (
+                        <button key={g.id} type="button" onClick={() => { setAddGatewayId(String(g.id)); setAddTxId(""); setPersonalStep(1); }}
+                          className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${isSelected ? "border-primary bg-primary/5 shadow-md" : "border-border hover:border-primary/40 hover:bg-muted/50"}`}>
+                          {logo ? (
+                            <Image src={logo} alt={g.display_name || g.name} width={48} height={48} className="object-contain h-12 w-12" />
+                          ) : (
+                            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center"><CircleDot className="h-6 w-6 text-primary" /></div>
+                          )}
+                          <span className="text-sm font-medium text-center">{g.display_name || g.name}</span>
+                          {Number(g.percent_charge) > 0 && <span className="text-xs text-muted-foreground">{g.percent_charge}% fee</span>}
+                          {isSelected && <div className="absolute top-2 right-2"><CheckCircle className="h-4 w-4 text-primary" /></div>}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                {Number(addAmount) > 0 && (
+
+                <div className="space-y-2">
+                  <Label>Amount (BDT)</Label>
+                  <Input type="number" placeholder="Enter amount" value={addAmount} onChange={(e) => setAddAmount(e.target.value)} min="10" />
+                  {selDG && <p className="text-xs text-muted-foreground">Min: {formatCurrency(selDG.min_amount)} - Max: {formatCurrency(selDG.max_amount)}</p>}
+                </div>
+
+                {Number(addAmount) > 0 && selDG && <div className="p-3 bg-muted rounded-lg space-y-1">
+                  <div className="flex justify-between text-sm"><span>Amount</span><span>{formatCurrency(Number(addAmount))}</span></div>
+                  {depFee > 0 && <div className="flex justify-between text-sm"><span>Fee</span><span>{formatCurrency(depFee)}</span></div>}
+                  <div className="flex justify-between text-sm font-semibold border-t pt-1"><span>Total</span><span>{formatCurrency(Number(addAmount) + depFee)}</span></div>
+                </div>}
+
+                {/* Non-personal: submit directly */}
+                {!isPersonal && (
+                  <Button onClick={handleAdd} disabled={!addGatewayId || !addAmount || addLoading} className="w-full">
+                    {addLoading ? "Processing..." : "Add Money"}
+                  </Button>
+                )}
+
+                {/* Personal: Proceed to step 2 */}
+                {isPersonal && (
+                  <Button onClick={() => setPersonalStep(2)} disabled={!addGatewayId || !addAmount} className="w-full">
+                    Proceed <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                )}
+              </>
+            )}
+
+            {/* Step 2: Personal gateway — instructions + txid */}
+            {isPersonal && personalStep === 2 && selDG && (
+              <>
+                {/* Back button + edit amount */}
+                <button type="button" onClick={() => setPersonalStep(1)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <ArrowLeft className="h-4 w-4" /> Change method or amount
+                </button>
+
+                {/* Editable amount */}
+                <div className="space-y-2">
+                  <Label>Amount (BDT)</Label>
+                  <Input type="number" placeholder="Enter amount" value={addAmount} onChange={(e) => setAddAmount(e.target.value)} min="10" />
+                  {selDG && <p className="text-xs text-muted-foreground">Min: {formatCurrency(selDG.min_amount)} - Max: {formatCurrency(selDG.max_amount)}</p>}
+                </div>
+
+                {/* Payment instructions */}
+                <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-3">
+                  <p className="text-sm font-semibold text-primary">Send Money To:</p>
                   <div className="flex items-center gap-2 bg-background p-3 rounded-lg border">
-                    <span className="text-lg font-mono font-bold flex-1">Total: {formatCurrency(Number(addAmount) + depFee)}</span>
-                    <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(String(Number(addAmount) + depFee)); setCopiedTotal(true); setTimeout(() => setCopiedTotal(false), 2000); }}>
-                      {copiedTotal ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                    <span className="text-lg font-mono font-bold flex-1">{selDG.personal_number}</span>
+                    <Button variant="ghost" size="sm" onClick={copyNumber}>
+                      {copied ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                     </Button>
                   </div>
-                )}
-                {selDG.instruction && <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selDG.instruction}</p>}
-              </div>
-            )}
+                  {Number(addAmount) > 0 && (
+                    <div className="flex items-center gap-2 bg-background p-3 rounded-lg border">
+                      <span className="text-lg font-mono font-bold flex-1">Total: {formatCurrency(Number(addAmount) + depFee)}</span>
+                      <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(String(Number(addAmount) + depFee)); setCopiedTotal(true); setTimeout(() => setCopiedTotal(false), 2000); }}>
+                        {copiedTotal ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  )}
+                  {selDG.instruction && <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selDG.instruction}</p>}
+                </div>
 
-            {/* Personal Gateway: Transaction ID input */}
-            {isPersonal && (
-              <div className="space-y-2">
-                <Label>Transaction ID *</Label>
-                <Input placeholder="Enter transaction ID from your payment" value={addTxId} onChange={(e) => setAddTxId(e.target.value)} />
-                <p className="text-xs text-muted-foreground">Enter the transaction ID you received after sending money</p>
-              </div>
-            )}
+                {/* Transaction ID */}
+                <div className="space-y-2">
+                  <Label>Transaction ID *</Label>
+                  <Input placeholder="Enter transaction ID from your payment" value={addTxId} onChange={(e) => setAddTxId(e.target.value)} />
+                  <p className="text-xs text-muted-foreground">Enter the transaction ID you received after sending money</p>
+                </div>
 
-            <Button onClick={handleAdd} disabled={!addGatewayId || !addAmount || addLoading || (isPersonal && !addTxId)} className="w-full">{addLoading ? "Processing..." : "Add Money"}</Button>
+                <Button onClick={handleAdd} disabled={!addAmount || addLoading || !addTxId} className="w-full">
+                  {addLoading ? "Processing..." : "Add Money"}
+                </Button>
+              </>
+            )}
           </>}
         </CardContent></Card></TabsContent>
+
+        {/* WITHDRAW TAB */}
         <TabsContent value="withdraw"><Card><CardHeader><CardTitle>Withdraw</CardTitle></CardHeader><CardContent className="space-y-4">
           <div className="p-3 bg-muted rounded-lg"><p className="text-sm text-muted-foreground">Withdrawable (Earnings Only)</p><p className="text-xl font-bold">{formatCurrency(withdrawable)}</p><p className="text-xs text-muted-foreground mt-1">Only earned money from jobs can be withdrawn. Service charge applies.</p></div>
           {withdrawalMethods.length === 0 ? <p className="text-muted-foreground">No withdrawal methods available</p> : <><div className="space-y-2"><Label>Method</Label><Select value={withdrawGatewayId} onValueChange={(v) => { setWithdrawGatewayId(v); setWithdrawInputs({}); }}><SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger><SelectContent>{withdrawalMethods.map((g: any) => <SelectItem key={g.id} value={String(g.id)}>{g.name}{Number(g.percent_charge) > 0 ? " (" + g.percent_charge + "%)" : ""}{Number(g.fixed_charge) > 0 ? " +" + formatCurrency(g.fixed_charge) : ""}</SelectItem>)}</SelectContent></Select></div>
@@ -255,6 +294,8 @@ function WalletPageInner() {
           <Button onClick={handleWithdraw} disabled={!withdrawGatewayId || !withdrawAmount || withdrawLoading || Number(withdrawAmount) > withdrawable} className="w-full">{withdrawLoading ? "Processing..." : "Request Withdrawal"}</Button>
           </>}
         </CardContent></Card></TabsContent>
+
+        {/* ESCROW TAB */}
         <TabsContent value="escrow"><Card><CardHeader><CardTitle>Escrow</CardTitle></CardHeader><CardContent className="space-y-4">
           <div className="p-3 bg-muted rounded-lg"><p className="text-sm font-medium">How Escrow Works</p><p className="text-xs text-muted-foreground mt-1">When employer approves your remote job, the amount is locked in escrow. After you complete work and employer releases payment, funds go to your wallet minus a platform service charge.</p></div>
           {locked > 0 && <div className="p-4 border rounded-lg bg-yellow-50 dark:bg-yellow-950/20"><div className="flex items-center gap-2 mb-2"><Clock className="h-5 w-5 text-yellow-600" /><span className="font-semibold">Active Escrow</span></div><p className="text-sm text-muted-foreground">{formatCurrency(locked)} locked in active projects.</p></div>}
