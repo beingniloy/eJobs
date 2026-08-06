@@ -429,7 +429,16 @@ export default function Navbar() {
                       <div className="space-y-0.5">
                         {group.items.map((link) => {
                           const Icon = link.icon;
-                          const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+                          const isActive = (() => {
+                            const matches = pathname === link.href || pathname.startsWith(link.href + "/");
+                            if (!matches) return false;
+                            return !group.items.some(
+                              (other) =>
+                                other.href !== link.href &&
+                                other.href.startsWith(link.href + "/") &&
+                                (pathname === other.href || pathname.startsWith(other.href + "/"))
+                            );
+                          })();
                           return (
                             <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)}
                               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${
@@ -452,7 +461,16 @@ export default function Navbar() {
                       <div className="space-y-0.5">
                         {group.items.map((link) => {
                           const Icon = link.icon;
-                          const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+                          const isActive = (() => {
+                            const matches = pathname === link.href || pathname.startsWith(link.href + "/");
+                            if (!matches) return false;
+                            return !group.items.some(
+                              (other) =>
+                                other.href !== link.href &&
+                                other.href.startsWith(link.href + "/") &&
+                                (pathname === other.href || pathname.startsWith(other.href + "/"))
+                            );
+                          })();
                           return (
                             <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)}
                               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${

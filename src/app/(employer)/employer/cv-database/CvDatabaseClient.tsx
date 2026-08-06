@@ -192,7 +192,7 @@ export default function CvDatabaseClient() {
 
   const formatSkills = (skills: string[] | string | null | undefined): string[] => {
     if (!skills) return [];
-    if (Array.isArray(skills)) return skills.slice(0, 6);
+    if (Array.isArray(skills)) return skills.map((s) => (typeof s === "object" && s !== null ? s.name || "" : String(s))).filter(Boolean).slice(0, 6);
     return skills.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 6);
   };
 

@@ -78,7 +78,17 @@ function Sidebar() {
             </p>
             <div className="space-y-0.5">
               {group.items.map((item) => {
-                const isActive = item.href === "/employer/dashboard" ? pathname === "/employer/dashboard" : pathname.startsWith(item.href);
+                const isActive = (() => {
+                  if (item.href === "/employer/dashboard") return pathname === "/employer/dashboard";
+                  const matches = pathname === item.href || pathname.startsWith(item.href + "/");
+                  if (!matches) return false;
+                  return !group.items.some(
+                    (other) =>
+                      other.href !== item.href &&
+                      other.href.startsWith(item.href + "/") &&
+                      (pathname === other.href || pathname.startsWith(other.href + "/"))
+                  );
+                })();
                 return (
                   <Link key={item.href} href={item.href}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${

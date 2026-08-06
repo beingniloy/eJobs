@@ -89,6 +89,7 @@ export default function ManageJobsPage() {
   const [now, setNow] = useState(Date.now());
 
   const [promoMap, setPromoMap] = useState<Map<number, PromotionInfo>>(new Map());
+  const [hasBoostAccess, setHasBoostAccess] = useState(false);
 
   useEffect(() => { const iv = setInterval(() => setNow(Date.now()), 60000); return () => clearInterval(iv); }, []);
 
@@ -99,10 +100,26 @@ export default function ManageJobsPage() {
       if (searchQuery) params.append("search", searchQuery);
       if (statusFilter && statusFilter !== "all") params.append("status", statusFilter);
 
-      const [jobsRes, promosRes] = await Promise.all([
+      const [jobsRes, promosRes, subRes] = await Promise.all([
         api.get(`/employer/jobs${params.toString() ? `?${params}` : ""}`),
         api.get("/employer/promotions").catch(() => ({ data: { data: [] } })),
+        api.get("/subscriptions/my-subscription").catch(() => ({ data: {} })),
       ]);
+
+      // Check if subscription includes job_boosts feature
+      const subData = subRes.data;
+      const subscription = subData?.subscription || subData?.active_subscription;
+      const quotas = subData?.quotas || {};
+      const boostQuota = quotas?.job_boosts;
+      // Allow boost if subscription exists with boost quota, or if plan has unlimited (-1)
+      setHasBoostAccess(
+        !!subscription && (
+          (boostQuota && boostQuota.max_limit > 0) ||
+          (boostQuota && boostQuota.max_limit === -1) ||
+          (subscription.plan?.features_mapped?.job_boosts ?? false) === true ||
+          (subscription.plan_name && !["Free", "free", "ফ্রি"].includes(subscription.plan_name))
+        )
+      );
 
       const data = jobsRes.data.data;
       const list = Array.isArray(data) ? data : (data?.data || []);
@@ -295,7 +312,9 @@ export default function ManageJobsPage() {
                     <TableCell className="hidden md:table-cell text-muted-foreground text-sm">{job.created_at && formatDate(job.created_at)}</TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950" onClick={() => { setBoostJobId(job.id); setBoostJobTitle(job.title); }} disabled={job.status !== "active" && !job.is_active} title={isBn ? "বুস্ট" : "Boost"}><Zap className="h-4 w-4" /></Button>
+                        {hasBoostAccess && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950" onClick={() => { setBoostJobId(job.id); setBoostJobTitle(job.title); }} disabled={job.status !== "active" && !job.is_active} title={isBn ? "বুস্ট" : "Boost"}><Zap className="h-4 w-4" /></Button>
+                        )}
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950" onClick={() => handleCopyLink(job)} title="Copy Link"><Copy className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" asChild title="Edit"><Link href={`/employer/manage-jobs/${job.id}/edit`}><Edit className="h-4 w-4" /></Link></Button>
                         <Button variant="ghost" size="icon" className={`h-8 w-8 ${job.is_active || job.status === "active" ? "text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50 dark:hover:bg-yellow-950" : "text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950"}`} onClick={() => handleToggleStatus(job)} disabled={togglingId === job.id}>
