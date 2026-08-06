@@ -131,7 +131,7 @@ export default function CompanyDetailClient({ slug }: Props) {
     if (!company || !isAuthenticated || !user) return;
     if (user.role === "employer" || user.role === "admin") return;
     api.get(`/candidate/companies/${company.id}/followers/check`)
-      .then((res: any) => setFollowing(res.data.following ?? res.data.data?.following ?? false))
+      .then((res: any) => setFollowing(res.data?.data?.is_following ?? res.data?.is_following ?? false))
       .catch(() => {});
   }, [company, isAuthenticated, user]);
 
