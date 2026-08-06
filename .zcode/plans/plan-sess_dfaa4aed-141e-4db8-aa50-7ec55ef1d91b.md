@@ -1,72 +1,90 @@
-## Plan: Employer Profile Fix + Shared Company Components + Cover Image
+# Performance Optimization Plan
 
-### Phase 1: Fix Employer Profile Page (`/employer/profile`)
+## Root Cause Analysis
 
-**Issues found:**
-1. **`city` field never saved** — district dropdown maps to `address_district` but `city` column stays empty. `buildFormData()` doesn't append `city`.
-2. **`highlights` field not sent** — backend accepts it, model has it, but no frontend input sends it.
-3. **HR team save errors silently swallowed** — `catch {}` means user sees "saved" even when HR team fails.
-4. **Stale previews after save** — `logoPreview`/`coverPreview` read from stale `hookCompany`.
+### 1. `export const dynamic = "force-dynamic"` in root layout (CRITICAL)
+**File:** `src/app/layout.tsx:6`
+- Forces ALL pages to be dynamically rendered on every request
+- Defeats Next.js static generation, ISR, streaming, edge caching
+- This single line is the #1 performance killer
 
-**Fix:** Modify `src/app/(employer)/employer/profile/page.tsx`:
-- Add `fd.append("city", district)` in `buildFormData()`
-- Add `highlights` state + UI input in overview step
-- Fix HR team save to show error toast
-- Update previews from save response instead of stale hook data
+### 2. Blocking SEO fetch on every page load
+**File:** `src/app/layout.tsx:27-49`
+- `fetchSeoSettings()` runs on every page with 5s timeout
+- Has `revalidate: 300` but `force-dynamic` defeats the cache
+- After removing `force-dynamic`, this auto-fixes via ISR
 
----
+### 3. Homepage 100% client-rendered (HIGH)
+**File:** `src/app/page.tsx` (1434 lines, `"use client"`)
+- All 45+ lucide icons imported eagerly
+- District data hardcoded inline (~100 lines)
+- 6 API calls on mount with raw `fetchWithRetry` — no React Query caching
+- `fetchWithRetry` re-fetches everything on every visit
 
-### Phase 2: Shared Company Header (Facebook-style cover image)
+### 4. No code splitting on heavy pages (MEDIUM)
+- `resume-builder` imports tiptap (~200KB) eagerly
+- `ai-assistant` imports react-markdown + remark-gfm eagerly
+- Only `RichTextEditor` uses `next/dynamic` already
 
-**Problem:** Cover image is `absolute inset-0` filling the entire banner — text sits ON the cover, no clear separation.
+### 5. Auth verification blocks render (MEDIUM)
+**File:** `src/providers/auth-provider.tsx`
+- `api.get("/user")` runs on every page load
+- Already has `enabled: !!token && !user` — only fires when no cached user
+- React Query `staleTime: 5min` already set — this is OK
 
-**Target layout (Facebook-style):**
-```
-┌──────────────────────────────────────┐
-│         COVER IMAGE (h-48/64)        │  ← top section, full width
-│    ┌──────┐                          │
-│    │ LOGO │  Company Name    [Follow]│  ← info overlaps cover bottom
-│    └──────┘  Description     [Jobs]  │
-│              Location · Industry     │
-└──────────────────────────────────────┘
-```
-
-**New file: `src/components/company/CompanyProfileHeader.tsx`**
-- Cover image at top with fixed height (h-48 md:h-64)
-- Logo positioned to overlap cover bottom (-mt-12)
-- Profile info below with z-index
-- Props: `mode: "owner" | "public"` controls which action buttons show
-- Owner mode: Edit Profile, Share, View Public Profile
-- Public mode: Follow, Message, Website, View Jobs, Share
+### 6. Navbar makes API calls on mount (LOW-MEDIUM)
+**File:** `src/components/layout/Navbar.tsx`
+- Subscription + notification fetches on every page
+- No staleTime — refetches constantly
 
 ---
 
-### Phase 3: Refactor Both Pages to Use Shared Components
+## Execution Steps
 
-**New file: `src/components/company/CompanyProfileSidebar.tsx`**
-- Extract shared sidebar content (snapshot, why join, brochure, skills) from `CompanySidebar.tsx`
+### Step 1: Remove `force-dynamic` from root layout
+**File:** `src/app/layout.tsx`
+- Delete line 6: `export const dynamic = "force-dynamic";`
+- Enables ISR caching for SEO fetch (5min) and all server components
 
-**Modify: `src/app/(employer)/employer/company-overview/CompanyOverviewClient.tsx`**
-- Remove ~80 lines of inline banner code
-- Use `<CompanyProfileHeader mode="owner" />` + `<CompanyProfileSidebar />`
+### Step 2: Extract district data from homepage
+**File:** `src/app/page.tsx` → NEW `src/data/bangladesh-districts.ts`
+- Move `DIVISIONS_BN`, `DIVISIONS_EN`, `DISTRICTS_BN`, `DISTRICTS_EN` to separate file
+- Reduces homepage bundle parse cost
 
-**Modify: `src/app/companies/[slug]/CompanyDetailClient.tsx`**
-- Replace `CompanyHeader` import with shared `<CompanyProfileHeader mode="public" />`
-- Replace `CompanySidebar` with shared `<CompanyProfileSidebar />`
+### Step 3: Extract icon map from homepage  
+**File:** `src/app/page.tsx` → NEW `src/app/homepage-icons.ts`
+- Move the `ICON_MAP` object and icon imports to separate file
+- Wrap with `React.memo` to prevent re-renders
 
-**Delete/simplify: `src/app/companies/[slug]/CompanyHeader.tsx`** (replaced by shared component)
+### Step 4: Add React Query caching for homepage
+**File:** `src/app/page.tsx`
+- Replace raw `fetchWithRetry` + `useState` with `useQuery`
+- Set `staleTime: 2 * 60 * 1000` (2 min)
+- Prevents refetching on navigation back
+
+### Step 5: Dynamic import heavy pages
+**Files:**
+- `src/app/resume-builder/page.tsx` → wrap with `next/dynamic`
+- `src/app/ai-assistant/page.tsx` → wrap with `next/dynamic`
+- Defers tiptap + react-markdown (~250KB) until needed
+
+### Step 6: Fix Navbar staleTime
+**File:** `src/components/layout/Navbar.tsx`
+- Move subscription fetch to React Query with `staleTime: 5 * 60 * 1000`
 
 ---
 
-### Phase 4: Backend — No Changes Needed
+## Files Modified
+1. `src/app/layout.tsx` — remove `force-dynamic`
+2. `src/app/page.tsx` — lazy icons, extract districts, React Query
+3. `src/data/bangladesh-districts.ts` — NEW
+4. `src/app/homepage-icons.ts` — NEW
+5. `src/app/resume-builder/page.tsx` — dynamic import
+6. `src/app/ai-assistant/page.tsx` — dynamic import
+7. `src/components/layout/Navbar.tsx` — React Query for subscription
 
-`CompanyController::update()` already accepts `city` and `highlights` in its `$request->only()`. All issues are frontend.
-
----
-
-### Execution Order
-1. Fix employer profile page (Phase 1)
-2. Create shared `CompanyProfileHeader` + `CompanyProfileSidebar` (Phase 2)
-3. Refactor employer overview (Phase 3)
-4. Refactor public profile (Phase 3)
-5. TypeScript build check
+## Expected Impact
+- **First load:** ~40-60% faster (ISR caching + code splitting)
+- **Subsequent loads:** Near-instant (ISR + React Query cache)
+- **Bundle:** ~250KB reduction (tiptap, react-markdown deferred)
+- **Time to Interactive:** Major improvement on homepage and public pages

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
@@ -9,6 +9,7 @@ import { useTheme as useNextTheme } from "next-themes";
 import api from "@/lib/api-client";
 import { getStorageUrl } from "@/lib/utils";
 import PublicLayout from "@/components/layout/PublicLayout";
+import { useHomepageData } from "@/hooks/use-homepage-data";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Search,
@@ -370,23 +371,6 @@ const IMPORTANT_LINKS = [
   { icon: LayoutTemplate, href: "/resume-builder", bn: "ফ্রি সিভি টেমপ্লেট", en: "Free CV Templates" },
 ];
 
-/* ─────────────────────────────────────────────
-   Fetch Helper
-   ───────────────────────────────────────────── */
-async function fetchWithRetry<T>(url: string, retries = 2, delayMs = 1000): Promise<T | null> {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await api.get(url);
-      return res.data?.data ?? null;
-    } catch {
-      if (attempt < retries) {
-        await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
-      }
-    }
-  }
-  return null;
-}
-
 /* ═══════════════════════════════════════════════
    Homepage Component
    ═══════════════════════════════════════════════ */
@@ -411,67 +395,11 @@ export default function HomePage() {
   const [location, setLocation] = useState("");
   const [keyword, setKeyword] = useState("");
 
-  /* ── Data State ── */
-  const [categories, setCategories] = useState<any[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const [categoriesError, setCategoriesError] = useState(false);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [notices, setNotices] = useState<any[]>([]);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [hpData, setHpData] = useState<Record<string, any>>({});
-  const [hotJobs, setHotJobs] = useState<any[]>([]);
-  const [remoteJobs, setRemoteJobs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const retryCount = useRef(0);
-
-  /* ── Fetch All Data ── */
-  const fetchAllData = useCallback(async () => {
-    const [catData, compData, noticeData, jobData, hpRes, hotRes] = await Promise.all([
-      fetchWithRetry<any[]>("/categories/highlighted"),
-      fetchWithRetry<any>("/companies?per_page=30"),
-      fetchWithRetry<any>("/notices"),
-      fetchWithRetry<any>("/jobs?per_page=6"),
-      fetchWithRetry<Record<string, any>>("/settings/homepage"),
-      fetchWithRetry<any>("/jobs/hot"),
-    ]);
-
-    if (catData) {
-      setCategories(Array.isArray(catData) ? catData : (catData as { data?: unknown[] })?.data ?? []);
-      setCategoriesError(false);
-    } else {
-      setCategoriesError(true);
-    }
-    setCategoriesLoading(false);
-    if (compData) {
-      const raw = Array.isArray(compData) ? compData : compData?.data;
-      const compList = Array.isArray(raw) ? raw : raw?.data ?? [];
-      setCompanies(compList.slice(0, 6));
-    }
-    if (noticeData) {
-      const nList = Array.isArray(noticeData) ? noticeData : noticeData?.data ?? [];
-      setNotices(nList.slice(0, 5));
-    }
-    if (jobData) {
-      const raw = Array.isArray(jobData) ? jobData : jobData?.data;
-      const jList = Array.isArray(raw) ? raw : raw?.data ?? [];
-      setJobs(jList.slice(0, 6));
-    }
-    if (hpRes) {
-      setHpData(hpRes?.data ?? hpRes);
-      retryCount.current = 0;
-    }
-    if (hotRes) {
-      const hotData = hotRes?.data ?? hotRes;
-      setHotJobs(Array.isArray(hotData.hot_jobs) ? hotData.hot_jobs : []);
-      setRemoteJobs(Array.isArray(hotData.remote_jobs) ? hotData.remote_jobs : []);
-    }
-
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchAllData();
-  }, [fetchAllData]);
+  /* ── Data (React Query cached) ── */
+  const {
+    categories, categoriesLoading, categoriesError,
+    companies, notices, jobs, hpData, hotJobs, remoteJobs, loading,
+  } = useHomepageData();
 
   /* ── Derived data ── */
   const trending: string[] = isBn

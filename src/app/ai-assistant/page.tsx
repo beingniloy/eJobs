@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import AiAssistantClient from "./AiAssistantClient";
+import dynamic from "next/dynamic";
+
+const AiAssistantClient = dynamic(() => import("./AiAssistantClient"), { ssr: false });
 
 export const metadata: Metadata = {
   title: "AI Assistant",

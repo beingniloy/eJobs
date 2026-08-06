@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useThemeStore } from "@/store/theme-store";
 import { useTheme } from "@/hooks/use-theme";
@@ -54,17 +55,15 @@ export default function Navbar() {
   const { notifications, unreadCount, setNotifications } = useNotificationStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const { data: subscription } = useQuery({
+    queryKey: ["subscription", "current"],
+    queryFn: () => subscriptionService.getMySubscription(),
+    enabled: isAuthenticated,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
   useEffect(() => setMounted(true), []);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      subscriptionService.getMySubscription()
-        .then((sub) => setSubscription(sub))
-        .catch(() => { /* handled */ });
-    }
-  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
