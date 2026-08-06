@@ -24,6 +24,7 @@ function WalletPageInner() {
   const [withdrawalMethods, setWithdrawalMethods] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [escrows, setEscrows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("overview");
   const [addGatewayId, setAddGatewayId] = useState("");
@@ -47,6 +48,7 @@ function WalletPageInner() {
       setWithdrawalMethods(d.withdrawal_methods || []);
       setTransactions(d.transactions || []);
       setWithdrawals(d.withdrawals || []);
+      setEscrows(d.escrows || []);
     }).catch((err) => toast.error(err?.response?.data?.message || "Failed to load wallet")).finally(() => setLoading(false));
     api.get("/settings/financial").then((r) => {
       setFinancialSettings(r.data?.data || r.data || {});
@@ -286,13 +288,20 @@ function WalletPageInner() {
         <TabsContent value="escrow"><Card><CardHeader><CardTitle>Escrow</CardTitle></CardHeader><CardContent className="space-y-4">
           <div className="p-3 bg-muted rounded-lg"><p className="text-sm font-medium">How Escrow Works</p><p className="text-xs text-muted-foreground mt-1">When employer approves your remote job, the amount is locked in escrow. After you complete work and employer releases payment, funds go to your wallet minus a platform service charge.</p></div>
           {locked > 0 && <div className="p-4 border rounded-lg bg-yellow-50 dark:bg-yellow-950/20"><div className="flex items-center gap-2 mb-2"><Clock className="h-5 w-5 text-yellow-600" /><span className="font-semibold">Active Escrow</span></div><p className="text-sm text-muted-foreground">{formatCurrency(locked)} locked in active projects.</p></div>}
-          {transactions.filter((t: any) => ["escrow_funding","project_payout","project_commission"].includes(t.reference_type)).length === 0 ? (
+          {escrows.length === 0 ? (
             <div className="text-center py-8"><Shield className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" /><p className="text-muted-foreground">No escrow transactions yet</p></div>
-          ) : <div className="space-y-2">{transactions.filter((t: any) => ["escrow_funding","project_payout","project_commission"].includes(t.reference_type)).map((t: any) => (
-            <div key={t.id} className="flex items-center justify-between p-3 rounded-lg border">
-              <div className="flex items-center gap-3"><div className={"p-2 rounded-full " + (t.type === "credit" ? "bg-green-50" : "bg-yellow-50")}>{t.type === "credit" ? <CheckCircle className="h-4 w-4 text-green-600" /> : <AlertCircle className="h-4 w-4 text-yellow-600" />}</div>
-              <div><p className="text-sm font-medium">{t.description || t.reference_type}</p><p className="text-xs text-muted-foreground">{formatDate(t.created_at)}</p></div></div>
-              <span className={"font-semibold " + (t.type === "credit" ? "text-green-600" : "text-yellow-600")}>{t.type === "credit" ? "+" : ""}{formatCurrency(t.amount)}</span>
+          ) : <div className="space-y-2">{escrows.map((e: any) => (
+            <div key={e.id} className="flex items-center justify-between p-3 rounded-lg border">
+              <div className="flex items-center gap-3">
+                <div className={"p-2 rounded-full " + (e.status === 'released' ? "bg-green-50" : e.status === 'refunded' ? "bg-blue-50" : "bg-yellow-50")}>
+                  {e.status === 'released' ? <CheckCircle className="h-4 w-4 text-green-600" /> : e.status === 'refunded' ? <ArrowDownLeft className="h-4 w-4 text-blue-600" /> : <Clock className="h-4 w-4 text-yellow-600" />}
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{e.job?.title || "Project"}</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(e.created_at)} — <Badge variant={e.status === 'disputed' ? 'destructive' : e.status === 'released' ? 'default' : 'secondary'} className="text-xs">{e.status}</Badge></p>
+                </div>
+              </div>
+              <span className="font-semibold text-yellow-600">{formatCurrency(e.amount)}</span>
             </div>
           ))}</div>}
         </CardContent></Card></TabsContent>
