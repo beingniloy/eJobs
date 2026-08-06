@@ -138,7 +138,7 @@ function WalletPageInner() {
               <p className="text-sm font-medium">Fee Information</p>
             </div>
             <div className="flex flex-wrap gap-4 text-sm">
-              <div><span className="text-muted-foreground">Service Charge: </span><span className="font-semibold">{financialSettings.service_charge_percent || 0}%</span></div>
+              <div><span className="text-muted-foreground">Service Charge: </span><span className="font-semibold">{financialSettings.remote_job_service_charge || financialSettings.service_charge_percent || 0}%</span></div>
               <div><span className="text-muted-foreground">Escrow Fee: </span><span className="font-semibold">{financialSettings.escrow_fee_percent || 0}%</span></div>
               {financialSettings.min_withdrawal && <div><span className="text-muted-foreground">Minimum Withdrawal: </span><span className="font-semibold">{formatCurrency(financialSettings.min_withdrawal)}</span></div>}
             </div>

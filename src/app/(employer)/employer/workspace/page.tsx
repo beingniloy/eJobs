@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import api from "@/lib/api-client";
 import { useThemeStore } from "@/store/theme-store";
 import { useAuthStore } from "@/store/auth-store";
-import { Card, CardContent } from "@/components/ui/card";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,7 +18,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DefaultAvatar } from "@/components/ui/default-avatar";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
@@ -29,15 +29,17 @@ import {
   AlertTriangle,
   FileText,
   DollarSign,
-  UploadCloud,
   RefreshCw,
   Send,
   AlertCircle,
   MessageSquare,
   ArrowLeft,
   Download,
+  ChevronDown,
+  ChevronUp,
+  FileArchive,
 } from "lucide-react";
-import { formatCurrency, formatDate, getInitials } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 
 interface DeliveryRecord {
   id: number;
@@ -105,8 +107,17 @@ export default function EmployerWorkspacePage() {
     document.title = isBn ? `কর্মক্ষেত্র | ${siteName}` : `Workspace | ${siteName}`;
   }, [isBn, siteName]);
 
-  const [projects, setProjects] = useState<WorkspaceProject[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  const { data: projects = [], isLoading: loading } = useQuery<WorkspaceProject[]>({
+    queryKey: ["employer", "workspace"],
+    queryFn: async () => {
+      const res = await api.get("/employer/workspace");
+      return res.data.data || [];
+    },
+    staleTime: 30 * 1000,
+    gcTime: 2 * 60 * 1000,
+  });
 
   const [selectedProject, setSelectedProject] = useState<WorkspaceProject | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -124,6 +135,7 @@ export default function EmployerWorkspacePage() {
   const [revisionLoading, setRevisionLoading] = useState(false);
 
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
+  const [showSubmissionInfo, setShowSubmissionInfo] = useState(true);
   const [releaseProject, setReleaseProject] = useState<WorkspaceProject | null>(null);
   const [releasing, setReleasing] = useState(false);
 
@@ -132,21 +144,11 @@ export default function EmployerWorkspacePage() {
   const [disputeReason, setDisputeReason] = useState("");
   const [disputing, setDisputing] = useState(false);
 
-  const otherParty = selectedProject?.candidate;
+  const otherParty = useMemo(() => selectedProject?.candidate, [selectedProject]);
 
-  const fetchProjects = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get("/employer/workspace");
-      setProjects(res.data.data || []);
-    } catch {
-      toast.error(isBn ? "প্রজেক্ট লোড করতে ব্যর্থ" : "Failed to load projects");
-    } finally {
-      setLoading(false);
-    }
-  }, [isBn]);
-
-  useEffect(() => { fetchProjects(); }, [fetchProjects]);
+  const invalidateProjects = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["employer", "workspace"] });
+  }, [queryClient]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -210,7 +212,7 @@ export default function EmployerWorkspacePage() {
       await api.post(`/employer/workspace/${releaseProject.job_id}/release`);
       toast.success(isBn ? "পেমেন্ট সফলভাবে মুক্তি দেওয়া হয়েছে!" : "Payment released successfully!");
       setReleaseDialogOpen(false);
-      fetchProjects();
+      invalidateProjects();
     } catch (error: unknown) {
       const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || (isBn ? "মুক্তি দিতে ব্যর্থ" : "Failed to release payment");
       toast.error(msg);
@@ -235,7 +237,7 @@ export default function EmployerWorkspacePage() {
       await api.post(`/employer/workspace/${revisionProject.job_id}/revision`, { revision_note: revisionNote });
       toast.success(isBn ? "পুনর্দর্শন অনুরোধ পাঠানো হয়েছে!" : "Revision requested successfully!");
       setRevisionDialogOpen(false);
-      fetchProjects();
+      invalidateProjects();
     } catch (error: unknown) {
       const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || (isBn ? "পুনর্দর্শন অনুরোধ করতে ব্যর্থ" : "Failed to request revision");
       toast.error(msg);
@@ -260,7 +262,7 @@ export default function EmployerWorkspacePage() {
       await api.post(`/employer/workspace/${disputeProject.job_id}/dispute`, { reason: disputeReason });
       toast.success(isBn ? "বিরোধ জমা দেওয়া হয়েছে" : "Dispute submitted");
       setDisputeDialogOpen(false);
-      fetchProjects();
+      invalidateProjects();
     } catch (error: unknown) {
       const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || (isBn ? "বিরোধ জমা দিতে ব্যর্থ" : "Failed to submit dispute");
       toast.error(msg);
@@ -278,7 +280,7 @@ export default function EmployerWorkspacePage() {
       <div className={`${showMobileChat ? "hidden md:flex" : "flex"} flex-col w-full md:w-1/3 lg:w-[30%] border-r bg-background overflow-hidden`}>
         <div className="flex items-center justify-between p-4 border-b shrink-0">
           <h2 className="text-lg font-semibold">{isBn ? "কর্মক্ষেত্র" : "Workspace"}</h2>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={fetchProjects} disabled={loading}>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={invalidateProjects} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>
@@ -349,79 +351,115 @@ export default function EmployerWorkspacePage() {
               })()}
             </div>
 
-            <div className="px-4 py-3 border-b bg-muted/30 shrink-0">
-              <div className="flex flex-wrap items-center gap-4 text-sm">
-                {selectedProject.budget != null && (
-                  <span className="flex items-center gap-1 font-semibold"><DollarSign className="h-4 w-4" />{formatCurrency(selectedProject.budget)}</span>
-                )}
-                {selectedProject.escrow && (
-                  <>
-                    <span className="flex items-center gap-1 text-muted-foreground">
-                      {isBn ? "এসক্রো:" : "Escrow:"}{" "}
-                      <span className="font-medium text-foreground">{formatCurrency(selectedProject.escrow.amount)}</span>
-                      <Badge variant="outline" className="text-[10px] ml-0.5">{selectedProject.escrow.status}</Badge>
+            <div className="border-b shrink-0">
+              {/* Collapsible header */}
+              <button
+                type="button"
+                onClick={() => setShowSubmissionInfo(!showSubmissionInfo)}
+                className="w-full px-4 py-3 bg-muted/30 flex items-center justify-between hover:bg-muted/50 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {selectedProject.budget != null && (
+                    <span className="flex items-center gap-1 font-semibold text-sm"><DollarSign className="h-4 w-4" />{formatCurrency(selectedProject.budget)}</span>
+                  )}
+                  {selectedProject.deliveries && selectedProject.deliveries.length > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {selectedProject.deliveries.length} {isBn ? "জমাকৃত" : "submitted"}
                     </span>
-                    {selectedProject.escrow.platform_fee != null && (
-                      <span className="text-muted-foreground text-xs">{isBn ? "প্ল্যাটফর্ম ফি:" : "Fee:"} {formatCurrency(selectedProject.escrow.platform_fee)}</span>
-                    )}
-                  </>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {canRelease(selectedProject.project_status) && (
-                  <Button size="sm" onClick={() => { setReleaseProject(selectedProject); setReleaseDialogOpen(true); }}>
-                    <CheckCircle className="h-4 w-4 mr-1.5" />{isBn ? "পেমেন্ট মুক্তি দিন" : "Approve & Release"}
-                  </Button>
-                )}
-                {canRevision(selectedProject.project_status) && (
-                  <Button size="sm" variant="outline" onClick={() => handleOpenRevision(selectedProject)}>
-                    <RefreshCw className="h-4 w-4 mr-1.5" />{isBn ? "পুনর্দর্শন" : "Request Revision"}
-                  </Button>
-                )}
-                {selectedProject.project_status !== "completed" && selectedProject.project_status !== "disputed" && (
-                  <Button size="sm" variant="outline" onClick={() => handleOpenDispute(selectedProject)}>
-                    <AlertTriangle className="h-4 w-4 mr-1.5" />{isBn ? "বিরোধ" : "Open Dispute"}
-                  </Button>
-                )}
-              </div>
+                  )}
+                </div>
+                {showSubmissionInfo ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+              </button>
 
-              {/* Deliveries merged into info card */}
-              {selectedProject.deliveries && selectedProject.deliveries.length > 0 && (
-                <div className="mt-3 pt-3 border-t space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {isBn ? "জমাকৃত কাজ" : "Submissions"} ({selectedProject.deliveries.length})
-                  </p>
-                  {selectedProject.deliveries.map((d) => (
-                    <div key={d.id} className="p-2 rounded-lg bg-background border text-xs space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <Badge variant={d.status === "submitted" ? "default" : d.status === "revision_requested" ? "destructive" : "secondary"} className="text-[10px]">
-                          {d.status}
-                        </Badge>
-                        <span className="text-muted-foreground">{formatDate(d.created_at)}</span>
-                      </div>
-                      {d.message && <p className="text-muted-foreground">{d.message}</p>}
-                      {d.attachments && d.attachments.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {d.attachments.map((attPath, i) => (
-                            <a
-                              key={i}
-                              href={getStorageUrl(attPath) || `/storage/${attPath}`}
-                              download
-                              className="flex items-center gap-1 px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
-                            >
-                              {/\.(jpg|jpeg|png|gif|webp)$/i.test(attPath) ? (
-                                <img src={getStorageUrl(attPath) || `/storage/${attPath}`} alt="" className="h-5 w-5 rounded object-cover" />
-                              ) : (
-                                <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              )}
-                              <span className="truncate max-w-[120px]">{attPath.split("/").pop()}</span>
-                              <Download className="h-3 w-3 text-muted-foreground shrink-0" />
-                            </a>
-                          ))}
-                        </div>
-                      )}
+              {/* Collapsible content */}
+              {showSubmissionInfo && (
+                <div className="px-4 py-3 bg-muted/30">
+                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                    {selectedProject.escrow && (
+                      <>
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          {isBn ? "এসক্রো:" : "Escrow:"}{" "}
+                          <span className="font-medium text-foreground">{formatCurrency(selectedProject.escrow.amount)}</span>
+                          <Badge variant="outline" className="text-[10px] ml-0.5">{selectedProject.escrow.status}</Badge>
+                        </span>
+                        {selectedProject.escrow.platform_fee != null && (
+                          <span className="text-muted-foreground text-xs">{isBn ? "প্ল্যাটফর্ম ফি:" : "Fee:"} {formatCurrency(selectedProject.escrow.platform_fee)}</span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {canRelease(selectedProject.project_status) && (
+                      <Button size="sm" onClick={() => { setReleaseProject(selectedProject); setReleaseDialogOpen(true); }}>
+                        <CheckCircle className="h-4 w-4 mr-1.5" />{isBn ? "পেমেন্ট মুক্তি দিন" : "Approve & Release"}
+                      </Button>
+                    )}
+                    {canRevision(selectedProject.project_status) && (
+                      <Button size="sm" variant="outline" onClick={() => handleOpenRevision(selectedProject)}>
+                        <RefreshCw className="h-4 w-4 mr-1.5" />{isBn ? "পুনর্দর্শন" : "Request Revision"}
+                      </Button>
+                    )}
+                    {selectedProject.project_status !== "completed" && selectedProject.project_status !== "disputed" && (
+                      <Button size="sm" variant="outline" onClick={() => handleOpenDispute(selectedProject)}>
+                        <AlertTriangle className="h-4 w-4 mr-1.5" />{isBn ? "বিরোধ" : "Open Dispute"}
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Deliveries */}
+                  {selectedProject.deliveries && selectedProject.deliveries.length > 0 && (
+                    <div className="mt-3 pt-3 border-t space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {isBn ? "জমাকৃত কাজ" : "Submissions"} ({selectedProject.deliveries.length})
+                      </p>
+                      {selectedProject.deliveries.map((d) => {
+                        const hasAttachments = d.attachments && d.attachments.length > 0;
+                        return (
+                          <div key={d.id} className="p-2 rounded-lg bg-background border text-xs">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Badge variant={d.status === "submitted" ? "default" : d.status === "revision_requested" ? "destructive" : "secondary"} className="text-[10px] shrink-0">
+                                  {d.status}
+                                </Badge>
+                                {d.message && <span className="text-muted-foreground truncate">{d.message}</span>}
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {hasAttachments && (
+                                  <span className="text-muted-foreground flex items-center gap-1">
+                                    <FileArchive className="h-3 w-3" />
+                                    {d.attachments!.length}
+                                  </span>
+                                )}
+                                <span className="text-muted-foreground">{formatDate(d.created_at)}</span>
+                              </div>
+                            </div>
+                            {hasAttachments && (
+                              <div className="mt-2 pt-2 border-t space-y-1.5">
+                                {d.attachments!.map((attPath, i) => {
+                                  const fileUrl = getStorageUrl(attPath) || `/storage/${attPath}`;
+                                  const fileName = attPath.split("/").pop() || "file";
+                                  const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(attPath);
+                                  return (
+                                    <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded bg-muted/50">
+                                      {isImage ? (
+                                        <img src={fileUrl} alt="" className="h-5 w-5 rounded object-cover shrink-0" />
+                                      ) : (
+                                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                                      )}
+                                      <span className="truncate flex-1 text-muted-foreground">{fileName}</span>
+                                      <a href={fileUrl} download className="shrink-0 p-1 rounded hover:bg-background transition-colors">
+                                        <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                                      </a>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>

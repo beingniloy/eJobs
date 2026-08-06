@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Sparkles, Briefcase, MapPin, Calendar, DollarSign, Users, FileText, Shield, Globe } from "lucide-react";
+import { Loader2, Plus, Trash2, Sparkles, Briefcase, MapPin, Calendar, DollarSign, Users, FileText, Shield, Globe, Wallet, CheckCircle, AlertCircle } from "lucide-react";
 import dynamic from "next/dynamic";
 import { aiService } from "@/services/ai.service";
 import { subscriptionService, type QuotaInfo } from "@/services/subscription.service";
@@ -79,6 +79,8 @@ export default function PostJobPage() {
   const [aiQuota, setAiQuota] = useState<QuotaInfo | null>(null);
   const [categories, setCategories] = useState<{ id: number; name_en: string; name_bn: string }[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [financialSettings, setFinancialSettings] = useState<any>(null);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
 
   useEffect(() => {
     document.title = isBn ? `চাকরি পোস্ট করুন | ${siteName}` : `Post a Job | ${siteName}`;
@@ -88,6 +90,12 @@ export default function PostJobPage() {
     api.get("/categories").then((res) => {
       setCategories(res.data?.data || res.data || []);
     }).catch(() => { /* handled */ });
+    api.get("/settings/financial").then((res) => {
+      setFinancialSettings(res.data?.data || res.data || {});
+    }).catch(() => {});
+    api.get("/employer/wallet").then((res) => {
+      setWalletBalance(Number(res.data?.wallet?.balance || 0));
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -217,6 +225,7 @@ export default function PostJobPage() {
             </div>
 
             {isRemoteProject && (
+              <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="flex items-center gap-2"><DollarSign className="h-4 w-4" />{isBn ? "বাজেট (BDT)" : "Budget (BDT)"}</Label>
@@ -238,6 +247,43 @@ export default function PostJobPage() {
                   </Select>
                 </div>
               </div>
+
+              {/* Budget + Fee Calculation */}
+              {Number(watch("budget") || 0) > 0 && financialSettings && (
+                <div className="p-4 rounded-lg border space-y-2">
+                  <p className="text-sm font-medium flex items-center gap-2"><Wallet className="h-4 w-4" />{isBn ? "হায়ার করার খরচ হিসাব" : "Hiring Cost Breakdown"}</p>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between"><span className="text-muted-foreground">{isBn ? "বাজেট" : "Budget"}</span><span>{Number(watch("budget") || 0).toLocaleString()} ৳</span></div>
+                    {financialSettings.escrow_fee_payer === "employer" && Number(financialSettings.escrow_fee_percent || 0) > 0 && (
+                      <div className="flex justify-between"><span className="text-muted-foreground">{isBn ? "সার্ভিস ফি" : "Service Fee"} ({financialSettings.escrow_fee_percent}%)</span><span>{(Number(watch("budget") || 0) * Number(financialSettings.escrow_fee_percent || 0) / 100).toLocaleString()} ৳</span></div>
+                    )}
+                    <div className="flex justify-between font-semibold border-t pt-1"><span>{isBn ? "মোট প্রয়োজন" : "Total Required"}</span><span>
+                      {financialSettings.escrow_fee_payer === "employer"
+                        ? (Number(watch("budget") || 0) + Number(watch("budget") || 0) * Number(financialSettings.escrow_fee_percent || 0) / 100).toLocaleString()
+                        : Number(watch("budget") || 0).toLocaleString()} ৳
+                    </span></div>
+                    <div className="flex justify-between items-center pt-1">
+                      <span className="text-muted-foreground">{isBn ? "আপনার ব্যালেন্স" : "Your Balance"}</span>
+                      <span className={walletBalance >= (financialSettings.escrow_fee_payer === "employer"
+                        ? Number(watch("budget") || 0) + Number(watch("budget") || 0) * Number(financialSettings.escrow_fee_percent || 0) / 100
+                        : Number(watch("budget") || 0)) ? "text-green-600" : "text-red-600"}>
+                        {walletBalance.toLocaleString()} ৳
+                        {walletBalance >= (financialSettings.escrow_fee_payer === "employer"
+                          ? Number(watch("budget") || 0) + Number(watch("budget") || 0) * Number(financialSettings.escrow_fee_percent || 0) / 100
+                          : Number(watch("budget") || 0))
+                          ? <CheckCircle className="inline h-4 w-4 ml-1" />
+                          : <AlertCircle className="inline h-4 w-4 ml-1" />}
+                      </span>
+                    </div>
+                  </div>
+                  {walletBalance < (financialSettings.escrow_fee_payer === "employer"
+                    ? Number(watch("budget") || 0) + Number(watch("budget") || 0) * Number(financialSettings.escrow_fee_percent || 0) / 100
+                    : Number(watch("budget") || 0)) && (
+                    <p className="text-xs text-red-600 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{isBn ? "হায়ার করতে পর্যাপ্ত ব্যালেন্স নেই। ওয়ালেটে টাকা যোগ করুন।" : "Insufficient balance to hire. Add funds to your wallet."}</p>
+                  )}
+                </div>
+              )}
+              </>
             )}
           </CardContent>
         </Card>

@@ -47,6 +47,7 @@ export default function CandidateAcceptedJobsPage() {
   const statusColors: Record<string, string> = {
     shortlisted: "bg-blue-100 text-blue-700",
     interview: "bg-purple-100 text-purple-700",
+    offered: "bg-amber-100 text-amber-700",
     hired: "bg-green-100 text-green-700",
   };
 

@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import api from "@/lib/api-client";
 import { useThemeStore } from "@/store/theme-store";
 import { useAuthStore } from "@/store/auth-store";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listenToMessages } from "@/lib/echo";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,7 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DefaultAvatar } from "@/components/ui/default-avatar";
 import { toast } from "sonner";
 import { getStorageUrl } from "@/lib/utils";
@@ -32,7 +32,6 @@ import {
   CheckCircle,
   FileText,
   DollarSign,
-  UploadCloud,
   RefreshCw,
   MessageSquare,
   ArrowLeft,
@@ -44,8 +43,6 @@ import {
 } from "lucide-react";
 import {
   formatCurrency,
-  formatDate,
-  getInitials,
 } from "@/lib/utils";
 
 /* ─── Interfaces ─── */
@@ -144,6 +141,22 @@ function formatChatTime(dateStr: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+/* ─── Helpers (stable, outside component) ─── */
+
+function getFileIcon(name: string) {
+  const ext = name.split(".").pop()?.toLowerCase() || "";
+  if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) return ImageIcon;
+  if (["zip", "rar", "7z"].includes(ext)) return FileArchive;
+  if (["js", "ts", "jsx", "tsx", "py", "java", "php", "html", "css", "json", "xml"].includes(ext)) return FileCode;
+  return FileText;
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 /* ─── Component ─── */
 
 export default function CandidateWorkspacePage() {
@@ -153,8 +166,21 @@ export default function CandidateWorkspacePage() {
   const currentUserId = user?.id;
 
   /* ── Projects ── */
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  const { data: projects = [], isLoading: loading } = useQuery<Project[]>({
+    queryKey: ["candidate", "workspace"],
+    queryFn: async () => {
+      const res = await api.get("/candidate/workspace");
+      const raw = res.data.data || [];
+      return raw.map((p: any) => ({
+        ...p,
+        employer: p.employer || (p.company?.user ? { id: p.company.user.id, name: p.company.user.name, avatar: p.company.user.avatar } : undefined),
+      }));
+    },
+    staleTime: 30 * 1000,
+    gcTime: 2 * 60 * 1000,
+  });
 
   /* ── Chat ── */
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -175,6 +201,18 @@ export default function CandidateWorkspacePage() {
   /* ── Chat Attachments ── */
   const [attachFiles, setAttachFiles] = useState<File[]>([]);
 
+  // Memoize object URLs and revoke on cleanup (prevents memory leak)
+  const attachFileUrls = useMemo(() => attachFiles.map((f) => ({
+    url: URL.createObjectURL(f),
+    name: f.name,
+    size: f.size,
+    type: f.type,
+  })), [attachFiles]);
+
+  useEffect(() => {
+    return () => { attachFileUrls.forEach((u) => URL.revokeObjectURL(u.url)); };
+  }, [attachFileUrls]);
+
   /* ── Submit Work Dialog ── */
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
   const [submitProject, setSubmitProject] = useState<Project | null>(null);
@@ -190,32 +228,14 @@ export default function CandidateWorkspacePage() {
 
   /* ─── Derived ─── */
 
-  const otherParty = selectedProject?.employer || (selectedProject?.company?.user ? { id: selectedProject.company.user.id, name: selectedProject.company.user.name, avatar: selectedProject.company.user.avatar } : null);
+  const otherParty = useMemo(() =>
+    selectedProject?.employer || (selectedProject?.company?.user ? { id: selectedProject.company.user.id, name: selectedProject.company.user.name, avatar: selectedProject.company.user.avatar } : null),
+    [selectedProject]
+  );
 
-  /* ─── Fetch Projects ─── */
-
-  const fetchProjects = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get("/candidate/workspace");
-      const raw = res.data.data || [];
-      const mapped = raw.map((p: any) => ({
-        ...p,
-        employer: p.employer || (p.company?.user ? { id: p.company.user.id, name: p.company.user.name, avatar: p.company.user.avatar } : undefined),
-      }));
-      setProjects(mapped);
-    } catch {
-      toast.error(
-        isBn ? "প্রজেক্ট লোড করতে ব্যর্থ" : "Failed to load projects"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [isBn]);
-
-  useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+  const invalidateProjects = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["candidate", "workspace"] });
+  }, [queryClient]);
 
   /* ─── Messages ─── */
 
@@ -342,20 +362,6 @@ export default function CandidateWorkspacePage() {
     }
   };
 
-  const getFileIcon = (name: string) => {
-    const ext = name.split(".").pop()?.toLowerCase() || "";
-    if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) return ImageIcon;
-    if (["zip", "rar", "7z"].includes(ext)) return FileArchive;
-    if (["js", "ts", "jsx", "tsx", "py", "java", "php", "html", "css", "json", "xml"].includes(ext)) return FileCode;
-    return FileText;
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
   /* ─── Submit Work ─── */
 
   const handleOpenSubmit = (project: Project) => {
@@ -391,7 +397,7 @@ export default function CandidateWorkspacePage() {
           : "Work submitted successfully!"
       );
       setSubmitDialogOpen(false);
-      fetchProjects();
+      invalidateProjects();
       // Refresh selected project data
       if (selectedProject?.id === submitProject.id) {
         selectProject(submitProject);
@@ -432,7 +438,7 @@ export default function CandidateWorkspacePage() {
         isBn ? "বিরোধ জমা দেওয়া হয়েছে" : "Dispute submitted"
       );
       setDisputeDialogOpen(false);
-      fetchProjects();
+      invalidateProjects();
     } catch (error: unknown) {
       const msg =
         (error as { response?: { data?: { message?: string } } })?.response
@@ -470,7 +476,7 @@ export default function CandidateWorkspacePage() {
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            onClick={fetchProjects}
+            onClick={invalidateProjects}
             disabled={loading}
           >
             <RefreshCw
@@ -809,14 +815,14 @@ export default function CandidateWorkspacePage() {
               {/* Attachment previews */}
               {attachFiles.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {attachFiles.map((f, i) => {
+                  {attachFileUrls.map((f, i) => {
                     const isImage = f.type.startsWith("image/");
                     const FileIcon = getFileIcon(f.name);
                     return (
                       <div key={i} className="relative group">
                         {isImage ? (
                           <img
-                            src={URL.createObjectURL(f)}
+                            src={f.url}
                             alt={f.name}
                             className="h-16 w-16 object-cover rounded-lg border"
                           />
