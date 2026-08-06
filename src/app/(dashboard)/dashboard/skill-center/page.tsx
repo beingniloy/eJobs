@@ -41,8 +41,8 @@ export default function SkillCenterPage() {
 
   useEffect(() => {
     Promise.all([
-      api.get("/skill-center/my-courses").catch(() => ({ data: { data: [] } })),
-      api.get("/skill-center").catch(() => ({ data: { data: [] } })),
+      api.get("/skills/my-courses").catch(() => ({ data: { data: [] } })),
+      api.get("/skills").catch(() => ({ data: { data: [] } })),
     ]).then(([myRes, allRes]) => {
       setEnrollments(myRes.data?.data || []);
       setCourses(allRes.data?.data?.data || allRes.data?.data || []);

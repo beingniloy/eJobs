@@ -207,10 +207,16 @@ export function useProfileForm() {
           await api.post("/candidate/profile-update", fd);
           break;
         }
-        case "education":
-          await api.post("/candidate/profile/educations", { educations }); break;
-        case "experience":
-          await api.post("/candidate/profile/experiences", { experiences }); break;
+        case "education": {
+          const res = await api.post("/candidate/profile/educations", { educations });
+          if (Array.isArray(res.data.educations)) setEducations(res.data.educations);
+          break;
+        }
+        case "experience": {
+          const res = await api.post("/candidate/profile/experiences", { experiences });
+          if (Array.isArray(res.data.experiences)) setExperiences(res.data.experiences);
+          break;
+        }
         case "skills": {
           const fd = new FormData();
           fd.append("skills", JSON.stringify(skills.split(",").map((s) => s.trim()).filter(Boolean)));
@@ -221,13 +227,18 @@ export function useProfileForm() {
           fd.append("language_proficiency", JSON.stringify(languages));
           await api.post("/candidate/profile-update", fd); break;
         }
-        case "training":
-          await api.post("/candidate/profile/trainings", { trainings }); break;
+        case "training": {
+          const res = await api.post("/candidate/profile/trainings", { trainings });
+          if (Array.isArray(res.data.trainings)) setTrainings(res.data.trainings);
+          break;
+        }
         case "certifications": {
           const fd = new FormData();
           fd.append("certifications", JSON.stringify(certifications.map(({ _cert_file, ...rest }) => rest)));
           certifications.forEach((c, i) => { if (c._cert_file) fd.append(`cert_file_${i}`, c._cert_file); });
-          await api.post("/candidate/profile/certifications", fd); break;
+          const res = await api.post("/candidate/profile/certifications", fd);
+          if (Array.isArray(res.data.certifications)) setCertifications(res.data.certifications);
+          break;
         }
         case "documents": {
           const toUpload = documents.filter((d) => d._file);

@@ -110,6 +110,7 @@ export default function JobDetailClient({ jobId }: Props) {
         job_description: job?.description || "",
       });
       if (res.cover_letter) { setCoverLetter(res.cover_letter); toast.success(isBn ? "কভার লেটার তৈরি!" : "Cover letter generated!"); }
+      if (res.fallback) toast.info(isBn ? "টেমপ্লেট ব্যবহার করা হয়েছে (AI অনুপলব্ধ)" : "Template used (AI unavailable)");
     } catch { toast.error(isBn ? "কভার লেটার তৈরি করতে ব্যর্থ" : "Failed to generate cover letter"); }
     finally { setGeneratingCover(false); }
   };

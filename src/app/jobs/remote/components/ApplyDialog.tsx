@@ -52,7 +52,11 @@ export default function ApplyDialog({ open, onOpenChange, job, isBn, resumeFromP
       const companyName = typeof job.company === "object" && job.company ? job.company.name || "" : typeof job.company === "string" ? job.company : "";
       const res = await aiService.generateCoverLetter({ job_title: job.title, company_name: companyName });
       const text = res?.cover_letter || res?.response;
-      if (text) { setCoverLetter(text); toast.success(isBn ? "কভার লেটার তৈরি হয়েছে!" : "Cover letter generated!"); }
+      if (text) {
+        setCoverLetter(text);
+        if (res?.fallback) toast.info(isBn ? "কভার লেটার টেমপ্লেট তৈরি হয়েছে (AI অনুপলব্ধ)" : "Cover letter template generated (AI unavailable)");
+        else toast.success(isBn ? "কভার লেটার তৈরি হয়েছে!" : "Cover letter generated!");
+      }
       else toast.error(isBn ? "তৈরি করতে ব্যর্থ" : "Failed to generate");
       subscriptionService.getMySubscriptionWithQuotas().then((r) => setQuotas(r.quotas)).catch(() => {});
     } catch (err: any) {
