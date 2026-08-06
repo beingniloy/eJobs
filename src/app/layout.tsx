@@ -80,7 +80,7 @@ export async function generateMetadata(): Promise<Metadata> {
     authors: [{ name: siteName }],
     icons: favicon
       ? { icon: favicon, apple: favicon }
-      : { icon: "/favicon.svg", apple: "/favicon.svg" },
+      : { icon: "/favicon.svg", apple: "/favicon-192.png" },
     openGraph: {
       type: "website",
       locale: "en_US",

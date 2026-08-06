@@ -52,7 +52,7 @@ export default function EmployerDashboardPage() {
           total_applicants: d.stats?.total_applicants || 0,
           total_views: 0,
           wallet_balance: 0,
-          recent_applications: [],
+          recent_applications: d.recent_applications || [],
         });
       })
       .catch((err) => toast.error(err?.response?.data?.message || "Failed to load dashboard data"))

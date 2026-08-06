@@ -1,90 +1,54 @@
-# Performance Optimization Plan
+# PWA Footer Install Banner
 
-## Root Cause Analysis
+## Problem
+No PWA install option in footer. Existing `PwaInstallBanner` is a floating bottom-right popup — user wants a persistent footer section similar to Play Store app banners.
 
-### 1. `export const dynamic = "force-dynamic"` in root layout (CRITICAL)
-**File:** `src/app/layout.tsx:6`
-- Forces ALL pages to be dynamically rendered on every request
-- Defeats Next.js static generation, ISR, streaming, edge caching
-- This single line is the #1 performance killer
+## Plan
 
-### 2. Blocking SEO fetch on every page load
-**File:** `src/app/layout.tsx:27-49`
-- `fetchSeoSettings()` runs on every page with 5s timeout
-- Has `revalidate: 300` but `force-dynamic` defeats the cache
-- After removing `force-dynamic`, this auto-fixes via ISR
+### Step 1: Create shared `usePwaInstall` hook
+**File:** `src/hooks/use-pwa-install.ts` (NEW)
 
-### 3. Homepage 100% client-rendered (HIGH)
-**File:** `src/app/page.tsx` (1434 lines, `"use client"`)
-- All 45+ lucide icons imported eagerly
-- District data hardcoded inline (~100 lines)
-- 6 API calls on mount with raw `fetchWithRetry` — no React Query caching
-- `fetchWithRetry` re-fetches everything on every visit
+Extract `beforeinstallprompt` logic into a shared hook so both Footer and existing PwaInstallBanner can use it without duplicating event listeners.
 
-### 4. No code splitting on heavy pages (MEDIUM)
-- `resume-builder` imports tiptap (~200KB) eagerly
-- `ai-assistant` imports react-markdown + remark-gfm eagerly
-- Only `RichTextEditor` uses `next/dynamic` already
+```typescript
+export function usePwaInstall() {
+  // Listens to beforeinstallprompt, appinstalled, standalone detection
+  // Returns: { canInstall, install(), isInstalled }
+}
+```
 
-### 5. Auth verification blocks render (MEDIUM)
-**File:** `src/providers/auth-provider.tsx`
-- `api.get("/user")` runs on every page load
-- Already has `enabled: !!token && !user` — only fires when no cached user
-- React Query `staleTime: 5min` already set — this is OK
+### Step 2: Add PWA install section to Footer
+**File:** `src/components/layout/Footer.tsx`
 
-### 6. Navbar makes API calls on mount (LOW-MEDIUM)
-**File:** `src/components/layout/Navbar.tsx`
-- Subscription + notification fetches on every page
-- No staleTime — refetches constantly
+Add a section above the bottom bar (between grid and copyright) with:
+- App icon: `settings.site_logo` via `getStorageUrl()` → `<Image>` fallback to `/favicon.svg`
+- App name from `settings.site_name`
+- Tagline (bilingual)
+- "Install App" button that triggers `install()`
+- Only renders when `canInstall && !isInstalled`
+- Dismiss button → stored in `localStorage` (`pwa-footer-dismissed`), reappears after 7 days
 
----
+Visual: horizontal card with icon left, text center, button right — like Google Play Store footer banners.
 
-## Execution Steps
+### Step 3: Refactor existing `PwaInstallBanner` to use shared hook
+**File:** `src/components/pwa-install-banner.tsx`
 
-### Step 1: Remove `force-dynamic` from root layout
-**File:** `src/app/layout.tsx`
-- Delete line 6: `export const dynamic = "force-dynamic";`
-- Enables ISR caching for SEO fetch (5min) and all server components
+Replace inline `beforeinstallprompt` logic with `usePwaInstall()` hook. Keeps the floating bottom-right behavior but deduplicates event listeners.
 
-### Step 2: Extract district data from homepage
-**File:** `src/app/page.tsx` → NEW `src/data/bangladesh-districts.ts`
-- Move `DIVISIONS_BN`, `DIVISIONS_EN`, `DISTRICTS_BN`, `DISTRICTS_EN` to separate file
-- Reduces homepage bundle parse cost
+### Step 4: Generate PNG icons for PWA manifest
+**File:** `public/favicon-192.png`, `public/favicon-512.png` (NEW)
 
-### Step 3: Extract icon map from homepage  
-**File:** `src/app/page.tsx` → NEW `src/app/homepage-icons.ts`
-- Move the `ICON_MAP` object and icon imports to separate file
-- Wrap with `React.memo` to prevent re-renders
-
-### Step 4: Add React Query caching for homepage
-**File:** `src/app/page.tsx`
-- Replace raw `fetchWithRetry` + `useState` with `useQuery`
-- Set `staleTime: 2 * 60 * 1000` (2 min)
-- Prevents refetching on navigation back
-
-### Step 5: Dynamic import heavy pages
-**Files:**
-- `src/app/resume-builder/page.tsx` → wrap with `next/dynamic`
-- `src/app/ai-assistant/page.tsx` → wrap with `next/dynamic`
-- Defers tiptap + react-markdown (~250KB) until needed
-
-### Step 6: Fix Navbar staleTime
-**File:** `src/components/layout/Navbar.tsx`
-- Move subscription fetch to React Query with `staleTime: 5 * 60 * 1000`
-
----
+The manifest only references SVG which doesn't work on all platforms. Create PNG versions from the existing SVG favicon. Update `src/app/manifest.json/route.ts` fallback to include PNG icon references.
 
 ## Files Modified
-1. `src/app/layout.tsx` — remove `force-dynamic`
-2. `src/app/page.tsx` — lazy icons, extract districts, React Query
-3. `src/data/bangladesh-districts.ts` — NEW
-4. `src/app/homepage-icons.ts` — NEW
-5. `src/app/resume-builder/page.tsx` — dynamic import
-6. `src/app/ai-assistant/page.tsx` — dynamic import
-7. `src/components/layout/Navbar.tsx` — React Query for subscription
+1. `src/hooks/use-pwa-install.ts` — NEW shared hook
+2. `src/components/layout/Footer.tsx` — add install banner section
+3. `src/components/pwa-install-banner.tsx` — refactor to use shared hook
+4. `src/app/manifest.json/route.ts` — add PNG icon references to fallback
+5. `public/favicon-192.png`, `public/favicon-512.png` — NEW generated icons
 
-## Expected Impact
-- **First load:** ~40-60% faster (ISR caching + code splitting)
-- **Subsequent loads:** Near-instant (ISR + React Query cache)
-- **Bundle:** ~250KB reduction (tiptap, react-markdown deferred)
-- **Time to Interactive:** Major improvement on homepage and public pages
+## UX
+- Footer banner: persistent, professional, like Play Store banners
+- Floating banner: still works as-is (just deduped via shared hook)
+- Both respect dismiss state (footer uses localStorage with 7-day expiry, floating uses sessionStorage)
+- Only shows when PWA is actually installable (beforeinstallprompt fired)

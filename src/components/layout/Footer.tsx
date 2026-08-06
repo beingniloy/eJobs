@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
-import { Phone, Mail, Globe } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Phone, Mail, Globe, Download, X } from "lucide-react";
 import api from "@/lib/api-client";
 import { useThemeStore } from "@/store/theme-store";
 import { getStorageUrl } from "@/lib/utils";
+import { usePwaInstall } from "@/hooks/use-pwa-install";
 
 interface PublicSettings {
   support_phone?: string;
@@ -51,6 +52,30 @@ export default function Footer() {
     pub.support_email ? { icon: Mail, text: pub.support_email, href: `mailto:${pub.support_email}` } : null,
     pub.support_website ? { icon: Globe, text: pub.support_website.replace(/^https?:\/\//, ""), href: pub.support_website } : null,
   ].filter(Boolean) as { icon: typeof Phone; text: string; href: string }[];
+
+  /* ── PWA Install ── */
+  const { canInstall, isInstalled, install } = usePwaInstall();
+  const [pwaDismissed, setPwaDismissed] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("pwa-footer-dismissed");
+      if (raw) {
+        const dismissedAt = JSON.parse(raw) as number;
+        // Re-show after 7 days
+        if (Date.now() - dismissedAt < 7 * 24 * 60 * 60 * 1000) {
+          setPwaDismissed(true);
+        }
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const dismissPwa = useCallback(() => {
+    setPwaDismissed(true);
+    localStorage.setItem("pwa-footer-dismissed", JSON.stringify(Date.now()));
+  }, []);
+
+  const showInstallBanner = canInstall && !isInstalled && !pwaDismissed;
 
   return (
     <footer className="footer-surface">
@@ -129,6 +154,55 @@ export default function Footer() {
             </ul>
           </div>
         </div>
+
+        {/* PWA Install Banner */}
+        {showInstallBanner && (
+          <div className="mt-8 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 p-4 flex items-center gap-4">
+            <div className="shrink-0 h-14 w-14 rounded-xl overflow-hidden bg-background border shadow-sm flex items-center justify-center">
+              {settings.site_logo ? (
+                <Image
+                  src={getStorageUrl(settings.site_logo)!}
+                  alt={siteName}
+                  width={56}
+                  height={56}
+                  className="h-full w-full object-contain"
+                  unoptimized
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src="/favicon.svg" alt={siteName} className="h-10 w-10" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-surface-footer-foreground">
+                {isBn ? `${siteName} ইনস্টল করুন` : `Install ${siteName}`}
+              </p>
+              <p className="text-xs text-surface-footer-foreground/70 mt-0.5">
+                {isBn
+                  ? "হোম স্ক্রিনে যোগ করুন — দ্রুত এবং সহজে ব্যবহার করুন"
+                  : "Add to home screen for quick & easy access"}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={install}
+                className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+              >
+                <Download className="h-4 w-4" />
+                {isBn ? "ইনস্টল" : "Install"}
+              </button>
+              <button
+                type="button"
+                onClick={dismissPwa}
+                className="p-1.5 rounded-lg hover:bg-surface-footer-foreground/10 transition-colors text-surface-footer-foreground/50 hover:text-surface-footer-foreground"
+                aria-label="Dismiss"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Bottom Bar */}
         <div className="mt-8 pt-8 border-t border-white/10 text-center text-sm text-surface-footer-foreground space-y-2">

@@ -6,9 +6,8 @@ import api from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
 import { useThemeStore } from "@/store/theme-store";
 import RecommendedJobs from "@/components/jobs/RecommendedJobs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
@@ -19,11 +18,9 @@ import {
   Eye,
   TrendingUp,
   ArrowRight,
-  CreditCard,
   ShieldAlert,
   CheckCircle,
   XCircle,
-  Clock,
 } from "lucide-react";
 
 interface DashboardData {
@@ -31,13 +28,6 @@ interface DashboardData {
   saved_jobs_count: number;
   profile_views: number;
   match_score: number;
-  recent_applications: {
-    id: number;
-    job_title: string;
-    company_name: string;
-    status: string;
-    created_at: string;
-  }[];
   wallet_balance: number;
 }
 
@@ -59,13 +49,6 @@ export default function CandidateDashboardPage() {
           saved_jobs_count: d.user?.profile?.saved_jobs_count ?? 0,
           profile_views: d.user?.profile?.profile_views ?? 0,
           match_score: d.user?.profile?.match_score ?? 0,
-          recent_applications: (d.applications ?? []).slice(0, 5).map((app: any) => ({
-            id: app.id,
-            job_title: app.job?.title ?? "Untitled Job",
-            company_name: app.job?.company?.name ?? "Unknown Company",
-            status: app.status,
-            created_at: app.created_at,
-          })),
           wallet_balance: d.user?.profile?.wallet_balance ?? 0,
         });
       })
@@ -103,14 +86,6 @@ export default function CandidateDashboardPage() {
       bg: "bg-blue-50 dark:bg-blue-950",
     },
   ];
-
-  const statusColors: Record<string, string> = {
-    pending: "bg-yellow-100 text-yellow-800",
-    reviewed: "bg-blue-100 text-blue-800",
-    shortlisted: "bg-green-100 text-green-800",
-    rejected: "bg-red-100 text-red-800",
-    hired: "bg-green-100 text-green-800",
-  };
 
   return (
     <div className="space-y-6">
@@ -235,51 +210,6 @@ export default function CandidateDashboardPage() {
       {/* Recommended Jobs */}
       <RecommendedJobs />
 
-      {/* Recent Applications */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{isBn ? "সাম্প্রতিক আবেদন" : "Recent Applications"}</CardTitle>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/dashboard/applied-jobs">
-              {isBn ? "সব দেখুন" : "View All"}
-              <ArrowRight className="h-4 w-4 ml-1" />
-            </Link>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <Skeleton className="h-5 w-48" />
-                  <Skeleton className="h-5 w-20" />
-                </div>
-              ))}
-            </div>
-          ) : !data?.recent_applications?.length ? (
-            <p className="text-muted-foreground text-center py-4">
-              {isBn ? "এখনো কোনো আবেদন নেই" : "No applications yet"}
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {data.recent_applications.map((app) => (
-                <div
-                  key={app.id}
-                  className="flex items-center justify-between p-3 rounded-lg border"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{app.job_title}</p>
-                    <p className="text-sm text-muted-foreground">{app.company_name}</p>
-                  </div>
-                  <Badge variant="outline" className={`capitalize shrink-0 ${statusColors[app.status] || ""}`}>
-                    {app.status}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

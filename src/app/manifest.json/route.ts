@@ -19,7 +19,11 @@ export async function GET() {
       short_name: "JobPortal",
       name: "JobPortal - Job Board & Career Platform",
       description: "Find your dream job or hire the best talent.",
-      icons: [{ src: "/favicon.svg", type: "image/svg+xml", sizes: "any", purpose: "any maskable" }],
+      icons: [
+        { src: "/favicon-192.png", type: "image/png", sizes: "192x192", purpose: "any" },
+        { src: "/favicon-512.png", type: "image/png", sizes: "512x512", purpose: "any maskable" },
+        { src: "/favicon.svg", type: "image/svg+xml", sizes: "any", purpose: "any" },
+      ],
       start_url: "/",
       scope: "/",
       background_color: "#ffffff",

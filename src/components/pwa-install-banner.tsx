@@ -4,16 +4,11 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, X } from "lucide-react";
 import { useThemeStore } from "@/store/theme-store";
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
+import { usePwaInstall } from "@/hooks/use-pwa-install";
 
 export default function PwaInstallBanner() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const { canInstall, isInstalled, install } = usePwaInstall();
   const settings = useThemeStore((s) => s.settings);
   const appName = settings?.site_name || process.env.NEXT_PUBLIC_APP_NAME || "JobPortal";
 
@@ -22,37 +17,15 @@ export default function PwaInstallBanner() {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
 
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setIsInstalled(true);
-      return;
+    if (canInstall) {
+      const timer = setTimeout(() => setShowBanner(true), 3000);
+      return () => clearTimeout(timer);
     }
-
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setTimeout(() => setShowBanner(true), 3000);
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-    window.addEventListener("appinstalled", () => {
-      setIsInstalled(true);
-      setShowBanner(false);
-      setDeferredPrompt(null);
-    });
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handler);
-    };
-  }, []);
+  }, [canInstall]);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") {
-      setShowBanner(false);
-    }
-    setDeferredPrompt(null);
+    const accepted = await install();
+    if (accepted) setShowBanner(false);
   };
 
   const handleDismiss = () => {
@@ -60,7 +33,7 @@ export default function PwaInstallBanner() {
     sessionStorage.setItem("pwa-dismissed", "1");
   };
 
-  if (isInstalled || !showBanner || !deferredPrompt) return null;
+  if (isInstalled || !showBanner || !canInstall) return null;
   if (typeof window !== "undefined" && sessionStorage.getItem("pwa-dismissed") === "1") return null;
 
   return (
