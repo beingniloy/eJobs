@@ -179,21 +179,21 @@ function WalletPageInner() {
               <>
                 <div className="space-y-3">
                   <Label>Payment Method</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="flex flex-wrap gap-2">
                     {depositMethods.map((g: any) => {
                       const logo = getStorageUrl(g.logo);
                       const isSelected = String(g.id) === addGatewayId;
                       return (
                         <button key={g.id} type="button" onClick={() => { setAddGatewayId(String(g.id)); setAddTxId(""); setPersonalStep(1); }}
-                          className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${isSelected ? "border-primary bg-primary/5 shadow-md" : "border-border hover:border-primary/40 hover:bg-muted/50"}`}>
+                          className={`relative flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-sm ${isSelected ? "border-primary bg-primary/5 shadow-sm font-medium" : "border-border hover:border-primary/40 hover:bg-muted/50"}`}>
                           {logo ? (
-                            <Image src={logo} alt={g.display_name || g.name} width={48} height={48} className="object-contain h-12 w-12" />
+                            <Image src={logo} alt={g.display_name || g.name} width={24} height={24} className="object-contain h-6 w-6" />
                           ) : (
-                            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center"><CircleDot className="h-6 w-6 text-primary" /></div>
+                            <CircleDot className="h-4 w-4 text-muted-foreground" />
                           )}
-                          <span className="text-sm font-medium text-center">{g.display_name || g.name}</span>
-                          {Number(g.percent_charge) > 0 && <span className="text-xs text-muted-foreground">{g.percent_charge}% fee</span>}
-                          {isSelected && <div className="absolute top-2 right-2"><CheckCircle className="h-4 w-4 text-primary" /></div>}
+                          <span>{g.display_name || g.name}</span>
+                          {Number(g.percent_charge) > 0 && <span className="text-xs text-muted-foreground ml-1">({g.percent_charge}%)</span>}
+                          {isSelected && <CheckCircle className="h-3.5 w-3.5 text-primary ml-1" />}
                         </button>
                       );
                     })}
