@@ -1,76 +1,26 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
-import Link from "next/link";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import api from "@/lib/api-client";
 import { useThemeStore } from "@/store/theme-store";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DefaultAvatar } from "@/components/ui/default-avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Users,
-  Download,
-  Eye,
-  MessageSquare,
-  CheckCircle,
-  XCircle,
-  MoreHorizontal,
-  Filter,
-  FileText,
-  ClipboardList,
-  ChevronDown,
-  ChevronRight,
-  Globe,
-  Wallet,
-  Briefcase,
-} from "lucide-react";
-
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Users, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import type { JobApplication } from "@/types";
-import { useRouter } from "next/navigation";
 
-type JobGroup = {
-  jobId: number;
-  title: string;
-  isRemote: boolean;
-  budget: number | null;
-  budgetType: string | null;
-  applications: JobApplication[];
-};
-
-async function tryEndpoints(attempts: (() => Promise<any>)[]): Promise<any> {
-  let lastErr: any;
-  for (const fn of attempts) {
-    try {
-      return await fn();
-    } catch (err: any) {
-      lastErr = err;
-      if (err?.response?.status !== 404) throw err;
-    }
-  }
-  throw lastErr;
-}
+import ApplicantsFilterBar from "./ApplicantsFilterBar";
+import JobGroupCard from "./JobGroupCard";
+import ApplicantDetailDialog from "./ApplicantDetailDialog";
+import { StatusChangeDialog } from "./StatusChangeDialog";
+import { tryEndpoints, groupByJob } from "./applicants-utils";
 
 export default function ApplicantsClient() {
   const { language, settings } = useThemeStore();
-  const router = useRouter();
   const isBn = language === "bn";
   const siteName = settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs";
+
   const [applicants, setApplicants] = useState<JobApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -87,140 +37,58 @@ export default function ApplicantsClient() {
     api
       .get("/employer/applicants")
       .then((res) => {
-        const data = res.data.data?.data || res.data.data || [];
-        data.sort((a: JobApplication, b: JobApplication) => (b.profile_strength ?? 0) - (a.profile_strength ?? 0));
+        const data: JobApplication[] = res.data.data?.data || res.data.data || [];
+        data.sort((a, b) => (b.profile_strength ?? 0) - (a.profile_strength ?? 0));
         setApplicants(data);
       })
       .catch(() => toast.error(isBn ? "আবেদনকারী লোড করতে ব্যর্থ" : "Failed to load applicants"))
       .finally(() => setLoading(false));
   }, []);
 
-  const refreshStatus = (id: number, status: string) => {
-    setApplicants((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
-  };
-
-  const updateApplicantStatus = (appId: number, status: string) =>
-    tryEndpoints([
-      () => api.patch(`/employer/applications/${appId}`, { status }),
-      () => api.post(`/employer/applications/${appId}/status`, { status }),
-      () => api.patch(`/employer/applicants/${appId}`, { status }),
-      () => api.post(`/employer/applicants/${appId}/status`, { status }),
-    ]);
-
-  const hireApplicant = (appId: number) =>
-    tryEndpoints([
-      () => api.post(`/employer/applications/${appId}/hire`),
-      () => api.post(`/employer/applicants/${appId}/hire`),
-    ]);
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: applicants.length, pending: 0, reviewed: 0, shortlisted: 0, rejected: 0, hired: 0 };
+    for (const app of applicants) {
+      if (app.status && counts[app.status] !== undefined) counts[app.status]++;
+    }
+    return counts;
+  }, [applicants]);
 
   const filteredApplicants = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return applicants.filter((app) => {
       if (statusFilter !== "all" && app.status !== statusFilter) return false;
       if (!q) return true;
-      const name = app.user?.name?.toLowerCase() || "";
-      const job = app.job?.title?.toLowerCase() || "";
-      return name.includes(q) || job.includes(q);
+      return (app.user?.name?.toLowerCase() || "").includes(q) || (app.job?.title?.toLowerCase() || "").includes(q);
     });
   }, [applicants, statusFilter, searchQuery]);
 
-  const groupedByJob = useMemo(() => {
-    const map = new Map<number, JobGroup>();
-    filteredApplicants.forEach((app) => {
-      const jobId = app.job_id;
-      if (!map.has(jobId)) {
-        map.set(jobId, {
-          jobId,
-          title: app.job?.title || "Job",
-          isRemote: !!(app.job as any)?.is_remote_project,
-          budget: (app.job as any)?.budget ?? null,
-          budgetType: (app.job as any)?.budget_type ?? null,
-          applications: [],
-        });
-      }
-      map.get(jobId)!.applications.push(app);
-    });
-    return Array.from(map.values()).sort((a, b) => b.applications.length - a.applications.length);
-  }, [filteredApplicants]);
+  const groupedByJob = useMemo(() => groupByJob(filteredApplicants), [filteredApplicants]);
 
-  const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: applicants.length, pending: 0, reviewed: 0, shortlisted: 0, rejected: 0, hired: 0 };
-    applicants.forEach((app) => {
-      if (app.status && counts[app.status] !== undefined) counts[app.status]++;
-    });
-    return counts;
-  }, [applicants]);
+  const refreshStatus = useCallback((id: number, status: string) => {
+    setApplicants((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
+  }, []);
 
-  const statusColors: Record<string, string> = {
-    pending: "bg-yellow-100 text-yellow-800",
-    reviewed: "bg-blue-100 text-blue-800",
-    shortlisted: "bg-green-100 text-green-800",
-    rejected: "bg-red-100 text-red-800",
-    hired: "bg-green-100 text-green-800",
-  };
-
-  const statusOptions = [
-    { value: "all", label: isBn ? "সব" : "All" },
-    { value: "pending", label: isBn ? "পেন্ডিং" : "Pending" },
-    { value: "reviewed", label: isBn ? "রিভিউ" : "Reviewed" },
-    { value: "shortlisted", label: isBn ? "শর্টলিস্ট" : "Shortlisted" },
-    { value: "rejected", label: isBn ? "প্রত্যাখ্যাত" : "Rejected" },
-    { value: "hired", label: isBn ? "নিয়োগ" : "Hired" },
-  ];
-
-  // Which statuses this applicant can be moved TO (excluding current)
-  const getAvailableStatuses = (currentStatus: string): string[] => {
-    const all = ["pending", "reviewed", "shortlisted", "rejected", "hired"];
-    return all.filter((s) => s !== currentStatus);
-  };
-
-  const candidateLabel = (app: JobApplication) => app.user?.name || "Candidate";
-
-  const getProfileUrl = (app: JobApplication) => {
-    const username = (app as any).user?.username;
-    const userId = (app as any).user?.id;
-    if (username) return `/profile/${username}`;
-    if (userId) return `/candidate/${userId}`;
-    return null;
-  };
-
-  const toggleJob = (jobId: number) => {
-    setExpandedJobs((prev) => ({ ...prev, [jobId]: !prev[jobId] }));
-  };
-
-  const hireCandidate = async (app: JobApplication) => {
+  const handleStatusChange = useCallback(async (app: JobApplication, newStatus: string) => {
     try {
-      await hireApplicant(app.id);
-      refreshStatus(app.id, "hired");
-      toast.success(isBn ? "নিয়োগ দেওয়া হয়েছে" : "Candidate hired");
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || (isBn ? "নিয়োগ দিতে ব্যর্থ" : "Failed to hire"));
-    }
-  };
-
-  const handleStatusChange = async (app: JobApplication, newStatus: string) => {
-    try {
-      await updateApplicantStatus(app.id, newStatus);
+      await tryEndpoints([
+        () => api.patch(`/employer/applications/${app.id}`, { status: newStatus }),
+        () => api.post(`/employer/applications/${app.id}/status`, { status: newStatus }),
+        () => api.patch(`/employer/applicants/${app.id}`, { status: newStatus }),
+        () => api.post(`/employer/applicants/${app.id}/status`, { status: newStatus }),
+      ]);
       refreshStatus(app.id, newStatus);
-      const label = isBn
-        ? { shortlisted: "শর্টলিস্টে যোগ করা হয়েছে", rejected: "প্রত্যাখ্যাত", reviewed: "রিভিউ করা হয়েছে", hired: "নিয়োগ দেওয়া হয়েছে", pending: "পেন্ডিং করা হয়েছে" }[newStatus] || "স্ট্যাটাস আপডেট হয়েছে"
-        : { shortlisted: "Shortlisted", rejected: "Rejected", reviewed: "Marked as reviewed", hired: "Candidate hired", pending: "Marked as pending" }[newStatus] || "Status updated";
-      toast.success(label);
+      const labels: Record<string, { en: string; bn: string }> = {
+        shortlisted: { en: "Shortlisted", bn: "শর্টলিস্টে যোগ করা হয়েছে" },
+        rejected: { en: "Rejected", bn: "প্রত্যাখ্যাত" },
+        reviewed: { en: "Marked as reviewed", bn: "রিভিউ করা হয়েছে" },
+        hired: { en: "Candidate hired", bn: "নিয়োগ দেওয়া হয়েছে" },
+        pending: { en: "Marked as pending", bn: "পেন্ডিং করা হয়েছে" },
+      };
+      toast.success(labels[newStatus] ? (isBn ? labels[newStatus].bn : labels[newStatus].en) : "Status updated");
     } catch (err: any) {
       toast.error(err?.response?.data?.message || (isBn ? "ব্যর্থ" : "Failed to update status"));
     }
-  };
-
-  const statusLabel = (s: string) => {
-    const map: Record<string, { en: string; bn: string }> = {
-      pending: { en: "Pending", bn: "পেন্ডিং" },
-      reviewed: { en: "Reviewed", bn: "রিভিউ" },
-      shortlisted: { en: "Shortlist", bn: "শর্টলিস্ট" },
-      rejected: { en: "Reject", bn: "প্রত্যাখ্যান" },
-      hired: { en: "Hire", bn: "নিয়োগ" },
-    };
-    return isBn ? map[s]?.bn || s : map[s]?.en || s;
-  };
+  }, [isBn, refreshStatus]);
 
   return (
     <div className="space-y-6">
@@ -231,318 +99,57 @@ export default function ApplicantsClient() {
         </p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <div className="flex gap-1 flex-wrap">
-            {statusOptions.map((opt) => (
-              <Button
-                key={opt.value}
-                variant={statusFilter === opt.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => setStatusFilter(opt.value)}
-                className="h-8 text-xs"
-              >
-                {opt.label}
-                <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">
-                  {statusCounts[opt.value] ?? 0}
-                </Badge>
-              </Button>
-            ))}
-          </div>
-        </div>
-        <input
-          type="text"
-          placeholder={isBn ? "নাম বা চাকরি খুঁজুন..." : "Search by name or job..."}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-8 px-3 rounded-md border bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-ring w-full sm:w-64"
-        />
-      </div>
+      <ApplicantsFilterBar
+        statusFilter={statusFilter}
+        statusCounts={statusCounts}
+        searchQuery={searchQuery}
+        isBn={isBn}
+        onStatusChange={setStatusFilter}
+        onSearchChange={setSearchQuery}
+      />
 
       {loading ? (
         <div className="space-y-3">
-          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-32 w-full" />)}
         </div>
-      ) : !groupedByJob.length ? (
+      ) : groupedByJob.length === 0 ? (
         <div className="text-center py-16">
           <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold">{isBn ? "এখনো কোনো আবেদন নেই" : "No applicants found"}</h3>
         </div>
       ) : (
         <div className="space-y-4">
-          {groupedByJob.map((group) => {
-            const isExpanded = expandedJobs[group.jobId] !== false;
-            return (
-              <Card key={group.jobId} className="overflow-hidden">
-                <button
-                  onClick={() => toggleJob(group.jobId)}
-                  className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/50 transition-colors"
-                >
-                  {isExpanded ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
-                  <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold truncate">{group.title}</p>
-                    <p className="text-xs text-muted-foreground">{group.applications.length} {isBn ? "জন আবেদনকারী" : "applicants"}</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {group.isRemote && <Badge variant="secondary" className="text-xs border-blue-300 text-blue-600"><Globe className="h-3 w-3 mr-1" />{isBn ? "রিমোট" : "Remote"}</Badge>}
-                    {group.budget != null && <Badge variant="outline" className="text-xs"><Wallet className="h-3 w-3 mr-1" />{Number(group.budget).toLocaleString()} ৳</Badge>}
-                    <Badge variant="secondary">{group.applications.length}</Badge>
-                  </div>
-                </button>
-
-                {isExpanded && (
-                  <div className="border-t divide-y">
-                    {group.applications.map((app) => {
-                      const profileUrl = getProfileUrl(app);
-                      const available = getAvailableStatuses(app.status || "pending");
-
-                      return (
-                        <div key={app.id} className="p-4 flex items-start gap-3 hover:bg-muted/30 transition-colors">
-                          <DefaultAvatar src={(app as any).user?.avatar} name={candidateLabel(app)} className="h-10 w-10 rounded-full shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="font-medium truncate">{candidateLabel(app)}</p>
-                                {app.cover_letter && <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{app.cover_letter}</p>}
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                {app.profile_strength != null && (
-                                  <div className="hidden sm:flex items-center gap-2">
-                                    <div className="relative h-2 w-16 rounded-full bg-muted overflow-hidden">
-                                      <div
-                                        className={`absolute inset-y-0 left-0 rounded-full transition-all ${
-                                          app.profile_strength >= 80 ? "bg-emerald-500" : app.profile_strength >= 50 ? "bg-amber-500" : "bg-red-500"
-                                        }`}
-                                        style={{ width: `${app.profile_strength}%` }}
-                                      />
-                                    </div>
-                                    <Badge variant={app.profile_strength >= 80 ? "success" : app.profile_strength >= 50 ? "warning" : "destructive"}>
-                                      {app.profile_strength}%
-                                    </Badge>
-                                  </div>
-                                )}
-                                {app.ai_match_score && <Badge variant="success" className="hidden sm:inline-flex">{app.ai_match_score}%</Badge>}
-                                <Badge variant="outline" className={`capitalize text-xs ${statusColors[app.status as keyof typeof statusColors] || ""}`}>
-                                  {app.status}
-                                </Badge>
-                              </div>
-                            </div>
-
-                            {/* Action buttons row */}
-                            <div className="mt-2 flex items-center gap-1 flex-wrap">
-                              {profileUrl ? (
-                                <Button variant="ghost" size="icon" className="h-7 w-7" title={isBn ? "প্রোফাইল" : "View Profile"} asChild>
-                                  <Link href={profileUrl} target="_blank"><Eye className="h-3.5 w-3.5" /></Link>
-                                </Button>
-                              ) : (
-                                <Button variant="ghost" size="icon" className="h-7 w-7" disabled><Eye className="h-3.5 w-3.5" /></Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                title={isBn ? "বার্তা" : "Message"}
-                                onClick={() => {
-                                  const cid = app.user?.id ?? app.id;
-                                  if (cid) router.push(`/employer/messages?to=${cid}`);
-                                }}
-                              >
-                                <MessageSquare className="h-3.5 w-3.5" />
-                              </Button>
-
-                              {/* Quick status-change buttons for pending/reviewed */}
-                              {app.status === "pending" && (
-                                <>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600" title={isBn ? "শর্টলিস্ট" : "Shortlist"} onClick={() => handleStatusChange(app, "shortlisted")}>
-                                    <CheckCircle className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600" title={isBn ? "প্রত্যাখ্যান" : "Reject"} onClick={() => handleStatusChange(app, "rejected")}>
-                                    <XCircle className="h-3.5 w-3.5" />
-                                  </Button>
-                                </>
-                              )}
-                              {app.status === "reviewed" && (
-                                <>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600" title={isBn ? "শর্টলিস্ট" : "Shortlist"} onClick={() => handleStatusChange(app, "shortlisted")}>
-                                    <CheckCircle className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600" title={isBn ? "প্রত্যাখ্যান" : "Reject"} onClick={() => handleStatusChange(app, "rejected")}>
-                                    <XCircle className="h-3.5 w-3.5" />
-                                  </Button>
-                                </>
-                              )}
-
-                              {/* Dropdown with ALL actions based on current status */}
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7">
-                                    <MoreHorizontal className="h-3.5 w-3.5" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48">
-                                  {/* Status-change actions */}
-                                  {available.length > 0 && (
-                                    <>
-                                      <p className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                        {isBn ? "স্ট্যাটাস পরিবর্তন" : "Change Status"}
-                                      </p>
-                                      {available.map((s) => (
-                                        <DropdownMenuItem
-                                          key={s}
-                                          onClick={() => handleStatusChange(app, s)}
-                                        >
-                                          {s === "shortlisted" && <CheckCircle className="h-4 w-4 mr-2 text-green-600" />}
-                                          {s === "rejected" && <XCircle className="h-4 w-4 mr-2 text-red-600" />}
-                                          {s === "reviewed" && <Eye className="h-4 w-4 mr-2 text-blue-600" />}
-                                          {s === "hired" && <CheckCircle className="h-4 w-4 mr-2 text-emerald-600" />}
-                                          {s === "pending" && <ClipboardList className="h-4 w-4 mr-2 text-yellow-600" />}
-                                          {statusLabel(s)}
-                                        </DropdownMenuItem>
-                                      ))}
-                                      <DropdownMenuSeparator />
-                                    </>
-                                  )}
-
-                                  {/* Other actions */}
-                                  {app.resume_url && (
-                                    <DropdownMenuItem onClick={() => window.open(app.resume_url as string, "_blank")}>
-                                      <Download className="h-4 w-4 mr-2" />{isBn ? "সিভি ডাউনলোড" : "Download CV"}
-                                    </DropdownMenuItem>
-                                  )}
-                                  {profileUrl ? (
-                                    <DropdownMenuItem asChild>
-                                      <Link href={profileUrl} target="_blank">
-                                        <Eye className="h-4 w-4 mr-2" />{isBn ? "প্রোফাইল দেখুন" : "View Profile"}
-                                      </Link>
-                                    </DropdownMenuItem>
-                                  ) : (
-                                    <DropdownMenuItem disabled>
-                                      <Eye className="h-4 w-4 mr-2" />{isBn ? "প্রোফাইল" : "View Profile"}
-                                    </DropdownMenuItem>
-                                  )}
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      const cid = app.user?.id ?? app.id;
-                                      if (cid) router.push(`/employer/messages?to=${cid}`);
-                                    }}
-                                  >
-                                    <MessageSquare className="h-4 w-4 mr-2" />{isBn ? "বার্তা পাঠান" : "Message"}
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </Card>
-            );
-          })}
+          {groupedByJob.map((group) => (
+            <JobGroupCard
+              key={group.jobId}
+              group={group}
+              isExpanded={expandedJobs[group.jobId] !== false}
+              isBn={isBn}
+              onToggle={() => setExpandedJobs((p) => ({ ...p, [group.jobId]: p[group.jobId] !== false ? false : true }))}
+              onStatusChange={handleStatusChange}
+            />
+          ))}
         </div>
       )}
 
-      {/* Detail Dialog */}
-      <Dialog open={!!selectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
-        <DialogContent className="max-w-3xl">
-          {selectedApp && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{isBn ? "আবেদনের বিবরণ" : "Applicant Details"}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="flex items-start gap-4">
-                  <DefaultAvatar src={(selectedApp as any).user?.avatar} name={candidateLabel(selectedApp)} className="h-14 w-14 rounded-full" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-base">{candidateLabel(selectedApp)}</p>
-                    <p className="text-sm text-muted-foreground">{selectedApp.job?.title || "Job"}</p>
-                    <div className="flex flex-wrap items-center gap-2 mt-2">
-                      <Badge variant="outline" className="capitalize text-xs">{selectedApp.status}</Badge>
-                      {selectedApp.profile_strength != null && (
-                        <Badge variant={selectedApp.profile_strength >= 80 ? "success" : selectedApp.profile_strength >= 50 ? "warning" : "destructive"}>{selectedApp.profile_strength}%</Badge>
-                      )}
-                      {selectedApp.ai_match_score && <Badge variant="success">{selectedApp.ai_match_score}% Match</Badge>}
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                  {selectedApp.expected_salary && (
-                    <div className="rounded-lg border p-3">
-                      <p className="text-xs text-muted-foreground">{isBn ? "প্রত্যাশিত বেতন" : "Expected Salary"}</p>
-                      <p className="font-medium">{selectedApp.expected_salary}</p>
-                    </div>
-                  )}
-                  {selectedApp.delivery_days && (
-                    <div className="rounded-lg border p-3">
-                      <p className="text-xs text-muted-foreground">{isBn ? "ডেলিভারি" : "Delivery"}</p>
-                      <p className="font-medium">{selectedApp.delivery_days} {isBn ? "দিন" : "days"}</p>
-                    </div>
-                  )}
-                  <div className="rounded-lg border p-3">
-                    <p className="text-xs text-muted-foreground">{isBn ? "স্ট্যাটাস" : "Status"}</p>
-                    <p className="font-medium capitalize">{selectedApp.status}</p>
-                  </div>
-                </div>
-                {selectedApp.cover_letter && (
-                  <Card><CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2"><FileText className="h-4 w-4" /><p className="text-sm font-medium">{isBn ? "আবেদন পত্র" : "Cover Letter"}</p></div>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedApp.cover_letter}</p>
-                  </CardContent></Card>
-                )}
-                <div className="flex flex-wrap items-center gap-2">
-                  {selectedApp.resume_url && (
-                    <Button variant="outline" size="sm" onClick={() => window.open(selectedApp.resume_url as string, "_blank")}>
-                      <Download className="h-4 w-4 mr-2" />{isBn ? "সিভি" : "Download CV"}
-                    </Button>
-                  )}
-                  {(() => {
-                    const url = getProfileUrl(selectedApp);
-                    return url ? <Button variant="secondary" size="sm" asChild><Link href={url} target="_blank"><Eye className="h-4 w-4 mr-2" />{isBn ? "প্রোফাইল" : "View Full Profile"}</Link></Button> : null;
-                  })()}
-                  <Button variant="default" size="sm" onClick={() => setChangeStatusApp(selectedApp)}>
-                    <ClipboardList className="h-4 w-4 mr-2" />{isBn ? "স্ট্যাটাস পরিবর্তন" : "Change Status"}
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => { const cid = selectedApp.user?.id ?? selectedApp.id; if (cid) router.push(`/employer/messages?to=${cid}`); }}>
-                    <MessageSquare className="h-4 w-4 mr-2" />{isBn ? "বার্তা" : "Message"}
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <ApplicantDetailDialog
+        app={selectedApp}
+        isBn={isBn}
+        onOpenChange={(o) => { if (!o) setSelectedApp(null); }}
+        onStatusRefresh={refreshStatus}
+        onOpenStatusChange={(app) => { setSelectedApp(null); setChangeStatusApp(app); }}
+      />
 
-      {/* Status Change Dialog */}
-      <Dialog open={!!changeStatusApp} onOpenChange={(open) => !open && setChangeStatusApp(null)}>
-        <DialogContent className="max-w-sm">
-          {changeStatusApp && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{isBn ? "স্ট্যাটাস পরিবর্তন করুন" : "Change Applicant Status"}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">{candidateLabel(changeStatusApp)} — {changeStatusApp.job?.title || "Job"}</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {["pending", "reviewed", "shortlisted", "rejected", "hired"].map((status) => (
-                    <Button
-                      key={status}
-                      variant={changeStatusApp.status === status ? "default" : "outline"}
-                      size="sm"
-                      className="capitalize"
-                      onClick={async () => { await handleStatusChange(changeStatusApp, status); setChangeStatusApp(null); }}
-                    >
-                      {status}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <StatusChangeDialog
+        app={changeStatusApp}
+        isBn={isBn}
+        onOpenChange={(o) => { if (!o) setChangeStatusApp(null); }}
+        onStatusChange={async (status) => {
+          if (!changeStatusApp) return;
+          await handleStatusChange(changeStatusApp, status);
+          setChangeStatusApp(null);
+        }}
+      />
     </div>
   );
 }
