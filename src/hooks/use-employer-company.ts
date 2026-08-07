@@ -3,165 +3,19 @@
 import { useState, useEffect, useCallback } from "react";
 import api from "@/lib/api-client";
 
-interface EmployerCompanyData {
-  id: number;
-  name: string;
-  name_bn: string;
-  slug: string;
-  tagline: string;
-  logo: string | null;
-  cover_photo: string | null;
-  website: string;
-  email: string;
-  phone: string;
-  industry: string;
-  company_type: string;
-  company_size: string;
-  size: string;
-  employee_count: string;
-  founded_year: string;
-  description: string;
-  mission: string;
-  vision: string;
-  values: string;
-  city: string;
-  country: string;
-  district: string;
-  division: string;
-  location: string;
-  head_office_address: string;
-  address_postal_code: string;
-  contact_person_name: string;
-  contact_person_designation: string;
-  contact_phone: string;
-  contact_alt_phone: string;
-  contact_email: string;
-  business_registration_number: string;
-  trade_license_number: string;
-  hr_manager_name: string;
-  hr_contact_number: string;
-  hr_email: string;
-  recruitment_policy: string;
-  hiring_process: string;
-  services_products: string;
-  working_culture: string;
-  google_map_embed: string;
-  tin_number: string;
-  verification_status: string;
-  company_video_url: string;
-  youtube_channel: string;
-  instagram_profile: string;
-  facebook: string;
-  linkedin: string;
-  highlights: string[];
-  active_jobs_count: number;
-  jobs_count: number;
-  response_rate: number;
-  allow_job_posting: boolean;
-  featured_job_allowed: boolean;
-  auto_approval: boolean;
-  job_expiry_days: number;
-  job_posting_limit_monthly: string;
-  hr_team: any[];
-  updated_at: string;
-  [key: string]: any;
-}
-
-interface EmployerCompanyStats {
-  total_jobs: number;
-  active_jobs: number;
-  expired_jobs: number;
-  total_applications: number;
-  shortlisted: number;
-  pending_applications: number;
-  total_views: number;
-  response_rate: number;
-}
-
-interface CompanyBrochure {
-  id: number;
-  title: string;
-  file_path: string;
-  file_url: string;
-  download_count: number;
-}
-
-interface CompanyAward {
-  id: number;
-  title: string;
-  issuer: string;
-  year: number;
-  description: string | null;
-  is_verified: boolean;
-}
-
-interface CompanyCulturePhoto {
-  id: number;
-  file_path: string;
-  file_url: string;
-  caption: string | null;
-}
-
-interface CompanyUpdate {
-  id: number;
-  title: string;
-  time: string;
-}
-
-interface ActiveJob {
-  id: number;
-  title: string;
-  type: string;
-  mode: string;
-  department: string;
-  location: string;
-  experience: string;
-  salary: string;
-  posted: string;
-}
-
-interface SimilarCompany {
-  name: string;
-  type: string;
-  rating: string;
-  slug: string;
-}
-
-interface UseEmployerCompanyReturn {
-  company: EmployerCompanyData | null;
-  stats: EmployerCompanyStats | null;
-  brochures: CompanyBrochure[];
-  awards: CompanyAward[];
-  culturePhotos: CompanyCulturePhoto[];
-  recentUpdates: CompanyUpdate[];
-  activeJobs: ActiveJob[];
-  profileViews: number;
-  followersCount: number;
-  reviewsCount: number;
-  avgRating: number;
-  similarCompanies: SimilarCompany[];
-  loading: boolean;
-  saving: boolean;
-  error: string | null;
-  lastSyncedAt: Date | null;
-  refetch: () => Promise<void>;
-  updateCompany: (data: FormData) => Promise<boolean>;
-  getDisplayField: (dbField: string, fallback?: string) => string;
-}
-
-export function useEmployerCompany(): UseEmployerCompanyReturn {
-  const [company, setCompany] = useState<EmployerCompanyData | null>(null);
-  const [stats, setStats] = useState<EmployerCompanyStats | null>(null);
-  const [brochures, setBrochures] = useState<CompanyBrochure[]>([]);
-  const [awards, setAwards] = useState<CompanyAward[]>([]);
-  const [culturePhotos, setCulturePhotos] = useState<CompanyCulturePhoto[]>([]);
-  const [recentUpdates, setRecentUpdates] = useState<CompanyUpdate[]>([]);
-  const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([]);
+export function useEmployerCompany() {
+  const [company, setCompany] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
+  const [brochures, setBrochures] = useState<any[]>([]);
+  const [awards, setAwards] = useState<any[]>([]);
+  const [culturePhotos, setCulturePhotos] = useState<any[]>([]);
+  const [recentUpdates, setRecentUpdates] = useState<any[]>([]);
+  const [activeJobs, setActiveJobs] = useState<any[]>([]);
   const [profileViews, setProfileViews] = useState(0);
   const [followersCount, setFollowersCount] = useState(0);
   const [reviewsCount, setReviewsCount] = useState(0);
   const [avgRating, setAvgRating] = useState(0);
-  const [similarCompanies, setSimilarCompanies] = useState<SimilarCompany[]>([]);
+  const [similarCompanies, setSimilarCompanies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -219,13 +73,32 @@ export function useEmployerCompany(): UseEmployerCompanyReturn {
         setLastSyncedAt(new Date());
         return true;
       }
-      // Debug: log the unexpected response shape
-      console.error("[useEmployerCompany] Unexpected response:", JSON.stringify(res.data));
+      // Unexpected response shape
+      if (res.data?.status === false || res.data?.status === undefined) {
+        const msg = res.data?.message || "Server returned an unexpected response";
+        setError(msg);
+        throw new Error(msg);
+      }
       return false;
     } catch (err: any) {
       const data = err.response?.data;
-      const msg = data?.message || err.message || "Failed to save profile";
-      console.error("[useEmployerCompany] API error:", err.response?.status, data);
+      let msg: string;
+
+      if (data?.errors) {
+        const firstKey = Object.keys(data.errors)[0];
+        const val = data.errors[firstKey];
+        msg = Array.isArray(val) ? val[0] : val;
+      } else if (data?.message) {
+        msg = data.message;
+      } else if (err.response?.status === 500) {
+        msg = "Server error occurred. Please try again or contact support.";
+      } else if (err.response?.status === 413) {
+        msg = "File too large. Maximum size is 2MB.";
+      } else {
+        msg = err.message || "Failed to save profile";
+      }
+
+      console.error("[useEmployerCompany] Save failed:", err.response?.status, msg);
       setError(msg);
       throw err;
     } finally {
