@@ -1,512 +1,35 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import api from "@/lib/api-client";
 import { useThemeStore } from "@/store/theme-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useEmployerCompany } from "@/hooks/use-employer-company";
+import { useEmployerProfileState } from "@/hooks/use-employer-profile-state";
+import { STEPS } from "@/components/employer/profile/step-config";
+import BasicInfoStep from "@/components/employer/profile/steps/BasicInfoStep";
+import ContactStep from "@/components/employer/profile/steps/ContactStep";
+import AddressStep from "@/components/employer/profile/steps/AddressStep";
+import OverviewStep from "@/components/employer/profile/steps/OverviewStep";
+import HrStep from "@/components/employer/profile/steps/HrStep";
+import SettingsStep from "@/components/employer/profile/steps/SettingsStep";
+import VerificationStep from "@/components/employer/profile/steps/VerificationStep";
+import MediaStep from "@/components/employer/profile/steps/MediaStep";
+import SocialStep from "@/components/employer/profile/steps/SocialStep";
+import StatsStep from "@/components/employer/profile/steps/StatsStep";
+import HrTeamStep from "@/components/employer/profile/steps/HrTeamStep";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import { DefaultAvatar } from "@/components/ui/default-avatar";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import {
-  Building2, Upload, Loader2, Plus, Trash2, Globe, MapPin, Users, Phone,
-  Shield, FileCheck, Camera, Settings, ChevronRight, ChevronLeft, Check,
-  Link2, Briefcase,
-} from "lucide-react";
-import { DIVISIONS_BN, DIVISIONS_EN, DISTRICTS_BN, DISTRICTS_EN } from "@/lib/bd-data";
-import { getStorageUrl } from "@/lib/utils";
+import { Loader2, ChevronRight, ChevronLeft, Check, FileCheck } from "lucide-react";
 
-const COMPANY_TYPES = ["Private", "Government", "NGO", "Startup", "Multinational", "Sole Proprietorship", "Partnership", "Public Limited"];
-const COMPANY_SIZES = ["1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+"];
-const HR_DESIGNATIONS = [
-  { value: "admin", label: "Admin" },
-  { value: "hr_manager", label: "HR Manager" },
-  { value: "recruiter", label: "Recruiter" },
-];
-
-function Field({ label, required, children, className = "" }: { label: string; required?: boolean; children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`space-y-1.5 ${className}`}>
-      <Label className="text-sm font-medium">
-        {label} {required && <span className="text-destructive">*</span>}
-      </Label>
-      {children}
-    </div>
-  );
-}
-
-const STEPS = [
-  { key: "basic", icon: Building2, labelEn: "Basic Info", labelBn: "মৌলিক তথ্য" },
-  { key: "contact", icon: Phone, labelEn: "Contact", labelBn: "যোগাযোগ" },
-  { key: "address", icon: MapPin, labelEn: "Address", labelBn: "ঠিকানা" },
-  { key: "overview", icon: Globe, labelEn: "Overview", labelBn: "পরিচিতি" },
-  { key: "hr", icon: Users, labelEn: "HR Info", labelBn: "HR তথ্য" },
-  { key: "settings", icon: Settings, labelEn: "Settings", labelBn: "সেটিংস" },
-  { key: "verification", icon: Shield, labelEn: "Verification", labelBn: "ভেরিফিকেশন" },
-  { key: "media", icon: Camera, labelEn: "Media", labelBn: "মিডিয়া" },
-  { key: "social", icon: Link2, labelEn: "Social", labelBn: "সোশ্যাল" },
-  { key: "stats", icon: Briefcase, labelEn: "Stats", labelBn: "পরিসংখ্যান" },
-  { key: "team", icon: Users, labelEn: "HR Team", labelBn: "HR টিম" },
-];
-
-export default function EmployerProfilePage() {
-  const { user } = useAuthStore();
-  const { language, settings } = useThemeStore();
-  const isBn = language === "bn";
-  const siteName = settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs";
-  const { company: hookCompany, stats: hookStats, loading: hookLoading, updateCompany, lastSyncedAt, error: hookError } = useEmployerCompany();
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [company, setCompany] = useState<any>(null);
-  const [step, setStep] = useState(0);
-  const [savedSteps, setSavedSteps] = useState<Set<number>>(new Set());
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  // Section 1: Basic Info
-  const [companyName, setCompanyName] = useState("");
-  const [companyNameBn, setCompanyNameBn] = useState("");
-  const [tagline, setTagline] = useState("");
-  const [companyType, setCompanyType] = useState("");
-  const [industry, setIndustry] = useState("");
-  const [businessRegNo, setBusinessRegNo] = useState("");
-  const [tradeLicenseNo, setTradeLicenseNo] = useState("");
-  const [foundedYear, setFoundedYear] = useState("");
-  const [companySize, setCompanySize] = useState("");
-  const [employeeCount, setEmployeeCount] = useState("");
-  const [description, setDescription] = useState("");
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState("");
-  const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [coverPreview, setCoverPreview] = useState("");
-
-  // Section 2: Contact Info
-  const [contactPerson, setContactPerson] = useState("");
-  const [contactDesignation, setContactDesignation] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
-  const [contactAltPhone, setContactAltPhone] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [website, setWebsite] = useState("");
-
-  // Section 3: Address
-  const [headOffice, setHeadOffice] = useState("");
-  const [country, setCountry] = useState("Bangladesh");
-  const [division, setDivision] = useState("");
-  const [district, setDistrict] = useState("");
-  const [postalCode, setPostalCode] = useState("");
-  const [googleMap, setGoogleMap] = useState("");
-
-  // Section 4: Overview
-  const [mission, setMission] = useState("");
-  const [vision, setVision] = useState("");
-  const [values, setValues] = useState("");
-  const [servicesProducts, setServicesProducts] = useState("");
-  const [workingCulture, setWorkingCulture] = useState("");
-  const [whyJoinUs, setWhyJoinUs] = useState<string[]>([]);
-  const [whyJoinUsInput, setWhyJoinUsInput] = useState("");
-  const [topSkills, setTopSkills] = useState<string[]>([]);
-  const [topSkillsInput, setTopSkillsInput] = useState("");
-  const [highlights, setHighlights] = useState<string[]>([]);
-  const [highlightsInput, setHighlightsInput] = useState("");
-
-  // Section 5: HR Info
-  const [hrName, setHrName] = useState("");
-  const [hrPhone, setHrPhone] = useState("");
-  const [hrEmail, setHrEmail] = useState("");
-  const [recruitmentPolicy, setRecruitmentPolicy] = useState("");
-  const [hiringProcess, setHiringProcess] = useState("");
-
-  // Section 6: Job Posting Settings
-  const [allowJobPosting, setAllowJobPosting] = useState(true);
-  const [postingLimit, setPostingLimit] = useState("");
-  const [featuredAllowed, setFeaturedAllowed] = useState(false);
-  const [autoApproval, setAutoApproval] = useState(false);
-  const [expiryDays, setExpiryDays] = useState("30");
-
-  // Section 7: Verification
-  const [tradeLicenseFile, setTradeLicenseFile] = useState<File | null>(null);
-  const [nidFile, setNidFile] = useState<File | null>(null);
-  const [regCertFile, setRegCertFile] = useState<File | null>(null);
-  const [tinNumber, setTinNumber] = useState("");
-  const [verificationStatus, setVerificationStatus] = useState("pending");
-  const [tradeLicensePath, setTradeLicensePath] = useState("");
-  const [nidPath, setNidPath] = useState("");
-  const [regCertPath, setRegCertPath] = useState("");
-
-  // Section 8: Media
-  const [videoUrl, setVideoUrl] = useState("");
-  const [youtubeChannel, setYoutubeChannel] = useState("");
-  const [instagramProfile, setInstagramProfile] = useState("");
-
-  // Section 9: Social
-  const [facebookPage, setFacebookPage] = useState("");
-  const [linkedinPage, setLinkedinPage] = useState("");
-
-  // Section 11: HR Team
-  const [hrTeam, setHrTeam] = useState<{ name: string; email: string; phone: string; designation: string }[]>([]);
-
-  useEffect(() => {
-    document.title = isBn ? `কোম্পানি প্রোফাইল | ${siteName}` : `Company Profile | ${siteName}`;
-  }, [isBn, siteName]);
-
-  useEffect(() => {
-    if (hookLoading) return;
-    setLoading(false);
-    const c = hookCompany;
-    if (c) {
-      setCompany(c);
-      setCompanyName(c.name || "");
-      setCompanyNameBn(c.name_bn || "");
-      setTagline(c.tagline || "");
-      setCompanyType(c.company_type || "");
-      setIndustry(c.industry || "");
-      setBusinessRegNo(c.business_registration_number || "");
-      setTradeLicenseNo(c.trade_license_number || "");
-      setFoundedYear(c.founded_year || "");
-      setCompanySize(c.size || "");
-      setEmployeeCount(c.employee_count || "");
-      setDescription(c.description || "");
-      setLogoPreview(getStorageUrl(c.logo) || "");
-      setCoverPreview(getStorageUrl(c.cover_photo) || "");
-      setContactPerson(c.contact_person_name || user?.name || "");
-      setContactDesignation(c.contact_person_designation || "");
-      setContactPhone(c.contact_phone || "");
-      setContactAltPhone(c.contact_alt_phone || "");
-      setContactEmail(c.contact_email || user?.email || "");
-      setWebsite(c.website || "");
-      setFacebookPage(c.facebook || "");
-      setLinkedinPage(c.linkedin || "");
-      setHeadOffice(c.head_office_address || c.location || "");
-      setCountry(c.address_country || "Bangladesh");
-      setDivision(c.address_division || "");
-      setDistrict(c.address_district || "");
-      setPostalCode(c.address_postal_code || "");
-      setGoogleMap(c.google_map_embed || "");
-      setMission(c.mission || "");
-      setVision(c.vision || "");
-      setValues(c.values || "");
-      setServicesProducts(c.services_products || "");
-      setWorkingCulture(c.working_culture || "");
-      const wju = c.why_join_us;
-      if (Array.isArray(wju)) setWhyJoinUs(wju);
-      else if (wju && typeof wju === "object" && wju.benefits) setWhyJoinUs(wju.benefits);
-      else setWhyJoinUs([]);
-      setTopSkills(Array.isArray(c.top_skills) ? c.top_skills : []);
-      setHighlights(Array.isArray(c.highlights) ? c.highlights : []);
-      setHrName(c.hr_manager_name || "");
-      setHrPhone(c.hr_contact_number || "");
-      setHrEmail(c.hr_email || "");
-      setRecruitmentPolicy(c.recruitment_policy || "");
-      setHiringProcess(c.hiring_process || "");
-      setAllowJobPosting(c.allow_job_posting !== false);
-      setPostingLimit(c.job_posting_limit_monthly || "");
-      setFeaturedAllowed(c.featured_job_allowed || false);
-      setAutoApproval(c.auto_approval || false);
-      setExpiryDays(String(c.job_expiry_days || 30));
-      setTinNumber(c.tin_number || "");
-      setVerificationStatus(c.verification_status || "pending");
-      setTradeLicensePath(c.trade_license_document || "");
-      setNidPath(c.nid_document || "");
-      setRegCertPath(c.registration_certificate || "");
-      setVideoUrl(c.company_video_url || "");
-      setYoutubeChannel(c.youtube_channel || "");
-      setInstagramProfile(c.instagram_profile || "");
-      if (c.hr_team && Array.isArray(c.hr_team)) {
-        setHrTeam(c.hr_team.map((h: any) => ({ name: h.name || "", email: h.email || "", phone: h.phone || "", designation: h.designation || "recruiter" })));
-      }
-    }
-  }, [hookCompany, hookLoading, user]);
-
-  const buildFormData = (): FormData => {
-    const fd = new FormData();
-    fd.append("company_name", companyName);
-    fd.append("name_bn", companyNameBn);
-    fd.append("tagline", tagline);
-    fd.append("company_type", companyType);
-    fd.append("industry", industry);
-    fd.append("business_registration_number", businessRegNo);
-    fd.append("trade_license_number", tradeLicenseNo);
-    fd.append("founded_year", foundedYear);
-    fd.append("size", companySize);
-    fd.append("employee_count", employeeCount);
-    fd.append("description", description);
-    fd.append("contact_person_name", contactPerson);
-    fd.append("contact_person_designation", contactDesignation);
-    fd.append("contact_phone", contactPhone);
-    fd.append("contact_alt_phone", contactAltPhone);
-    fd.append("contact_email", contactEmail);
-    fd.append("website", website);
-    fd.append("facebook", facebookPage);
-    fd.append("linkedin", linkedinPage);
-    fd.append("head_office_address", headOffice);
-    fd.append("address_country", country);
-    fd.append("address_division", division);
-    fd.append("address_district", district);
-    fd.append("address_postal_code", postalCode);
-    fd.append("google_map_embed", googleMap);
-    fd.append("location", headOffice);
-    fd.append("mission", mission);
-    fd.append("vision", vision);
-    fd.append("values", values);
-    fd.append("services_products", servicesProducts);
-    fd.append("working_culture", workingCulture);
-    fd.append("why_join_us", JSON.stringify(whyJoinUs));
-    fd.append("top_skills", JSON.stringify(topSkills));
-    fd.append("highlights", JSON.stringify(highlights));
-    fd.append("city", district);
-    fd.append("hr_manager_name", hrName);
-    fd.append("hr_contact_number", hrPhone);
-    fd.append("hr_email", hrEmail);
-    fd.append("recruitment_policy", recruitmentPolicy);
-    fd.append("hiring_process", hiringProcess);
-    fd.append("allow_job_posting", String(allowJobPosting));
-    fd.append("job_posting_limit_monthly", postingLimit);
-    fd.append("featured_job_allowed", String(featuredAllowed));
-    fd.append("auto_approval", String(autoApproval));
-    fd.append("job_expiry_days", expiryDays);
-    fd.append("tin_number", tinNumber);
-    fd.append("company_video_url", videoUrl);
-    fd.append("youtube_channel", youtubeChannel);
-    fd.append("instagram_profile", instagramProfile);
-    if (logoFile) fd.append("logo", logoFile);
-    if (coverFile) fd.append("cover_photo", coverFile);
-    if (tradeLicenseFile) fd.append("trade_license_document", tradeLicenseFile);
-    if (nidFile) fd.append("nid_document", nidFile);
-    if (regCertFile) fd.append("registration_certificate", regCertFile);
-    return fd;
-  };
-
-  const handleSave = async (showToast = true): Promise<boolean> => {
-    try {
-      setSaving(true);
-      setSaveError(null);
-      const fd = buildFormData();
-      const success = await updateCompany(fd);
-      if (success) {
-        if (hrTeam.length > 0) {
-          try { await api.post("/employer/hr-team", { members: hrTeam }); } catch (hrErr: any) {
-            toast.error(isBn ? "HR টিম সংরক্ষণ ব্যর্থ হয়েছে" : "HR team save failed");
-          }
-        }
-        const c = hookCompany;
-        if (c) {
-          setCompany(c);
-          setLogoPreview(getStorageUrl(c.logo) || logoPreview);
-          setCoverPreview(getStorageUrl(c.cover_photo) || coverPreview);
-        }
-        if (showToast) toast.success(isBn ? "সংরক্ষিত হয়েছে!" : "Profile saved!");
-        window.dispatchEvent(new Event("employer-company-saved"));
-        setSaveError(null);
-        return true;
-      } else {
-        if (showToast) toast.error(isBn ? "সংরক্ষণ ব্যর্থ হয়েছে" : "Failed to save profile");
-        return false;
-      }
-    } catch (error: any) {
-      const data = error.response?.data;
-      let msg: string;
-      if (error.response?.status === 500) {
-        msg = isBn ? "সার্ভার ত্রুটি। পরে আবার চেষ্টা করুন বা সাপোর্টে যোগাযোগ করুন।" : "Server error. Please try again or contact support.";
-      } else if (data?.errors) {
-        const firstKey = Object.keys(data.errors)[0];
-        msg = firstKey ? (Array.isArray(data.errors[firstKey]) ? data.errors[firstKey][0] : data.errors[firstKey]) : "Validation failed";
-      } else {
-        msg = data?.message || "Failed to save profile";
-      }
-      setSaveError(msg);
-      if (showToast) toast.error(msg);
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveAndContinue = async () => {
-    const ok = await handleSave(true);
-    if (ok) {
-      setSavedSteps((prev) => new Set(prev).add(step));
-      if (step < STEPS.length - 1) setStep(step + 1);
-    }
-  };
-
-  const handleSkip = () => {
-    if (step < STEPS.length - 1) setStep(step + 1);
-  };
-
-  const addHrMember = () => setHrTeam([...hrTeam, { name: "", email: "", phone: "", designation: "recruiter" }]);
-  const removeHrMember = (i: number) => setHrTeam(hrTeam.filter((_, idx) => idx !== i));
-  const updateHrMember = (i: number, key: string, val: string) => {
-    const next = [...hrTeam];
-    next[i] = { ...next[i], [key]: val };
-    setHrTeam(next);
-  };
-
-  const totalFields = 30;
-  const filledFields = [companyName, industry, description, contactPerson, contactPhone, contactEmail, headOffice, district].filter(Boolean).length;
-  const completionPct = Math.round((filledFields / totalFields) * 100);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  const renderStepContent = () => {
-    switch (STEPS[step].key) {
-      case "basic":
-        return (
-          <div className="space-y-4">
-            <div className="flex items-center gap-6">
-              <div className="relative">
-                <DefaultAvatar name={companyName || "C"} src={logoPreview} className="h-20 w-20 text-lg" />
-                <label className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer">
-                  <Camera className="h-3.5 w-3.5" />
-                  <input type="file" className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setLogoFile(f); setLogoPreview(URL.createObjectURL(f)); } }} />
-                </label>
-              </div>
-              <div>
-                <p className="text-sm font-medium">{isBn ? "কোম্পানি লোগো" : "Company Logo"}</p>
-                <p className="text-xs text-muted-foreground">PNG, JPG, max 2MB</p>
-              </div>
-            </div>
-            <div>
-              <p className="text-sm font-medium mb-1">{isBn ? "কোভার ফোটো" : "Cover Photo"}</p>
-              {coverPreview && <img src={coverPreview} alt="Cover" className="w-full h-32 object-cover rounded-lg mb-2" />}
-              <label>
-                <Button size="sm" variant="outline" asChild><span><Upload className="h-4 w-4 mr-1" /> {isBn ? "কোভার আপলোড করুন" : "Upload Cover"}</span></Button>
-                <input type="file" className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setCoverFile(f); setCoverPreview(URL.createObjectURL(f)); } }} />
-              </label>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={isBn ? "কোম্পানির নাম (English)" : "Company Name (English)"} required><Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} /></Field>
-              <Field label={isBn ? "কোম্পানির নাম (বাংলা)" : "Company Name (বাংলা)"}><Input value={companyNameBn} onChange={(e) => setCompanyNameBn(e.target.value)} placeholder="বাংলায় নাম" /></Field>
-            </div>
-            <Field label={isBn ? "ট্যাগলাইন / স্লোগান" : "Tagline / Slogan"}><Input value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="e.g. Building the future" /></Field>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={isBn ? "কোম্পানির ধরন" : "Company Type"}>
-                <Select value={companyType} onValueChange={setCompanyType}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{COMPANY_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
-              <Field label={isBn ? "শিল্পের ধরন" : "Industry Type"} required>
-                <Input value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="e.g. Technology, Healthcare" />
-              </Field>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Field label={isBn ? "ব্যবসায়িক নিবন্ধন নম্বর" : "Business Registration No."}><Input value={businessRegNo} onChange={(e) => setBusinessRegNo(e.target.value)} /></Field>
-              <Field label={isBn ? "ট্রেড লাইসেন্স নম্বর (ঐচ্ছিক)" : "Trade License No. (Optional)"}><Input value={tradeLicenseNo} onChange={(e) => setTradeLicenseNo(e.target.value)} /></Field>
-              <Field label={isBn ? "প্রতিষ্ঠার বছর" : "Year of Establishment"}><Input type="number" value={foundedYear} onChange={(e) => setFoundedYear(e.target.value)} placeholder="YYYY" /></Field>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={isBn ? "কোম্পানির সাইজ" : "Company Size"}>
-                <Select value={companySize} onValueChange={setCompanySize}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{COMPANY_SIZES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
-              <Field label={isBn ? "কর্মী সংখ্যা" : "Employee Count"}><Input type="number" value={employeeCount} onChange={(e) => setEmployeeCount(e.target.value)} /></Field>
-            </div>
-            <Field label={isBn ? "কোম্পানি বিবরণ" : "Company Description"} required><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} placeholder="Tell candidates about your company..." /></Field>
-          </div>
-        );
-      case "contact":
-        return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={isBn ? "যোগাযোগকারীর নাম" : "Contact Person Name"} required><Input value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} /></Field>
-              <Field label={isBn ? "পদবি" : "Designation"} required><Input value={contactDesignation} onChange={(e) => setContactDesignation(e.target.value)} placeholder="e.g. CEO, HR Director" /></Field>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={isBn ? "মোবাইল নম্বর" : "Mobile Number"} required><Input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} /></Field>
-              <Field label={isBn ? "বিকল্প ফোন" : "Alternative Phone"}><Input value={contactAltPhone} onChange={(e) => setContactAltPhone(e.target.value)} /></Field>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={isBn ? "অফিসিয়াল ইমেইল" : "Official Email"} required><Input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} /></Field>
-              <Field label={isBn ? "ওয়েবসাইট" : "Website URL"}><Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://" /></Field>
-            </div>
-          </div>
-        );
-      case "address":
-        return (
-          <div className="space-y-4">
-            <Field label={isBn ? "হেড অফিস ঠিকানা" : "Head Office Address"} required><Textarea value={headOffice} onChange={(e) => setHeadOffice(e.target.value)} rows={2} /></Field>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={isBn ? "দেশ" : "Country"}><Input value={country} onChange={(e) => setCountry(e.target.value)} /></Field>
-              <Field label={isBn ? "পোস্টাল কোড" : "Postal Code"}><Input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} /></Field>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={isBn ? "বিভাগ" : "Division"}>
-                <Select value={division} onValueChange={(v) => { setDivision(v); setDistrict(""); }}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{Object.entries(isBn ? DIVISIONS_BN : DIVISIONS_EN).map(([key, label]) => Continuing the file from where it was cut off:
-
-<dyad-write path="src/app/(employer)/employer/profile/page.tsx" description="Continue employer profile page with all remaining steps and fix error handling">
-"use client";
-
-import React, { useState, useEffect } from "react";
-import api from "@/lib/api-client";
-import { useThemeStore } from "@/store/theme-store";
-import { useAuthStore } from "@/store/auth-store";
-import { useEmployerCompany } from "@/hooks/use-employer-company";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import { DefaultAvatar } from "@/components/ui/default-avatar";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
-import {
-  Building2, Upload, Loader2, Plus, Trash2, Globe, MapPin, Users, Phone,
-  Shield, FileCheck, Camera, Settings, ChevronRight, ChevronLeft, Check,
-  Link2, Briefcase,
-} from "lucide-react";
-import { DIVISIONS_BN, DIVISIONS_EN, DISTRICTS_BN, DISTRICTS_EN } from "@/lib/bd-data";
-import { getStorageUrl } from "@/lib/utils";
-
-const COMPANY_TYPES = ["Private", "Government", "NGO", "Startup", "Multinational", "Sole Proprietorship", "Partnership", "Public Limited"];
-const COMPANY_SIZES = ["1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+"];
-const HR_DESIGNATIONS = [
-  { value: "admin", label: "Admin" },
-  { value: "hr_manager", label: "HR Manager" },
-  { value: "recruiter", label: "Recruiter" },
-];
-
-function Field({ label, required, children, className = "" }: { label: string; required?: boolean; children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`space-y-1.5 ${className}`}>
-      <Label className="text-sm font-medium">
-        {label} {required && <span className="text-destructive">*</span>}
-      </Label>
-      {children}
-    </div>
-  );
-}
-
-const STEPS = [
-  { key: "basic", icon: Building2, labelEn: "Basic Info", labelBn: "মৌলিক তথ্য" },
-  { key: "contact", icon: Phone, labelEn: "Contact", labelBn: "যোগাযোগ" },
-  { key: "address", icon: MapPin, labelEn: "Address", labelBn: "ঠিকানা" },
-  { key: "overview", icon: Globe, labelEn: "Overview", labelBn: "পরিচিতি" },
-  { key: "hr", icon: Users, labelEn: "HR Info", labelBn: "HR তথ্য" },
-  { key: "settings", icon: Settings, labelEn: "Settings", labelBn: "সেটিংস" },
-  { key: "verification", icon: Shield, labelEn: "Verification", labelBn: "ভেরিফিকেশন" },
-  { key: "media", icon: Camera, labelEn: "Media", labelBn: "মিডিয়া" },
-  { key: "social", icon: Link2, labelEn: "Social", labelBn: "সোশ্যাল" },
-  { key: "stats", icon: Briefcase, labelEn: "Stats", labelBn: "পরিসংখ্যান" },
-  { key: "team", icon: Users, labelEn: "HR Team", labelBn: "HR টিম" },
-];
+const STEP_COMPONENTS: Record<string, React.FC<any>> = {
+  basic: BasicInfoStep, contact: ContactStep, address: AddressStep,
+  overview: OverviewStep, hr: HrStep, settings: SettingsStep,
+  verification: VerificationStep, media: MediaStep, social: SocialStep,
+};
 
 export default function EmployerProfilePage() {
   const { user } = useAuthStore();
@@ -514,597 +37,97 @@ export default function EmployerProfilePage() {
   const isBn = language === "bn";
   const siteName = settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs";
   const { company: hookCompany, stats: hookStats, loading: hookLoading, updateCompany, lastSyncedAt } = useEmployerCompany();
+  const form = useEmployerProfileState();
+
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [company, setCompany] = useState<any>(null);
   const [step, setStep] = useState(0);
   const [savedSteps, setSavedSteps] = useState<Set<number>>(new Set());
   const [saveError, setSaveError] = useState<string | null>(null);
-
-  // Basic
-  const [companyName, setCompanyName] = useState("");
-  const [companyNameBn, setCompanyNameBn] = useState("");
-  const [tagline, setTagline] = useState("");
-  const [companyType, setCompanyType] = useState("");
-  const [industry, setIndustry] = useState("");
-  const [businessRegNo, setBusinessRegNo] = useState("");
-  const [tradeLicenseNo, setTradeLicenseNo] = useState("");
-  const [foundedYear, setFoundedYear] = useState("");
-  const [companySize, setCompanySize] = useState("");
-  const [employeeCount, setEmployeeCount] = useState("");
-  const [description, setDescription] = useState("");
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState("");
-  const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [coverPreview, setCoverPreview] = useState("");
-
-  // Contact
-  const [contactPerson, setContactPerson] = useState("");
-  const [contactDesignation, setContactDesignation] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
-  const [contactAltPhone, setContactAltPhone] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [website, setWebsite] = useState("");
-
-  // Address
-  const [headOffice, setHeadOffice] = useState("");
-  const [country, setCountry] = useState("Bangladesh");
-  const [division, setDivision] = useState("");
-  const [district, setDistrict] = useState("");
-  const [postalCode, setPostalCode] = useState("");
-  const [googleMap, setGoogleMap] = useState("");
-
-  // Overview
-  const [mission, setMission] = useState("");
-  const [vision, setVision] = useState("");
-  const [values, setValues] = useState("");
-  const [servicesProducts, setServicesProducts] = useState("");
-  const [workingCulture, setWorkingCulture] = useState("");
-  const [whyJoinUs, setWhyJoinUs] = useState<string[]>([]);
-  const [whyJoinUsInput, setWhyJoinUsInput] = useState("");
-  const [topSkills, setTopSkills] = useState<string[]>([]);
-  const [topSkillsInput, setTopSkillsInput] = useState("");
-  const [highlights, setHighlights] = useState<string[]>([]);
-  const [highlightsInput, setHighlightsInput] = useState("");
-
-  // HR
-  const [hrName, setHrName] = useState("");
-  const [hrPhone, setHrPhone] = useState("");
-  const [hrEmail, setHrEmail] = useState("");
-  const [recruitmentPolicy, setRecruitmentPolicy] = useState("");
-  const [hiringProcess, setHiringProcess] = useState("");
-
-  // Settings
-  const [allowJobPosting, setAllowJobPosting] = useState(true);
-  const [postingLimit, setPostingLimit] = useState("");
-  const [featuredAllowed, setFeaturedAllowed] = useState(false);
-  const [autoApproval, setAutoApproval] = useState(false);
-  const [expiryDays, setExpiryDays] = useState("30");
-
-  // Verification
-  const [tradeLicenseFile, setTradeLicenseFile] = useState<File | null>(null);
-  const [nidFile, setNidFile] = useState<File | null>(null);
-  const [regCertFile, setRegCertFile] = useState<File | null>(null);
-  const [tinNumber, setTinNumber] = useState("");
-  const [verificationStatus, setVerificationStatus] = useState("pending");
-  const [tradeLicensePath, setTradeLicensePath] = useState("");
-  const [nidPath, setNidPath] = useState("");
-  const [regCertPath, setRegCertPath] = useState("");
-
-  // Media
-  const [videoUrl, setVideoUrl] = useState("");
-  const [youtubeChannel, setYoutubeChannel] = useState("");
-  const [instagramProfile, setInstagramProfile] = useState("");
-
-  // Social
-  const [facebookPage, setFacebookPage] = useState("");
-  const [linkedinPage, setLinkedinPage] = useState("");
-
-  // HR Team
-  const [hrTeam, setHrTeam] = useState<{ name: string; email: string; phone: string; designation: string }[]>([]);
 
   useEffect(() => {
     document.title = isBn ? `কোম্পানি প্রোফাইল | ${siteName}` : `Company Profile | ${siteName}`;
   }, [isBn, siteName]);
 
   useEffect(() => {
-    if (hookLoading) return;
-    setLoading(false);
-    const c = hookCompany;
-    if (c) {
-      setCompany(c);
-      setCompanyName(c.name || "");
-      setCompanyNameBn(c.name_bn || "");
-      setTagline(c.tagline || "");
-      setCompanyType(c.company_type || "");
-      setIndustry(c.industry || "");
-      setBusinessRegNo(c.business_registration_number || "");
-      setTradeLicenseNo(c.trade_license_number || "");
-      setFoundedYear(c.founded_year || "");
-      setCompanySize(c.size || "");
-      setEmployeeCount(c.employee_count || "");
-      setDescription(c.description || "");
-      setLogoPreview(getStorageUrl(c.logo) || "");
-      setCoverPreview(getStorageUrl(c.cover_photo) || "");
-      setContactPerson(c.contact_person_name || user?.name || "");
-      setContactDesignation(c.contact_person_designation || "");
-      setContactPhone(c.contact_phone || "");
-      setContactAltPhone(c.contact_alt_phone || "");
-      setContactEmail(c.contact_email || user?.email || "");
-      setWebsite(c.website || "");
-      setFacebookPage(c.facebook || "");
-      setLinkedinPage(c.linkedin || "");
-      setHeadOffice(c.head_office_address || c.location || "");
-      setCountry(c.address_country || "Bangladesh");
-      setDivision(c.address_division || "");
-      setDistrict(c.address_district || "");
-      setPostalCode(c.address_postal_code || "");
-      setGoogleMap(c.google_map_embed || "");
-      setMission(c.mission || "");
-      setVision(c.vision || "");
-      setValues(c.values || "");
-      setServicesProducts(c.services_products || "");
-      setWorkingCulture(c.working_culture || "");
-      const wju = c.why_join_us;
-      if (Array.isArray(wju)) setWhyJoinUs(wju);
-      else if (wju && typeof wju === "object" && wju.benefits) setWhyJoinUs(wju.benefits);
-      else setWhyJoinUs([]);
-      setTopSkills(Array.isArray(c.top_skills) ? c.top_skills : []);
-      setHighlights(Array.isArray(c.highlights) ? c.highlights : []);
-      setHrName(c.hr_manager_name || "");
-      setHrPhone(c.hr_contact_number || "");
-      setHrEmail(c.hr_email || "");
-      setRecruitmentPolicy(c.recruitment_policy || "");
-      setHiringProcess(c.hiring_process || "");
-      setAllowJobPosting(c.allow_job_posting !== false);
-      setPostingLimit(c.job_posting_limit_monthly || "");
-      setFeaturedAllowed(c.featured_job_allowed || false);
-      setAutoApproval(c.auto_approval || false);
-      setExpiryDays(String(c.job_expiry_days || 30));
-      setTinNumber(c.tin_number || "");
-      setVerificationStatus(c.verification_status || "pending");
-      setTradeLicensePath(c.trade_license_document || "");
-      setNidPath(c.nid_document || "");
-      setRegCertPath(c.registration_certificate || "");
-      setVideoUrl(c.company_video_url || "");
-      setYoutubeChannel(c.youtube_channel || "");
-      setInstagramProfile(c.instagram_profile || "");
-      if (c.hr_team && Array.isArray(c.hr_team)) {
-        setHrTeam(c.hr_team.map((h: any) => ({ name: h.name || "", email: h.email || "", phone: h.phone || "", designation: h.designation || "recruiter" })));
-      }
-    }
-  }, [hookCompany, hookLoading, user]);
-
-  const buildFormData = (): FormData => {
-    const fd = new FormData();
-    fd.append("company_name", companyName);
-    fd.append("name_bn", companyNameBn);
-    fd.append("tagline", tagline);
-    fd.append("company_type", companyType);
-    fd.append("industry", industry);
-    fd.append("business_registration_number", businessRegNo);
-    fd.append("trade_license_number", tradeLicenseNo);
-    fd.append("founded_year", foundedYear);
-    fd.append("size", companySize);
-    fd.append("employee_count", employeeCount);
-    fd.append("description", description);
-    fd.append("contact_person_name", contactPerson);
-    fd.append("contact_person_designation", contactDesignation);
-    fd.append("contact_phone", contactPhone);
-    fd.append("contact_alt_phone", contactAltPhone);
-    fd.append("contact_email", contactEmail);
-    fd.append("website", website);
-    fd.append("facebook", facebookPage);
-    fd.append("linkedin", linkedinPage);
-    fd.append("head_office_address", headOffice);
-    fd.append("address_country", country);
-    fd.append("address_division", division);
-    fd.append("address_district", district);
-    fd.append("address_postal_code", postalCode);
-    fd.append("google_map_embed", googleMap);
-    fd.append("location", headOffice);
-    fd.append("mission", mission);
-    fd.append("vision", vision);
-    fd.append("values", values);
-    fd.append("services_products", servicesProducts);
-    fd.append("working_culture", workingCulture);
-    fd.append("why_join_us", JSON.stringify(whyJoinUs));
-    fd.append("top_skills", JSON.stringify(topSkills));
-    fd.append("highlights", JSON.stringify(highlights));
-    fd.append("city", district);
-    fd.append("hr_manager_name", hrName);
-    fd.append("hr_contact_number", hrPhone);
-    fd.append("hr_email", hrEmail);
-    fd.append("recruitment_policy", recruitmentPolicy);
-    fd.append("hiring_process", hiringProcess);
-    fd.append("allow_job_posting", String(allowJobPosting));
-    fd.append("job_posting_limit_monthly", postingLimit);
-    fd.append("featured_job_allowed", String(featuredAllowed));
-    fd.append("auto_approval", String(autoApproval));
-    fd.append("job_expiry_days", expiryDays);
-    fd.append("tin_number", tinNumber);
-    fd.append("company_video_url", videoUrl);
-    fd.append("youtube_channel", youtubeChannel);
-    fd.append("instagram_profile", instagramProfile);
-    if (logoFile) fd.append("logo", logoFile);
-    if (coverFile) fd.append("cover_photo", coverFile);
-    if (tradeLicenseFile) fd.append("trade_license_document", tradeLicenseFile);
-    if (nidFile) fd.append("nid_document", nidFile);
-    if (regCertFile) fd.append("registration_certificate", regCertFile);
-    return fd;
-  };
+    if (!hookLoading) setLoading(false);
+  }, [hookLoading]);
 
   const handleSave = async (showToast = true): Promise<boolean> => {
     try {
-      setSaving(true);
-      setSaveError(null);
-      const fd = buildFormData();
+      setSaving(true); setSaveError(null);
+      const fd = form.buildFormData();
       const success = await updateCompany(fd);
       if (success) {
-        if (hrTeam.length > 0) {
-          try { await api.post("/employer/hr-team", { members: hrTeam }); } catch {
-            toast.error(isBn ? "HR টিম সংরক্ষণ ব্যর্থ হয়েছে" : "HR team save failed");
-          }
-        }
-        const c = hookCompany;
-        if (c) {
-          setCompany(c);
-          setLogoPreview(getStorageUrl(c.logo) || logoPreview);
-          setCoverPreview(getStorageUrl(c.cover_photo) || coverPreview);
+        if (form.hrTeam.length > 0) {
+          api.post("/employer/hr-team", { members: form.hrTeam }).catch(() => toast.error(isBn ? "HR টিম সংরক্ষণ ব্যর্থ" : "HR team save failed"));
         }
         if (showToast) toast.success(isBn ? "সংরক্ষিত হয়েছে!" : "Profile saved!");
         window.dispatchEvent(new Event("employer-company-saved"));
-        setSaveError(null);
-        return true;
-      } else {
-        if (showToast) toast.error(isBn ? "সংরক্ষণ ব্যর্থ হয়েছে" : "Failed to save profile");
-        return false;
+        setSaveError(null); return true;
       }
+      if (showToast) toast.error(isBn ? "সংরক্ষণ ব্যর্থ হয়েছে" : "Failed to save profile");
+      return false;
     } catch (error: any) {
       const data = error.response?.data;
-      let msg: string;
-      if (error.response?.status === 500) {
-        msg = isBn ? "সার্ভার ত্রুটি। পরে আবার চেষ্টা করুন।" : "Server error. Please try again later.";
-      } else if (data?.errors) {
-        const firstKey = Object.keys(data.errors)[0];
-        msg = firstKey ? (Array.isArray(data.errors[firstKey]) ? data.errors[firstKey][0] : data.errors[firstKey]) : "Validation failed";
-      } else {
-        msg = data?.message || "Failed to save profile";
-      }
-      setSaveError(msg);
-      if (showToast) toast.error(msg);
-      return false;
-    } finally {
-      setSaving(false);
-    }
+      const msg = error.response?.status === 500
+        ? (isBn ? "সার্ভার ত্রুটি। পরে আবার চেষ্টা করুন।" : "Server error. Please try again later.")
+        : data?.errors ? (Array.isArray(data.errors[Object.keys(data.errors)[0]]) ? data.errors[Object.keys(data.errors)[0]][0] : data.errors[Object.keys(data.errors)[0]])
+        : data?.message || "Failed to save profile";
+      setSaveError(msg); if (showToast) toast.error(msg); return false;
+    } finally { setSaving(false); }
   };
 
   const handleSaveAndContinue = async () => {
-    const ok = await handleSave(true);
-    if (ok) {
-      setSavedSteps((prev) => new Set(prev).add(step));
-      if (step < STEPS.length - 1) setStep(step + 1);
-    }
+    if (await handleSave(true)) { setSavedSteps((p) => new Set(p).add(step)); if (step < STEPS.length - 1) setStep(step + 1); }
   };
 
-  const handleSkip = () => {
-    if (step < STEPS.length - 1) setStep(step + 1);
-  };
+  const completionPct = Math.round(([
+    form.companyName, form.industry, form.description, form.contactPerson,
+    form.contactPhone, form.contactEmail, form.headOffice, form.district,
+  ].filter(Boolean).length / 30) * 100);
 
-  const addHrMember = () => setHrTeam([...hrTeam, { name: "", email: "", phone: "", designation: "recruiter" }]);
-  const removeHrMember = (i: number) => setHrTeam(hrTeam.filter((_, idx) => idx !== i));
-  const updateHrMember = (i: number, key: string, val: string) => {
-    const next = [...hrTeam];
-    next[i] = { ...next[i], [key]: val };
-    setHrTeam(next);
-  };
+  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
-  const totalFields = 30;
-  const filledFields = [companyName, industry, description, contactPerson, contactPhone, contactEmail, headOffice, district].filter(Boolean).length;
-  const completionPct = Math.round((filledFields / totalFields) * 100);
+  const currentStep = STEPS[step];
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  const renderStepContent = () => {
-    switch (STEPS[step].key) {
-      case "basic":
-        return (
-          <div className="space-y-4">
-            <div className="flex items-center gap-6">
-              <div className="relative">
-                <DefaultAvatar name={companyName || "C"} src={logoPreview} className="h-20 w-20 text-lg" />
-                <label className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer">
-                  <Camera className="h-3.5 w-3.5" />
-                  <input type="file" className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setLogoFile(f); setLogoPreview(URL.createObjectURL(f)); } }} />
-                </label>
-              </div>
-              <div>
-                <p className="text-sm font-medium">{isBn ? "কোম্পানি লোগো" : "Company Logo"}</p>
-                <p className="text-xs text-muted-foreground">PNG, JPG, max 2MB</p>
-              </div>
-            </div>
-            <div>
-              <p className="text-sm font-medium mb-1">{isBn ? "কোভার ফোটো" : "Cover Photo"}</p>
-              {coverPreview && <img src={coverPreview} alt="Cover" className="w-full h-32 object-cover rounded-lg mb-2" />}
-              <label>
-                <Button size="sm" variant="outline" asChild><span><Upload className="h-4 w-4 mr-1" /> {isBn ? "কোভার আপলোড করুন" : "Upload Cover"}</span></Button>
-                <input type="file" className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setCoverFile(f); setCoverPreview(URL.createObjectURL(f)); } }} />
-              </label>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={isBn ? "কোম্পানির নাম (English)" : "Company Name (English)"} required><Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} /></Field>
-              <Field label={isBn ? "কোম্পানির নাম (বাংলা)" : "Company Name (বাংলা)"}><Input value={companyNameBn} onChange={(e) => setCompanyNameBn(e.target.value)} placeholder="বাংলায় নাম" /></Field>
-            </div>
-            <Field label={isBn ? "ট্যাগলাইন" : "Tagline"}><Input value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="e.g. Building the future" /></Field>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={isBn ? "কোম্পানির ধরন" : "Company Type"}>
-                <Select value={companyType} onValueChange={setCompanyType}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{COMPANY_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
-              <Field label={isBn ? "শিল্পের ধরন" : "Industry"} required>
-                <Input value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="e.g. Technology" />
-              </Field>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Field label={isBn ? "ব্যবসায়িক নিবন্ধন" : "Business Reg No."}><Input value={businessRegNo} onChange={(e) => setBusinessRegNo(e.target.value)} /></Field>
-              <Field label={isBn ? "ট্রেড লাইসেন্স" : "Trade License No."}><Input value={tradeLicenseNo} onChange={(e) => setTradeLicenseNo(e.target.value)} /></Field>
-              <Field label={isBn ? "প্রতিষ্ঠার বছর" : "Year Founded"}><Input type="number" value={foundedYear} onChange={(e) => setFoundedYear(e.target.value)} placeholder="YYYY" /></Field>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={isBn ? "কোম্পানির সাইজ" : "Company Size"}>
-                <Select value={companySize} onValueChange={setCompanySize}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{COMPANY_SIZES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
-              <Field label={isBn ? "কর্মী সংখ্যা" : "Employee Count"}><Input type="number" value={employeeCount} onChange={(e) => setEmployeeCount(e.target.value)} /></Field>
-            </div>
-            <Field label={isBn ? "কোম্পানি বিবরণ" : "Description"} required><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} placeholder="Tell candidates about your company..." /></Field>
-          </div>
-        );
-      case "contact":
-        return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={isBn ? "যোগাযোগকারী" : "Contact Person"} required><Input value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} /></Field>
-              <Field label={isBn ? "পদবি" : "Designation"} required><Input value={contactDesignation} onChange={(e) => setContactDesignation(e.target.value)} /></Field>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={isBn ? "মোবাইল" : "Mobile"} required><Input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} /></Field>
-              <Field label={isBn ? "বিকল্প ফোন" : "Alt Phone"}><Input value={contactAltPhone} onChange={(e) => setContactAltPhone(e.target.value)} /></Field>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={isBn ? "ইমেইল" : "Email"} required><Input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} /></Field>
-              <Field label={isBn ? "ওয়েবসাইট" : "Website"}><Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://" /></Field>
-            </div>
-          </div>
-        );
-      case "address":
-        return (
-          <div className="space-y-4">
-            <Field label={isBn ? "ঠিকানা" : "Head Office"} required><Textarea value={headOffice} onChange={(e) => setHeadOffice(e.target.value)} rows={2} /></Field>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={isBn ? "দেশ" : "Country"}><Input value={country} onChange={(e) => setCountry(e.target.value)} /></Field>
-              <Field label={isBn ? "পোস্টাল কোড" : "Postal Code"}><Input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} /></Field>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={isBn ? "বিভাগ" : "Division"}>
-                <Select value={division} onValueChange={(v) => { setDivision(v); setDistrict(""); }}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{Object.entries(isBn ? DIVISIONS_BN : DIVISIONS_EN).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
-              <Field label={isBn ? "জেলা" : "District"}>
-                <Select value={district} onValueChange={setDistrict} disabled={!division}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{((isBn ? DISTRICTS_BN : DISTRICTS_EN)[division] || []).map((d: string) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
-            </div>
-            <Field label="Google Map Embed"><Input value={googleMap} onChange={(e) => setGoogleMap(e.target.value)} placeholder="https://www.google.com/maps/embed?..." /></Field>
-          </div>
-        );
-      case "overview":
-        return (
-          <div className="space-y-4">
-            <Field label={isBn ? "মিশন" : "Mission"}><Textarea value={mission} onChange={(e) => setMission(e.target.value)} rows={3} /></Field>
-            <Field label={isBn ? "ভিশন" : "Vision"}><Textarea value={vision} onChange={(e) => setVision(e.target.value)} rows={3} /></Field>
-            <Field label={isBn ? "মূল্যবোধ" : "Values"}><Textarea value={values} onChange={(e) => setValues(e.target.value)} rows={3} /></Field>
-            <Field label={isBn ? "সেবা/পণ্য" : "Services/Products"}><Textarea value={servicesProducts} onChange={(e) => setServicesProducts(e.target.value)} rows={3} /></Field>
-            <Field label={isBn ? "কাজের কালচার" : "Working Culture"}><Textarea value={workingCulture} onChange={(e) => setWorkingCulture(e.target.value)} rows={3} /></Field>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">{isBn ? "কেন আমাদের সাথে" : "Why Join Us"}</Label>
-              <div className="flex gap-2">
-                <Input value={whyJoinUsInput} onChange={(e) => setWhyJoinUsInput(e.target.value)} placeholder="Add a benefit..." onKeyDown={(e) => { if (e.key === "Enter" && whyJoinUsInput.trim()) { e.preventDefault(); setWhyJoinUs([...whyJoinUs, whyJoinUsInput.trim()]); setWhyJoinUsInput(""); } }} />
-                <Button type="button" size="sm" variant="outline" onClick={() => { if (whyJoinUsInput.trim()) { setWhyJoinUs([...whyJoinUs, whyJoinUsInput.trim()]); setWhyJoinUsInput(""); } }}>+</Button>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {whyJoinUs.map((item, i) => (
-                  <Badge key={i} variant="secondary" className="text-xs gap-1 cursor-pointer hover:bg-destructive/10" onClick={() => setWhyJoinUs(whyJoinUs.filter((_, idx) => idx !== i))}>
-                    {item} <span className="text-muted-foreground ml-0.5">&times;</span>
-                  </Badge>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">{isBn ? "শীর্ষ দক্ষতা" : "Top Skills"}</Label>
-              <div className="flex gap-2">
-                <Input value={topSkillsInput} onChange={(e) => setTopSkillsInput(e.target.value)} placeholder="Add a skill..." onKeyDown={(e) => { if (e.key === "Enter" && topSkillsInput.trim()) { e.preventDefault(); setTopSkills([...topSkills, topSkillsInput.trim()]); setTopSkillsInput(""); } }} />
-                <Button type="button" size="sm" variant="outline" onClick={() => { if (topSkillsInput.trim()) { setTopSkills([...topSkills, topSkillsInput.trim()]); setTopSkillsInput(""); } }}>+</Button>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {topSkills.map((s, i) => (
-                  <Badge key={i} variant="secondary" className="text-xs gap-1 cursor-pointer hover:bg-destructive/10" onClick={() => setTopSkills(topSkills.filter((_, idx) => idx !== i))}>
-                    {s} <span className="text-muted-foreground ml-0.5">&times;</span>
-                  </Badge>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">{isBn ? "হাইলাইটস" : "Highlights"}</Label>
-              <div className="flex gap-2">
-                <Input value={highlightsInput} onChange={(e) => setHighlightsInput(e.target.value)} placeholder="Add a highlight..." onKeyDown={(e) => { if (e.key === "Enter" && highlightsInput.trim()) { e.preventDefault(); setHighlights([...highlights, highlightsInput.trim()]); setHighlightsInput(""); } }} />
-                <Button type="button" size="sm" variant="outline" onClick={() => { if (highlightsInput.trim()) { setHighlights([...highlights, highlightsInput.trim()]); setHighlightsInput(""); } }}>+</Button>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {highlights.map((item, i) => (
-                  <Badge key={i} variant="secondary" className="text-xs gap-1 cursor-pointer hover:bg-destructive/10" onClick={() => setHighlights(highlights.filter((_, idx) => idx !== i))}>
-                    {item} <span className="text-muted-foreground ml-0.5">&times;</span>
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-      case "hr":
-        return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Field label="HR Manager"><Input value={hrName} onChange={(e) => setHrName(e.target.value)} /></Field>
-              <Field label="HR Phone"><Input value={hrPhone} onChange={(e) => setHrPhone(e.target.value)} /></Field>
-              <Field label="HR Email"><Input type="email" value={hrEmail} onChange={(e) => setHrEmail(e.target.value)} /></Field>
-            </div>
-            <Field label={isBn ? "নিয়োগ নীতি" : "Recruitment Policy"}><Textarea value={recruitmentPolicy} onChange={(e) => setRecruitmentPolicy(e.target.value)} rows={3} /></Field>
-            <Field label={isBn ? "নিয়োগ প্রক্রিয়া" : "Hiring Process"}><Textarea value={hiringProcess} onChange={(e) => setHiringProcess(e.target.value)} rows={3} /></Field>
-          </div>
-        );
-      case "settings":
-        return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3"><Checkbox id="allowPosting" checked={allowJobPosting} onCheckedChange={(v) => setAllowJobPosting(!!v)} /><Label htmlFor="allowPosting" className="text-sm">{isBn ? "চাকরি পোস্টিং" : "Allow Job Posting"}</Label></div>
-              <div className="flex items-center gap-3"><Checkbox id="featuredAllowed" checked={featuredAllowed} onCheckedChange={(v) => setFeaturedAllowed(!!v)} /><Label htmlFor="featuredAllowed" className="text-sm">{isBn ? "ফিচার্ড জব" : "Featured Job Allowed"}</Label></div>
-              <div className="flex items-center gap-3"><Checkbox id="autoApproval" checked={autoApproval} onCheckedChange={(v) => setAutoApproval(!!v)} /><Label htmlFor="autoApproval" className="text-sm">{isBn ? "অটো অনুমোদন" : "Auto Approval"}</Label></div>
-              <Field label={isBn ? "মাসিক পোস্ট সীমা" : "Monthly Posting Limit"}><Input type="number" value={postingLimit} onChange={(e) => setPostingLimit(e.target.value)} placeholder="Unlimited" /></Field>
-            </div>
-            <Field label={isBn ? "মেয়াদ (দিন)" : "Job Expiry (days)"}><Input type="number" value={expiryDays} onChange={(e) => setExpiryDays(e.target.value)} /></Field>
-          </div>
-        );
-      case "verification":
-        return (
-          <div className="space-y-4">
-            {[{ label: "Trade License", file: tradeLicenseFile, setFile: setTradeLicenseFile, path: tradeLicensePath },
-              { label: "NID", file: nidFile, setFile: setNidFile, path: nidPath },
-              { label: "Registration Certificate", file: regCertFile, setFile: setRegCertFile, path: regCertPath },
-            ].map((doc) => (
-              <div key={doc.label} className="flex items-center gap-4 p-3 rounded-lg border">
-                <FileCheck className="h-5 w-5 text-muted-foreground shrink-0" />
-                <div className="flex-1"><p className="text-sm font-medium">{doc.label}</p>{doc.path && !doc.file && <p className="text-xs text-green-600">Uploaded</p>}</div>
-                <label>
-                  <Button size="sm" variant={doc.path && !doc.file ? "outline" : "default"} asChild>
-                    <span><Upload className="h-4 w-4 mr-1" /> {doc.path && !doc.file ? "Replace" : "Upload"}</span>
-                  </Button>
-                  <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => { const f = e.target.files?.[0]; if (f) doc.setFile(f); }} />
-                </label>
-              </div>
-            ))}
-            <Field label="TIN Number"><Input value={tinNumber} onChange={(e) => setTinNumber(e.target.value)} /></Field>
-          </div>
-        );
-      case "media":
-        return (
-          <div className="space-y-4">
-            <Field label={isBn ? "ভিডিও URL" : "Company Video URL"}><Input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." /></Field>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="YouTube"><Input value={youtubeChannel} onChange={(e) => setYoutubeChannel(e.target.value)} placeholder="https://youtube.com/@..." /></Field>
-              <Field label="Instagram"><Input value={instagramProfile} onChange={(e) => setInstagramProfile(e.target.value)} placeholder="https://instagram.com/..." /></Field>
-            </div>
-          </div>
-        );
-      case "social":
-        return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Facebook"><Input value={facebookPage} onChange={(e) => setFacebookPage(e.target.value)} placeholder="https://facebook.com/..." /></Field>
-            <Field label="LinkedIn"><Input value={linkedinPage} onChange={(e) => setLinkedinPage(e.target.value)} placeholder="https://linkedin.com/company/..." /></Field>
-          </div>
-        );
-      case "stats":
-        return (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[{ label: isBn ? "মোট চাকরি" : "Total Jobs", value: hookStats?.total_jobs || 0, color: "text-blue-600" },
-              { label: isBn ? "সক্রিয়" : "Active", value: hookStats?.active_jobs || 0, color: "text-green-600" },
-              { label: isBn ? "আবেদন" : "Applications", value: hookStats?.total_applications || 0, color: "text-purple-600" },
-              { label: isBn ? "শর্টলিস্ট" : "Shortlisted", value: hookStats?.shortlisted || 0, color: "text-amber-600" },
-            ].map((s) => (
-              <Card key={s.label}><CardContent className="p-4"><p className="text-xs text-muted-foreground">{s.label}</p><p className={`text-xl font-bold mt-1 ${s.color}`}>{s.value}</p></CardContent></Card>
-            ))}
-          </div>
-        );
-      case "team":
-        return (
-          <div className="space-y-4">
-            {hrTeam.map((member, i) => (
-              <div key={i} className="p-4 rounded-lg border space-y-3 relative">
-                <Button size="sm" variant="ghost" className="absolute top-2 right-2 h-7 w-7 p-0" onClick={() => removeHrMember(i)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Field label="Name" required><Input value={member.name} onChange={(e) => updateHrMember(i, "name", e.target.value)} /></Field>
-                  <Field label="Designation">
-                    <Select value={member.designation} onValueChange={(v) => updateHrMember(i, "designation", v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{HR_DESIGNATIONS.map((d) => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </Field>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Field label="Email"><Input type="email" value={member.email} onChange={(e) => updateHrMember(i, "email", e.target.value)} /></Field>
-                  <Field label="Phone"><Input value={member.phone} onChange={(e) => updateHrMember(i, "phone", e.target.value)} /></Field>
-                </div>
-              </div>
-            ))}
-            {hrTeam.length === 0 && <p className="text-sm text-muted-foreground">{isBn ? "কোনো HR সদস্য নেই" : "No HR team members"}</p>}
-            <Button size="sm" variant="outline" onClick={addHrMember}><Plus className="h-4 w-4 mr-1" /> {isBn ? "সদস্য যোগ" : "Add Member"}</Button>
-          </div>
-        );
-      default:
-        return null;
-    }
+  const renderContent = () => {
+    if (currentStep.key === "stats") return <StatsStep stats={hookStats} isBn={isBn} />;
+    if (currentStep.key === "team") return <HrTeamStep team={form.hrTeam} setTeam={form.setHrTeam} isBn={isBn} />;
+    const StepComp = STEP_COMPONENTS[currentStep.key];
+    return StepComp ? <StepComp state={form} isBn={isBn} /> : null;
   };
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-8">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{isBn ? "কোম্পানি প্রোফাইল" : "Company Profile"}</h1>
           {lastSyncedAt && <p className="text-xs text-muted-foreground mt-0.5">{isBn ? "সর্বশেষ সিঙ্ক:" : "Last synced:"} {lastSyncedAt.toLocaleTimeString()}</p>}
         </div>
-        <Button onClick={async () => { const ok = await handleSave(true); if (ok) setSavedSteps((prev) => new Set(prev).add(step)); }} disabled={saving} variant="outline">
+        <Button onClick={async () => { if (await handleSave(true)) setSavedSteps((p) => new Set(p).add(step)); }} disabled={saving} variant="outline">
           {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
           {saving ? (isBn ? "সংরক্ষিত হচ্ছে..." : "Saving...") : (isBn ? "সংরক্ষণ করুন" : "Save")}
         </Button>
       </div>
 
-      {/* Error Banner */}
       {saveError && (
         <div className="flex items-center gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">
-          <FileCheck className="h-4 w-4 shrink-0" />
-          <p className="flex-1">{saveError}</p>
-          <button onClick={() => setSaveError(null)} className="text-red-500 hover:text-red-700 shrink-0">×</button>
+          <FileCheck className="h-4 w-4 shrink-0" /><p className="flex-1">{saveError}</p>
+          <button onClick={() => setSaveError(null)} className="text-red-500 hover:text-red-700 shrink-0">&times;</button>
         </div>
       )}
 
-      {/* Completion Bar */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium">{isBn ? "প্রোফাইল সম্পূর্ণতা" : "Profile Completion"}</p>
-            <Badge variant={completionPct >= 80 ? "default" : completionPct >= 50 ? "secondary" : "outline"}>{completionPct}%</Badge>
-          </div>
-          <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
-            <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${completionPct}%` }} />
-          </div>
-        </CardContent>
-      </Card>
+      <Card><CardContent className="pt-6">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-medium">{isBn ? "প্রোফাইল সম্পূর্ণতা" : "Profile Completion"}</p>
+          <Badge variant={completionPct >= 80 ? "default" : completionPct >= 50 ? "secondary" : "outline"}>{completionPct}%</Badge>
+        </div>
+        <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+          <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${completionPct}%` }} />
+        </div>
+      </CardContent></Card>
 
-      {/* Step Indicators */}
       <div className="flex items-center gap-1 overflow-x-auto pb-2">
         {STEPS.map((s, i) => {
           const Icon = s.icon;
@@ -1118,25 +141,21 @@ export default function EmployerProfilePage() {
         })}
       </div>
 
-      {/* Step Content */}
-      <Card>
-        <CardContent className="pt-6">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            {React.createElement(STEPS[step].icon, { className: "h-5 w-5 text-primary" })}
-            {isBn ? STEPS[step].labelBn : STEPS[step].labelEn}
-            <Badge variant="outline" className="ml-auto text-xs">{step + 1}/{STEPS.length}</Badge>
-          </h2>
-          {renderStepContent()}
-        </CardContent>
-      </Card>
+      <Card><CardContent className="pt-6">
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          {React.createElement(currentStep.icon, { className: "h-5 w-5 text-primary" })}
+          {isBn ? currentStep.labelBn : currentStep.labelEn}
+          <Badge variant="outline" className="ml-auto text-xs">{step + 1}/{STEPS.length}</Badge>
+        </h2>
+        {renderContent()}
+      </CardContent></Card>
 
-      {/* Navigation */}
       <div className="flex items-center justify-between pb-8">
         <Button variant="outline" onClick={() => step > 0 && setStep(step - 1)} disabled={step === 0}>
           <ChevronLeft className="h-4 w-4 mr-1" /> {isBn ? "আগের" : "Previous"}
         </Button>
         <div className="flex items-center gap-2">
-          {step < STEPS.length - 1 && <Button variant="ghost" onClick={handleSkip}>{isBn ? "এড়িয়ে যান" : "Skip"}</Button>}
+          {step < STEPS.length - 1 && <Button variant="ghost" onClick={() => setStep(step + 1)}>{isBn ? "এড়িয়ে যান" : "Skip"}</Button>}
           {step < STEPS.length - 1 ? (
             <Button onClick={handleSaveAndContinue} disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
@@ -1144,7 +163,7 @@ export default function EmployerProfilePage() {
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           ) : (
-            <Button onClick={async () => { const ok = await handleSave(true); if (ok) setSavedSteps((prev) => new Set(prev).add(step)); }} disabled={saving}>
+            <Button onClick={async () => { if (await handleSave(true)) setSavedSteps((p) => new Set(p).add(step)); }} disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               {isBn ? "সম্পূর্ণ সংরক্ষণ" : "Save Complete"}
               <Check className="h-4 w-4 ml-1" />
