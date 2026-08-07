@@ -1,47 +1,4 @@
 "use client";
-... 
-  return {
-    companyName, setCompanyName, companyNameBn, setCompanyNameBn, tagline, setTagline,
-    ...more
-    recruitmentPolicy, setRecruitmentPolicy, hiring<dyad-write path="src/hooks/use-employer-profile-state.ts" description="All profile form state in one hook, initialized from API data">
-"use client";
-...
-```
-
-So even in the original context dump, that file was corrupted with a nested `<dyad-write>` tag mid-content. It seems my earlier "fix" writes didn't actually overwrite because... hmm, in previous turns I used `<dyad-write path="src/hooks/use-employer-profile-state.ts">` twice but the file shown in the context at the end was still the corrupted version, which means those writes maybe targeted a different path or were part of the "final file" but got merged incorrectly? Actually looking at the build output, the current file still has `...ntPolicy, setRecruitmentPolicy, hiring<dyad-write path="src/hooks/use-employer-profile...` — so my last write didn't take effect. The write tool may have failed silently, or the file has something attached that prevents overwriting.
-
-Wait — re-reading: my last message confirmed "Rewriting clean" and wrote the full file. But build output now still shows corruption. So the write didn't persist. Could be the write got cut off (token limit) or the tool errored. I need to write the file again, ensuring it's complete and without any embedded tags. Keep it minimal this time — shorter file, no trailing truncation. Also there's a `Badge` import missing in shared.tsx (uses Badge in ArrayInput). Let me check that too.
-
-shared.tsx uses `<Badge>` but doesn't import it. Original shared.tsx also had this issue — was in the initial context dump. Need to add import.
-
-Plan:
-1. Write clean `use-employer-profile-state.ts` — full content, no embedded tags, properly closed.
-2. Fix `shared.tsx` Badge import.
-3. Maybe combine into fewer files to reduce risk.
-
-Actually the file got corrupted because in the initial context dump, the file contents literally contained `<dyad-write path="src/hooks/use-employer-profile-state.ts" description="All profile form state in one hook, initialized from API data">` embedded INSIDE the file (it was the file's own content!). That's bizarre — the original file on disk has that tag inside it as literal text. So my earlier writes failed to overwrite because ... maybe the first write was also sent with embedded tag? Looking at my first attempt in this session: I wrote the file with `<dyad-write path="src/hooks/use-employer-profile-state.ts" ...>` — yes! In my second response I accidentally embedded the dyad-write tag INSIDE the file content again (I cut-pasted from the corrupted file). The second attempt was clean though. But it still shows corrupted... so maybe the second write also had the tag? Reviewing my "Rewriting clean" message: the content is clean, starts with "use client". So the file should be fixed now. But the build error shown is from BEFORE that write took effect (timestamp confusion). The user pasted the build error after my clean rewrite? The message sequence: I sent clean rewrite → user sent build error showingsame corruption. So the rewrite didn't apply.
-
-Possibility: write path mismatch. The corrupted src/hooks/use-employer-profile-state.ts in context is listed twice at the end (two files). Maybe there are two copies and my write only updated one. Or the write failed because the description contained special chars. Let me try a different approach — delete the file first, then write fresh. Use `<dyad-delete>` then `<dyad-write>`. That forces recreation.
-
-Also fix the Import trace — page imports useEmployerProfileState from this hook. So after delete+write it should resolve.
-
-Let me do:
-1. `<dyad-delete path="src/hooks/use-employer-profile-state.ts">`
-2. `<dyad-write path="src/hooks/use-employer-profile-state.ts">` — clean full content
-3. Also fix shared.tsx Badge import: add `import { Badge } from "@/components/ui/badge";`
-
-Keep the hook file identical to my earlier clean version. Make sure no stray tags.
-
-Also there's `badge` usage in shared.tsx — check original: `import { Button } from "@/components/ui/button";` no Badge import. Add it.
-
-Also step-config.ts and other new files — are they present? The build imports them from page.tsx which I rewrote. The error trace only complains about the hook file, so others probably are fine (or not reached). But to be safe, after fixing hook, everything should compile.
-
-Write both files now.</think>Corruption persisted — previous writes didn't replace the broken file. Force-fixing: delete first, then write clean copy.
-
-<dyad-delete path="src/hooks/use-employer-profile-state.ts"></dyad-delete>
-
-<dyad-write path="src/hooks/use-employer-profile-state.ts" description="Employer profile state hook">
-"use client";
 
 import { useState, useEffect } from "react";
 import { useEmployerCompany } from "./use-employer-company";
