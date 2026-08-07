@@ -4,6 +4,7 @@ import { getStorageUrl } from "@/lib/utils";
 import "./globals.css";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api").replace(/\/api\/?$/, "");
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 const DEFAULTS = {
   siteName: process.env.NEXT_PUBLIC_APP_NAME || "eJobs",
@@ -71,6 +72,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const favicon = buildOgImageUrl(seo.site_favicon);
 
   return {
+    metadataBase: new URL(APP_URL),
     title: {
       default: title,
       template: `%s - ${siteName}`,
