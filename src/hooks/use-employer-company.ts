@@ -67,8 +67,8 @@ export function useEmployerCompany() {
       setError(null);
       const res = await api.post("/employer/profile-update", formData);
 
-      if (res.data?.status && res.data?.data?.company) {
-        setCompany((prev) => ({ ...prev, ...res.data.data.company }));
+        if (res.data?.status && res.data?.data?.company) {
+          setCompany((prev: any) => ({ ...prev, ...res.data.data.company }));
         if (res.data.data.stats) setStats(res.data.data.stats);
         setLastSyncedAt(new Date());
         return true;
