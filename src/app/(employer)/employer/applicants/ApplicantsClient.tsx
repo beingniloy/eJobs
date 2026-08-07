@@ -53,6 +53,21 @@ type JobGroup = {
   applications: JobApplication[];
 };
 
+/** Try multiple backend route shapes until one succeeds. */
+async function tryEndpoints(attempts: (() => Promise<any>)[]): Promise<any> {
+  let lastErr: any;
+  for (const fn of attempts) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastErr = err;
+      // Only continue if 404 — other errors should surface
+      if (err?.response?.status !== 404) throw err;
+    }
+  }
+  throw lastErr;
+}
+
 export default function ApplicantsClient() {
   const { language, settings } = useThemeStore();
   const router = useRouter();
@@ -89,13 +104,29 @@ export default function ApplicantsClient() {
     setApplicants((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
   };
 
+  // PATCH status — try common backend route shapes
+  const updateApplicantStatus = (appId: number, status: string) =>
+    tryEndpoints([
+      () => api.patch(`/employer/applications/${appId}`, { status }),
+      () => api.post(`/employer/applications/${appId}/status`, { status }),
+      () => api.patch(`/employer/applicants/${appId}`, { status }),
+      () => api.post(`/employer/applicants/${appId}/status`, { status }),
+    ]);
+
+  // Hire — try common route shapes
+  const hireApplicant = (appId: number) =>
+    tryEndpoints([
+      () => api.post(`/employer/applications/${appId}/hire`),
+      () => api.post(`/employer/applicants/${appId}/hire`),
+    ]);
+
   const filteredApplicants = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return applicants.filter((app) => {
       if (statusFilter !== "all" && app.status !== statusFilter) return false;
+      if (!q) return true;
       const name = app.user?.name?.toLowerCase() || "";
       const job = app.job?.title?.toLowerCase() || "";
-      if (!q) return true;
       return name.includes(q) || job.includes(q);
     });
   }, [applicants, statusFilter, searchQuery]);
@@ -160,11 +191,24 @@ export default function ApplicantsClient() {
 
   const hireCandidate = async (app: JobApplication) => {
     try {
-      await api.post(`/employer/applicants/${app.id}/hire`);
+      await hireApplicant(app.id);
       refreshStatus(app.id, "hired");
       toast.success(isBn ? "নিয়োগ দেওয়া হয়েছে" : "Candidate hired");
     } catch (err: any) {
       toast.error(err?.response?.data?.message || (isBn ? "নিয়োগ দিতে ব্যর্থ" : "Failed to hire"));
+    }
+  };
+
+  const handleStatusChange = async (app: JobApplication, newStatus: string) => {
+    try {
+      await updateApplicantStatus(app.id, newStatus);
+      refreshStatus(app.id, newStatus);
+      const label = isBn
+        ? { shortlisted: "শর্টলিস্টে যোগ করা হয়েছে", rejected: "প্রত্যাখ্যাত", reviewed: "রিভিউ করা হয়েছে" }[newStatus] || "স্ট্যাটাস আপডেট হয়েছে"
+        : { shortlisted: "Shortlisted", rejected: "Rejected", reviewed: "Marked as reviewed" }[newStatus] || "Status updated";
+      toast.success(label);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || (isBn ? "ব্যর্থ" : "Failed to update status"));
     }
   };
 
@@ -177,7 +221,6 @@ export default function ApplicantsClient() {
         </p>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
@@ -214,9 +257,7 @@ export default function ApplicantsClient() {
       ) : !groupedByJob.length ? (
         <div className="text-center py-16">
           <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold">
-            {isBn ? "এখনো কোনো আবেদন নেই" : "No applicants found"}
-          </h3>
+          <h3 className="text-lg font-semibold">{isBn ? "এখনো কোনো আবেদন নেই" : "No applicants found"}</h3>
         </div>
       ) : (
         <div className="space-y-4">
@@ -224,7 +265,6 @@ export default function ApplicantsClient() {
             const isExpanded = expandedJobs[group.jobId] !== false;
             return (
               <Card key={group.jobId} className="overflow-hidden">
-                {/* Job Header */}
                 <button
                   onClick={() => toggleJob(group.jobId)}
                   className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/50 transition-colors"
@@ -233,152 +273,66 @@ export default function ApplicantsClient() {
                   <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold truncate">{group.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {group.applications.length} {isBn ? "জন আবেদনকারী" : "applicants"}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{group.applications.length} {isBn ? "জন আবেদনকারী" : "applicants"}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {group.isRemote && (
-                      <Badge variant="secondary" className="text-xs border-blue-300 text-blue-600">
-                        <Globe className="h-3 w-3 mr-1" />
-                        {isBn ? "রিমোট" : "Remote"}
-                      </Badge>
-                    )}
-                    {group.budget != null && (
-                      <Badge variant="outline" className="text-xs">
-                        <Wallet className="h-3 w-3 mr-1" />
-                        {Number(group.budget).toLocaleString()} ৳
-                      </Badge>
-                    )}
+                    {group.isRemote && <Badge variant="secondary" className="text-xs border-blue-300 text-blue-600"><Globe className="h-3 w-3 mr-1" />{isBn ? "রিমোট" : "Remote"}</Badge>}
+                    {group.budget != null && <Badge variant="outline" className="text-xs"><Wallet className="h-3 w-3 mr-1" />{Number(group.budget).toLocaleString()} ৳</Badge>}
                     <Badge variant="secondary">{group.applications.length}</Badge>
                   </div>
                 </button>
 
-                {/* Applications List */}
                 {isExpanded && (
                   <div className="border-t">
                     {group.applications.map((app) => {
                       const profileUrl = getProfileUrl(app);
                       return (
                         <div key={app.id} className="p-4 flex items-start gap-3 hover:bg-muted/30 transition-colors">
-                          <DefaultAvatar
-                            src={(app as any).user?.avatar}
-                            name={candidateLabel(app)}
-                            className="h-10 w-10 rounded-full"
-                          />
+                          <DefaultAvatar src={(app as any).user?.avatar} name={candidateLabel(app)} className="h-10 w-10 rounded-full" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-3">
                               <div className="min-w-0">
                                 <p className="font-medium truncate">{candidateLabel(app)}</p>
-                                {app.cover_letter && (
-                                  <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                                    {app.cover_letter}
-                                  </p>
-                                )}
+                                {app.cover_letter && <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{app.cover_letter}</p>}
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 {app.profile_strength != null && (
                                   <div className="hidden sm:flex items-center gap-2">
                                     <div className="relative h-2 w-16 rounded-full bg-muted overflow-hidden">
-                                      <div
-                                        className={`absolute inset-y-0 left-0 rounded-full transition-all ${
-                                          app.profile_strength >= 80
-                                            ? "bg-emerald-500"
-                                            : app.profile_strength >= 50
-                                              ? "bg-amber-500"
-                                              : "bg-red-500"
-                                        }`}
-                                        style={{ width: `${app.profile_strength}%` }}
-                                      />
+                                      <div className={`absolute inset-y-0 left-0 rounded-full transition-all ${app.profile_strength >= 80 ? "bg-emerald-500" : app.profile_strength >= 50 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${app.profile_strength}%` }} />
                                     </div>
-                                    <Badge
-                                      variant={app.profile_strength >= 80 ? "success" : app.profile_strength >= 50 ? "warning" : "destructive"}
-                                    >
-                                      {app.profile_strength}%
-                                    </Badge>
+                                    <Badge variant={app.profile_strength >= 80 ? "success" : app.profile_strength >= 50 ? "warning" : "destructive"}>{app.profile_strength}%</Badge>
                                   </div>
                                 )}
-                                {app.ai_match_score && (
-                                  <Badge variant="success" className="hidden sm:inline-flex">{app.ai_match_score}%</Badge>
-                                )}
-                                <Badge variant="outline" className={`capitalize text-xs ${statusColors[app.status as keyof typeof statusColors] || ""}`}>
-                                  {app.status}
-                                </Badge>
+                                {app.ai_match_score && <Badge variant="success" className="hidden sm:inline-flex">{app.ai_match_score}%</Badge>}
+                                <Badge variant="outline" className={`capitalize text-xs ${statusColors[app.status as keyof typeof statusColors] || ""}`}>{app.status}</Badge>
                               </div>
                             </div>
 
                             <div className="mt-2 flex items-center gap-1">
                               {profileUrl ? (
                                 <Button variant="ghost" size="icon" className="h-7 w-7" title={isBn ? "প্রোফাইল" : "View Profile"} asChild>
-                                  <Link href={profileUrl} target="_blank">
-                                    <Eye className="h-3.5 w-3.5" />
-                                  </Link>
+                                  <Link href={profileUrl} target="_blank"><Eye className="h-3.5 w-3.5" /></Link>
                                 </Button>
                               ) : (
-                                <Button variant="ghost" size="icon" className="h-7 w-7" disabled>
-                                  <Eye className="h-3.5 w-3.5" />
-                                </Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" disabled><Eye className="h-3.5 w-3.5" /></Button>
                               )}
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                title={isBn ? "বার্তা" : "Message"}
-                                onClick={() => {
-                                  const cid = app.user?.id ?? app.id;
-                                  if (cid) router.push(`/employer/messages?to=${cid}`);
-                                }}
-                              >
+                              <Button variant="ghost" size="icon" className="h-7 w-7" title={isBn ? "বার্তা" : "Message"} onClick={() => { const cid = app.user?.id ?? app.id; if (cid) router.push(`/employer/messages?to=${cid}`); }}>
                                 <MessageSquare className="h-3.5 w-3.5" />
                               </Button>
 
-                              {/* Hire button for shortlisted remote jobs */}
                               {group.isRemote && app.status === "shortlisted" && (
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  className="h-7 text-xs"
-                                  onClick={() => hireCandidate(app)}
-                                >
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  {isBn ? "নিয়োগ দিন" : "Hire"}
+                                <Button variant="default" size="sm" className="h-7 text-xs" onClick={() => hireCandidate(app)}>
+                                  <CheckCircle className="h-3 w-3 mr-1" />{isBn ? "নিয়োগ দিন" : "Hire"}
                                 </Button>
                               )}
 
                               {(app.status === "pending" || app.status === "reviewed") && (
                                 <>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7"
-                                    title={isBn ? "শর্টলিস্ট" : "Shortlist"}
-                                    onClick={async () => {
-                                      try {
-                                        await api.patch(`/employer/applicants/${app.id}`, { status: "shortlisted" });
-                                        refreshStatus(app.id, "shortlisted");
-                                        toast.success(isBn ? "শর্টলিস্টে যোগ করা হয়েছে" : "Shortlisted");
-                                      } catch {
-                                        toast.error(isBn ? "ব্যর্থ" : "Failed");
-                                      }
-                                    }}
-                                  >
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" title={isBn ? "শর্টলিস্ট" : "Shortlist"} onClick={() => handleStatusChange(app, "shortlisted")}>
                                     <CheckCircle className="h-3.5 w-3.5 text-green-600" />
                                   </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7"
-                                    title={isBn ? "প্রত্যাখ্যান" : "Reject"}
-                                    onClick={async () => {
-                                      try {
-                                        await api.patch(`/employer/applicants/${app.id}`, { status: "rejected" });
-                                        refreshStatus(app.id, "rejected");
-                                        toast.success(isBn ? "প্রত্যাখ্যাত" : "Rejected");
-                                      } catch {
-                                        toast.error(isBn ? "ব্যর্থ" : "Failed");
-                                      }
-                                    }}
-                                  >
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" title={isBn ? "প্রত্যাখ্যান" : "Reject"} onClick={() => handleStatusChange(app, "rejected")}>
                                     <XCircle className="h-3.5 w-3.5 text-red-600" />
                                   </Button>
                                 </>
@@ -386,76 +340,38 @@ export default function ApplicantsClient() {
 
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7">
-                                    <MoreHorizontal className="h-3.5 w-3.5" />
-                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-3.5 w-3.5" /></Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   {app.resume_url && (
                                     <DropdownMenuItem onClick={() => window.open(app.resume_url as string, "_blank")}>
-                                      <Download className="h-4 w-4 mr-2" />
-                                      {isBn ? "সিভি" : "Download CV"}
+                                      <Download className="h-4 w-4 mr-2" />{isBn ? "সিভি" : "Download CV"}
                                     </DropdownMenuItem>
                                   )}
                                   {profileUrl ? (
                                     <DropdownMenuItem asChild>
-                                      <Link href={profileUrl} target="_blank">
-                                        <Eye className="h-4 w-4 mr-2" />
-                                        {isBn ? "প্রোফাইল" : "View Profile"}
-                                      </Link>
+                                      <Link href={profileUrl} target="_blank"><Eye className="h-4 w-4 mr-2" />{isBn ? "প্রোফাইল" : "View Profile"}</Link>
                                     </DropdownMenuItem>
                                   ) : (
-                                    <DropdownMenuItem disabled>
-                                      <Eye className="h-4 w-4 mr-2" />
-                                      {isBn ? "প্রোফাইল" : "View Profile"}
-                                    </DropdownMenuItem>
+                                    <DropdownMenuItem disabled><Eye className="h-4 w-4 mr-2" />{isBn ? "প্রোফাইল" : "View Profile"}</DropdownMenuItem>
                                   )}
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      const cid = app.user?.id ?? app.id;
-                                      if (cid) router.push(`/employer/messages?to=${cid}`);
-                                    }}
-                                  >
-                                    <MessageSquare className="h-4 w-4 mr-2" />
-                                    {isBn ? "বার্তা" : "Message"}
+                                  <DropdownMenuItem onClick={() => { const cid = app.user?.id ?? app.id; if (cid) router.push(`/employer/messages?to=${cid}`); }}>
+                                    <MessageSquare className="h-4 w-4 mr-2" />{isBn ? "বার্তা" : "Message"}
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   {(app.status === "pending" || app.status === "reviewed") && (
                                     <>
-                                      <DropdownMenuItem
-                                        onClick={async () => {
-                                          try {
-                                            await api.patch(`/employer/applicants/${app.id}`, { status: "shortlisted" });
-                                            refreshStatus(app.id, "shortlisted");
-                                            toast.success(isBn ? "শর্টলিস্টে যোগ করা হয়েছে" : "Shortlisted");
-                                          } catch {
-                                            toast.error(isBn ? "ব্যর্থ" : "Failed");
-                                          }
-                                        }}
-                                      >
-                                        <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
-                                        {isBn ? "শর্টলিস্ট" : "Shortlist"}
+                                      <DropdownMenuItem onClick={() => handleStatusChange(app, "shortlisted")}>
+                                        <CheckCircle className="h-4 w-4 mr-2 text-green-600" />{isBn ? "শর্টলিস্ট" : "Shortlist"}
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={async () => {
-                                          try {
-                                            await api.patch(`/employer/applicants/${app.id}`, { status: "rejected" });
-                                            refreshStatus(app.id, "rejected");
-                                            toast.success(isBn ? "প্রত্যাখ্যাত" : "Rejected");
-                                          } catch {
-                                            toast.error(isBn ? "ব্যর্থ" : "Failed");
-                                          }
-                                        }}
-                                      >
-                                        <XCircle className="h-4 w-4 mr-2 text-red-600" />
-                                        {isBn ? "প্রত্যাখ্যান করুন" : "Reject"}
+                                      <DropdownMenuItem onClick={() => handleStatusChange(app, "rejected")}>
+                                        <XCircle className="h-4 w-4 mr-2 text-red-600" />{isBn ? "প্রত্যাখ্যান করুন" : "Reject"}
                                       </DropdownMenuItem>
                                     </>
                                   )}
                                   {group.isRemote && app.status === "shortlisted" && (
                                     <DropdownMenuItem onClick={() => hireCandidate(app)}>
-                                      <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
-                                      {isBn ? "নিয়োগ দিন" : "Hire"}
+                                      <CheckCircle className="h-4 w-4 mr-2 text-green-600" />{isBn ? "নিয়োগ দিন" : "Hire"}
                                     </DropdownMenuItem>
                                   )}
                                 </DropdownMenuContent>
@@ -478,26 +394,18 @@ export default function ApplicantsClient() {
           {selectedApp && (
             <>
               <DialogHeader>
-                <DialogTitle>
-                  {isBn ? "আবেদনের বিবরণ" : "Applicant Details"}
-                </DialogTitle>
+                <DialogTitle>{isBn ? "আবেদনের বিবরণ" : "Applicant Details"}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="flex items-start gap-4">
-                  <DefaultAvatar
-                    src={(selectedApp as any).user?.avatar}
-                    name={candidateLabel(selectedApp)}
-                    className="h-14 w-14 rounded-full"
-                  />
+                  <DefaultAvatar src={(selectedApp as any).user?.avatar} name={candidateLabel(selectedApp)} className="h-14 w-14 rounded-full" />
                   <div className="flex-1">
                     <p className="font-semibold text-base">{candidateLabel(selectedApp)}</p>
                     <p className="text-sm text-muted-foreground">{selectedApp.job?.title || "Job"}</p>
                     <div className="flex flex-wrap items-center gap-2 mt-2">
                       <Badge variant="outline" className="capitalize text-xs">{selectedApp.status}</Badge>
                       {selectedApp.profile_strength != null && (
-                        <Badge variant={selectedApp.profile_strength >= 80 ? "success" : selectedApp.profile_strength >= 50 ? "warning" : "destructive"}>
-                          {selectedApp.profile_strength}%
-                        </Badge>
+                        <Badge variant={selectedApp.profile_strength >= 80 ? "success" : selectedApp.profile_strength >= 50 ? "warning" : "destructive"}>{selectedApp.profile_strength}%</Badge>
                       )}
                       {selectedApp.ai_match_score && <Badge variant="success">{selectedApp.ai_match_score}% Match</Badge>}
                     </div>
@@ -528,57 +436,32 @@ export default function ApplicantsClient() {
                     <CardContent className="p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <FileText className="h-4 w-4" />
-                        <p className="text-sm font-medium">
-                          {isBn ? "আবেদন পত্র" : "Cover Letter"}
-                        </p>
+                        <p className="text-sm font-medium">{isBn ? "আবেদন পত্র" : "Cover Letter"}</p>
                       </div>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                        {selectedApp.cover_letter}
-                      </p>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedApp.cover_letter}</p>
                     </CardContent>
                   </Card>
                 )}
 
                 <div className="flex flex-wrap items-center gap-2">
                   {selectedApp.resume_url && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(selectedApp.resume_url as string, "_blank")}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      {isBn ? "সিভি" : "Download CV"}
+                    <Button variant="outline" size="sm" onClick={() => window.open(selectedApp.resume_url as string, "_blank")}>
+                      <Download className="h-4 w-4 mr-2" />{isBn ? "সিভি" : "Download CV"}
                     </Button>
                   )}
                   {(() => {
                     const url = getProfileUrl(selectedApp);
                     return url ? (
                       <Button variant="secondary" size="sm" asChild>
-                        <Link href={url} target="_blank">
-                          <Eye className="h-4 w-4 mr-2" />
-                          {isBn ? "প্রোফাইল" : "View Full Profile"}
-                        </Link>
+                        <Link href={url} target="_blank"><Eye className="h-4 w-4 mr-2" />{isBn ? "প্রোফাইল" : "View Full Profile"}</Link>
                       </Button>
                     ) : null;
                   })()}
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => setChangeStatusApp(selectedApp)}
-                  >
-                    <ClipboardList className="h-4 w-4 mr-2" />
-                    {isBn ? "স্ট্যাটাস পরিবর্তন" : "Change Status"}
+                  <Button variant="default" size="sm" onClick={() => setChangeStatusApp(selectedApp)}>
+                    <ClipboardList className="h-4 w-4 mr-2" />{isBn ? "স্ট্যাটাস পরিবর্তন" : "Change Status"}
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const cid = selectedApp.user?.id ?? selectedApp.id;
-                      if (cid) router.push(`/employer/messages?to=${cid}`);
-                    }}
-                  >
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    {isBn ? "বার্তা" : "Message"}
+                  <Button variant="outline" size="sm" onClick={() => { const cid = selectedApp.user?.id ?? selectedApp.id; if (cid) router.push(`/employer/messages?to=${cid}`); }}>
+                    <MessageSquare className="h-4 w-4 mr-2" />{isBn ? "বার্তা" : "Message"}
                   </Button>
                 </div>
               </div>
@@ -592,32 +475,13 @@ export default function ApplicantsClient() {
           {changeStatusApp && (
             <>
               <DialogHeader>
-                <DialogTitle>
-                  {isBn ? "স্ট্যাটাস পরিবর্তন করুন" : "Change Applicant Status"}
-                </DialogTitle>
+                <DialogTitle>{isBn ? "স্ট্যাটাস পরিবর্তন করুন" : "Change Applicant Status"}</DialogTitle>
               </DialogHeader>
               <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  {candidateLabel(changeStatusApp)} — {changeStatusApp.job?.title || "Job"}
-                </p>
+                <p className="text-sm text-muted-foreground">{candidateLabel(changeStatusApp)} — {changeStatusApp.job?.title || "Job"}</p>
                 <div className="grid grid-cols-2 gap-2">
                   {["pending", "reviewed", "shortlisted", "rejected", "hired"].map((status) => (
-                    <Button
-                      key={status}
-                      variant={changeStatusApp.status === status ? "default" : "outline"}
-                      size="sm"
-                      className="capitalize"
-                      onClick={async () => {
-                        try {
-                          await api.patch(`/employer/applicants/${changeStatusApp.id}`, { status });
-                          refreshStatus(changeStatusApp.id, status);
-                          toast.success(isBn ? "স্ট্যাটাস আপডেট হয়েছে" : "Status updated");
-                          setChangeStatusApp(null);
-                        } catch {
-                          toast.error(isBn ? "ব্যর্থ হয়েছে" : "Failed");
-                        }
-                      }}
-                    >
+                    <Button key={status} variant={changeStatusApp.status === status ? "default" : "outline"} size="sm" className="capitalize" onClick={async () => { await handleStatusChange(changeStatusApp, status); setChangeStatusApp(null); }}>
                       {status}
                     </Button>
                   ))}
