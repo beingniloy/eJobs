@@ -24,14 +24,14 @@ interface RecommendedJob {
 }
 
 export default function RecommendedJobs() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, role } = useAuth();
   const { language } = useThemeStore();
   const isBn = language === "bn";
   const [jobs, setJobs] = useState<RecommendedJob[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || role !== "candidate") {
       setLoading(false);
       return;
     }
@@ -44,9 +44,9 @@ export default function RecommendedJobs() {
       })
       .catch(() => { /* handled */ })
       .finally(() => setLoading(false));
-  }, [isAuthenticated]);
+  }, [isAuthenticated, role]);
 
-  if (!isAuthenticated) return null;
+  if (!isAuthenticated || role !== "candidate") return null;
 
   if (loading) {
     return (

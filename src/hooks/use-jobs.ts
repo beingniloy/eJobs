@@ -32,10 +32,12 @@ export function useRemoteJobs(page = 1) {
   });
 }
 
-export function useRecommendedJobs() {
+export function useRecommendedJobs(enabled = true) {
+  const role = useAuthStore((s) => s.role);
   return useQuery({
     queryKey: ["jobs", "recommended"],
     queryFn: jobsService.getRecommendedJobs,
+    enabled: enabled && role === "candidate",
     staleTime: 5 * 60 * 1000,
   });
 }

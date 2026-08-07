@@ -73,8 +73,11 @@ function EmployerLoginInner() {
   const [twoFactorMethod, setTwoFactorMethod] = useState<"totp" | "sms" | "email">("totp");
   const [otpSent, setOtpSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [accountTypeWarning, setAccountTypeWarning] = useState<string | null>(null);
+  const [checkingEmail, setCheckingEmail] = useState(false);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
+  const emailValue = watch("email", "");
 
   useEffect(() => {
     if (login.data?.requires_2fa && login.data?.temp_token) {
@@ -89,6 +92,23 @@ function EmployerLoginInner() {
   }, [login.data, isBn]);
 
   useEffect(() => { if (countdown <= 0) return; const t = setTimeout(() => setCountdown((c) => c - 1), 1000); return () => clearTimeout(t); }, [countdown]);
+
+  useEffect(() => {
+    if (!emailValue || !emailValue.includes("@")) { setAccountTypeWarning(null); return; }
+    const timer = setTimeout(async () => {
+      setCheckingEmail(true);
+      try {
+        const res = await api.post("/check-account-type", { email: emailValue });
+        if (res.data?.exists && res.data?.role === "candidate") {
+          setAccountTypeWarning(isBn
+            ? "এই ইমেইলটি প্রার্থী অ্যাকাউন্টে ব্যবহার করা হয়েছে। অনুগ্রহ করে প্রার্থী লগইন পেজে যান।"
+            : "This email is registered as a candidate account. Please use the candidate login page.");
+        } else { setAccountTypeWarning(null); }
+      } catch { setAccountTypeWarning(null); }
+      setCheckingEmail(false);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [emailValue, isBn]);
 
   const handleSendCode = async () => {
     if (!tempToken) return;
@@ -170,6 +190,13 @@ function EmployerLoginInner() {
                 <Label>{isBn ? "ইমেইল" : "Email"}</Label>
                 <Input type="email" placeholder="company@example.com" {...register("email")} />
                 {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                {accountTypeWarning && (
+                  <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                    <p className="text-sm text-amber-700 dark:text-amber-400 flex-1">{accountTypeWarning}</p>
+                    <Link href="/login" className="text-sm font-medium text-amber-800 dark:text-amber-300 hover:underline whitespace-nowrap">{isBn ? "প্রার্থী লগইন" : "Candidate Login"}</Link>
+                  </div>
+                )}
+                {checkingEmail && <p className="text-xs text-muted-foreground">{isBn ? "চেক করা হচ্ছে..." : "Checking..."}</p>}
               </div>
               <div className="space-y-2">
                 <Label>{isBn ? "পাসওয়ার্ড" : "Password"}</Label>
