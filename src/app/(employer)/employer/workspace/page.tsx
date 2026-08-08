@@ -38,6 +38,7 @@ import {
   ChevronDown,
   ChevronUp,
   FileArchive,
+  Loader2,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -72,6 +73,7 @@ interface ChatMessage {
   message: string;
   created_at: string;
   is_read: boolean;
+  pending?: boolean;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
@@ -190,16 +192,23 @@ export default function EmployerWorkspacePage() {
   useEffect(() => { scrollToBottom(); }, [chatMessages, scrollToBottom]);
 
   const sendMessage = async () => {
-    if (!chatInput.trim() || !otherParty) return;
+    if (!chatInput.trim() || !otherParty || !currentUserId) return;
     const text = chatInput.trim();
+    const tempId = -Date.now();
+    setChatMessages((prev) => [
+      ...prev,
+      { id: tempId, sender_id: currentUserId, receiver_id: otherParty.id, message: text, created_at: new Date().toISOString(), is_read: true, pending: true },
+    ]);
     setChatInput("");
     setSendingMessage(true);
     try {
-      await api.post(`/messages/direct/${otherParty.id}`, { message: text });
-      await fetchMessages(otherParty.id);
+      const res = await api.post(`/messages/direct/${otherParty.id}`, { message: text });
+      const saved = res.data.data;
+      setChatMessages((prev) => prev.map((m) => (m.id === tempId ? saved : m)));
     } catch {
-      toast.error(isBn ? "বার্তা পাঠাতে ব্যর্থ" : "Failed to send message");
+      setChatMessages((prev) => prev.filter((m) => m.id !== tempId));
       setChatInput(text);
+      toast.error(isBn ? "বার্তা পাঠাতে ব্যর্থ" : "Failed to send message");
     } finally {
       setSendingMessage(false);
     }
@@ -483,10 +492,13 @@ export default function EmployerWorkspacePage() {
                   const isOwn = msg.sender_id === currentUserId;
                   return (
                     <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[75%] rounded-lg px-4 py-2 ${isOwn ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                      <div className={`max-w-[75%] rounded-lg px-4 py-2 ${isOwn ? "bg-primary text-primary-foreground" : "bg-muted"} ${msg.pending ? "opacity-70" : ""}`}>
                         {!isOwn && otherParty && <p className="text-xs font-medium mb-0.5 opacity-70">{otherParty.name}</p>}
                         <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
-                        <p className={`text-[10px] mt-1 ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>{formatChatTime(msg.created_at)}</p>
+                        <p className={`text-[10px] mt-1 flex items-center gap-1 ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                          {msg.pending && <Loader2 className="h-3 w-3 animate-spin" />}
+                          {msg.pending ? (isBn ? "পাঠানো হচ্ছে..." : "Sending...") : formatChatTime(msg.created_at)}
+                        </p>
                       </div>
                     </div>
                   );
@@ -499,7 +511,7 @@ export default function EmployerWorkspacePage() {
               <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="flex items-end gap-2">
                 <Input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder={isBn ? "বার্তা লিখুন..." : "Type a message..."} disabled={sendingMessage} className="flex-1" autoComplete="off" />
                 <Button type="submit" size="icon" className="h-10 w-10 shrink-0" disabled={!chatInput.trim() || sendingMessage}>
-                  <Send className="h-4 w-4" />
+                  {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
               </form>
             </div>
@@ -509,7 +521,7 @@ export default function EmployerWorkspacePage() {
 
       {/* Release Dialog */}
       <Dialog open={releaseDialogOpen} onOpenChange={setReleaseDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>{isBn ? "পেমেন্ট মুক্তি দিন" : "Approve & Release Payment"}</DialogTitle>
             {releaseProject && <p className="text-sm text-muted-foreground">{releaseProject.title}</p>}
@@ -545,7 +557,7 @@ export default function EmployerWorkspacePage() {
 
       {/* Revision Dialog */}
       <Dialog open={revisionDialogOpen} onOpenChange={setRevisionDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>{isBn ? "পুনর্দর্শন অনুরোধ" : "Request Revision"}</DialogTitle>
             {revisionProject && <p className="text-sm text-muted-foreground">{revisionProject.title}</p>}
@@ -564,7 +576,7 @@ export default function EmployerWorkspacePage() {
 
       {/* Dispute Dialog */}
       <Dialog open={disputeDialogOpen} onOpenChange={setDisputeDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>{isBn ? "বিরোধ খোলুন" : "Open Dispute"}</DialogTitle>
             {disputeProject && <p className="text-sm text-muted-foreground">{disputeProject.title}</p>}
