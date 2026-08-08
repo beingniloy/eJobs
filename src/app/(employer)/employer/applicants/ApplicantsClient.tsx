@@ -6,7 +6,7 @@ import { useThemeStore } from "@/store/theme-store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Briefcase } from "lucide-react";
+import { Users, Briefcase, Send, Activity } from "lucide-react";
 import { toast } from "sonner";
 import type { JobApplication } from "@/types";
 
@@ -15,6 +15,8 @@ import JobGroupCard from "./JobGroupCard";
 import ApplicantDetailDialog from "./ApplicantDetailDialog";
 import { StatusChangeDialog } from "./StatusChangeDialog";
 import { tryEndpoints, groupByJob } from "./applicants-utils";
+import { BulkMessageDialog } from "./BulkMessageDialog";
+import { DeliveryMonitorDialog } from "./DeliveryMonitor";
 
 export default function ApplicantsClient() {
   const { language, settings } = useThemeStore();
@@ -29,6 +31,8 @@ export default function ApplicantsClient() {
   const [changeStatusApp, setChangeStatusApp] = useState<JobApplication | null>(null);
   const [expandedJobs, setExpandedJobs] = useState<Record<number, boolean>>({});
   const [pendingId, setPendingId] = useState<number | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [monitorOpen, setMonitorOpen] = useState(false);
 
   useEffect(() => {
     document.title = isBn ? `আবেদনকারী | ${siteName}` : `Applicants | ${siteName}`;
@@ -101,6 +105,16 @@ export default function ApplicantsClient() {
         <p className="text-muted-foreground mt-1">
           {isBn ? "চাকরি অনুযায়ী আবেদনকারী দেখুন" : "View applicants grouped by job"}
         </p>
+        <div className="flex gap-2 mt-3">
+          <Button size="sm" onClick={() => setBulkOpen(true)} disabled={applicants.length === 0}>
+            <Send className="h-4 w-4 mr-1" />
+            {isBn ? "বাল্ক বার্তা" : "Bulk Message"}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setMonitorOpen(true)}>
+            <Activity className="h-4 w-4 mr-1" />
+            {isBn ? "ডেলিভারি লগ" : "Delivery Log"}
+          </Button>
+        </div>
       </div>
 
       <ApplicantsFilterBar
@@ -154,6 +168,19 @@ export default function ApplicantsClient() {
           await handleStatusChange(changeStatusApp, status);
           setChangeStatusApp(null);
         }}
+      />
+      <BulkMessageDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        applicants={applicants}
+        statusFilter={statusFilter}
+        isBn={isBn}
+      />
+
+      <DeliveryMonitorDialog
+        open={monitorOpen}
+        onOpenChange={setMonitorOpen}
+        isBn={isBn}
       />
     </div>
   );
