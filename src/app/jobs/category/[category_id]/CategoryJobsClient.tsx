@@ -473,7 +473,7 @@ export default function CategoryJobsClient({ categoryId }: { categoryId: string 
                                   if (!label) return null;
                                   return <Badge key={idx} variant="secondary" className="text-xs">{label}</Badge>;
                                 })}
-                                {job.is_remote && <Badge variant="outline" className="text-xs border-green-300 text-green-600"><Globe className="h-3 w-3 mr-1" />Remote</Badge>}
+                                {job.is_remote_project || job.is_remote ? <Badge variant="outline" className="text-xs border-green-300 text-green-600"><Globe className="h-3 w-3 mr-1" />Remote</Badge> : null}
                               </div>
 
                               {/* Meta */}

@@ -90,7 +90,7 @@ export default function SavedJobsPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-2">
-                      {job.is_remote ? (
+                      {job.is_remote_project || job.is_remote ? (
                         <Badge variant="secondary" className="text-xs gap-1">
                           <Globe className="h-3 w-3" /> {isBn ? "রিমোট" : "Remote"}
                         </Badge>

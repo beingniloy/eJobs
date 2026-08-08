@@ -65,7 +65,7 @@ export default function RemoteJobCard({ job, isBn, onApply }: Props) {
               if (!label) return null;
               return <Badge key={label || idx} variant="secondary" className="text-xs">{label}</Badge>;
             })}
-            {job.is_remote && <Badge variant="outline" className="text-xs border-green-300 text-green-600"><Globe className="h-3 w-3 mr-1" />Remote</Badge>}
+            {job.is_remote_project && <Badge variant="outline" className="text-xs border-green-300 text-green-600"><Globe className="h-3 w-3 mr-1" />{isBn ? "রিমোট" : "Remote"}</Badge>}
           </div>
           <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
             {timeLeft != null && <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{timeLeft} {isBn ? "দিন বাকি" : "Days Left"}</span>}

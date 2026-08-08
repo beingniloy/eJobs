@@ -298,7 +298,7 @@ export default function JobsListClient() {
                             <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{truncate(desc, 180)}</p>
                             <div className="flex flex-wrap gap-1.5 mt-3">
                               {skills.slice(0, 4).map((s: any, idx: number) => { const label = typeof s === "string" ? s : s?.name || ""; if (!label) return null; return <Badge key={idx} variant="secondary" className="text-xs">{label}</Badge>; })}
-                              {job.is_remote && <Badge variant="outline" className="text-xs border-green-300 text-green-600"><Globe className="h-3 w-3 mr-1" />Remote</Badge>}
+                              {job.is_remote_project || job.is_remote ? <Badge variant="outline" className="text-xs border-green-300 text-green-600"><Globe className="h-3 w-3 mr-1" />Remote</Badge> : null}
                             </div>
                             <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
                               {timeLeft != null && <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {timeLeft} {isBn ? "দিন বাকি" : "Days Left"}</span>}
