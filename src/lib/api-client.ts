@@ -1,8 +1,9 @@
 import axios from "axios";
 import type { AxiosError, InternalAxiosRequestConfig } from "axios";
 
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api").replace(/\/api\/?$/, "");
 const api = axios.create({
-  baseURL: "/api",
+  baseURL: `${API_BASE}/api`,
   withCredentials: true,
   timeout: 30000,
   headers: {
