@@ -71,8 +71,6 @@ export default function ApplicantsClient() {
   const handleStatusChange = useCallback(async (app: JobApplication, newStatus: string) => {
     try {
       await tryEndpoints([
-        () => api.patch(`/employer/applications/${app.id}`, { status: newStatus }),
-        () => api.post(`/employer/applications/${app.id}/status`, { status: newStatus }),
         () => api.patch(`/employer/applicants/${app.id}`, { status: newStatus }),
         () => api.post(`/employer/applicants/${app.id}/status`, { status: newStatus }),
       ]);
