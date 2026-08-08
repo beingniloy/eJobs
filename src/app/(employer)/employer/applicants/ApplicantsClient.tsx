@@ -28,6 +28,7 @@ export default function ApplicantsClient() {
   const [selectedApp, setSelectedApp] = useState<JobApplication | null>(null);
   const [changeStatusApp, setChangeStatusApp] = useState<JobApplication | null>(null);
   const [expandedJobs, setExpandedJobs] = useState<Record<number, boolean>>({});
+  const [pendingId, setPendingId] = useState<number | null>(null);
 
   useEffect(() => {
     document.title = isBn ? `আবেদনকারী | ${siteName}` : `Applicants | ${siteName}`;
@@ -69,12 +70,14 @@ export default function ApplicantsClient() {
   }, []);
 
   const handleStatusChange = useCallback(async (app: JobApplication, newStatus: string) => {
+    const prevStatus = app.status || "pending";
+    setPendingId(app.id);
+    refreshStatus(app.id, newStatus);
     try {
       await tryEndpoints([
         () => api.patch(`/employer/applicants/${app.id}`, { status: newStatus }),
         () => api.post(`/employer/applicants/${app.id}/status`, { status: newStatus }),
       ]);
-      refreshStatus(app.id, newStatus);
       const labels: Record<string, { en: string; bn: string }> = {
         shortlisted: { en: "Shortlisted", bn: "শর্টলিস্টে যোগ করা হয়েছে" },
         rejected: { en: "Rejected", bn: "প্রত্যাখ্যাত" },
@@ -84,7 +87,10 @@ export default function ApplicantsClient() {
       };
       toast.success(labels[newStatus] ? (isBn ? labels[newStatus].bn : labels[newStatus].en) : "Status updated");
     } catch (err: any) {
+      refreshStatus(app.id, prevStatus);
       toast.error(err?.response?.data?.message || (isBn ? "ব্যর্থ" : "Failed to update status"));
+    } finally {
+      setPendingId(null);
     }
   }, [isBn, refreshStatus]);
 
@@ -125,6 +131,7 @@ export default function ApplicantsClient() {
               isBn={isBn}
               onToggle={() => setExpandedJobs((p) => ({ ...p, [group.jobId]: p[group.jobId] !== false ? false : true }))}
               onStatusChange={handleStatusChange}
+              pendingId={pendingId}
             />
           ))}
         </div>

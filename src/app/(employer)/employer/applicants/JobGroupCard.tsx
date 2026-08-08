@@ -14,9 +14,10 @@ interface Props {
   isBn: boolean;
   onToggle: () => void;
   onStatusChange: (app: JobApplication, status: string) => void;
+  pendingId?: number | null;
 }
 
-export default function JobGroupCard({ group, isExpanded, isBn, onToggle, onStatusChange }: Props) {
+export default function JobGroupCard({ group, isExpanded, isBn, onToggle, onStatusChange, pendingId }: Props) {
   return (
     <Card className="overflow-hidden">
       {/* Header — click to expand/collapse */}
@@ -65,6 +66,7 @@ export default function JobGroupCard({ group, isExpanded, isBn, onToggle, onStat
               app={app}
               isBn={isBn}
               onStatusChange={onStatusChange}
+              pending={pendingId === app.id}
             />
           ))}
         </div>

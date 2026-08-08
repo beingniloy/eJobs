@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import type { JobApplication } from "@/types";
 import { candidateLabel } from "./applicants-utils";
 
@@ -21,7 +22,19 @@ interface Props {
 const STATUSES = ["pending", "reviewed", "shortlisted", "rejected", "hired"];
 
 export function StatusChangeDialog({ app, isBn, onOpenChange, onStatusChange }: Props) {
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+
   if (!app) return null;
+
+  const handleClick = async (s: string) => {
+    if (pendingStatus) return;
+    setPendingStatus(s);
+    try {
+      await onStatusChange(s);
+    } finally {
+      setPendingStatus(null);
+    }
+  };
 
   return (
     <Dialog open={!!app} onOpenChange={onOpenChange}>
@@ -40,9 +53,14 @@ export function StatusChangeDialog({ app, isBn, onOpenChange, onStatusChange }: 
                 variant={app.status === s ? "default" : "outline"}
                 size="sm"
                 className="capitalize"
-                onClick={() => onStatusChange(s)}
+                disabled={!!pendingStatus}
+                onClick={() => handleClick(s)}
               >
-                {s}
+                {pendingStatus === s ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  s
+                )}
               </Button>
             ))}
           </div>

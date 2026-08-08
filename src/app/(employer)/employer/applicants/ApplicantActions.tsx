@@ -19,6 +19,7 @@ import {
   MoreHorizontal,
   Download,
   ClipboardList,
+  Loader2,
 } from "lucide-react";
 import type { JobApplication } from "@/types";
 import { getAvailableStatuses, getStatusLabel, candidateLabel } from "./applicants-utils";
@@ -28,9 +29,10 @@ interface Props {
   profileUrl: string | null;
   isBn: boolean;
   onStatusChange: (app: JobApplication, status: string) => void;
+  pending?: boolean;
 }
 
-export default function ApplicantActions({ app, profileUrl, isBn, onStatusChange }: Props) {
+export default function ApplicantActions({ app, profileUrl, isBn, onStatusChange, pending }: Props) {
   const router = useRouter();
   const available = getAvailableStatuses(app.status || "pending");
 
@@ -38,6 +40,15 @@ export default function ApplicantActions({ app, profileUrl, isBn, onStatusChange
     const cid = app.user?.id ?? app.id;
     if (cid) router.push(`/employer/messages?to=${cid}`);
   };
+
+  if (pending) {
+    return (
+      <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        {isBn ? "আপডেট হচ্ছে..." : "Updating..."}
+      </div>
+    );
+  }
 
   return (
     <div className="mt-2 flex items-center gap-1">
