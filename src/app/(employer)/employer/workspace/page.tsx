@@ -5,6 +5,7 @@ import api from "@/lib/api-client";
 import { useThemeStore } from "@/store/theme-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useRealtimeMessages } from "@/hooks/use-realtime-messages";
+import { MessageAttachment } from "@/components/messages/MessageAttachment";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,9 @@ import {
   ChevronUp,
   FileArchive,
   Loader2,
+  Paperclip,
+  ImageIcon,
+  X,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -88,6 +92,22 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   disputed: { label: "Disputed", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300", icon: AlertTriangle },
 };
 
+function getFileIcon(name: string) {
+  const ext = name.split(".").pop()?.toLowerCase();
+  if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext || "")) return ImageIcon;
+  if (["pdf"].includes(ext || "")) return FileText;
+  if (["zip", "rar", "7z"].includes(ext || "")) return FileArchive;
+  if (["doc", "docx"].includes(ext || "")) return FileText;
+  if (["xls", "xlsx", "csv"].includes(ext || "")) return FileText;
+  return FileText;
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function formatChatTime(dateStr: string): string {
   const d = new Date(dateStr);
   const now = new Date();
@@ -130,10 +150,23 @@ export default function EmployerWorkspacePage() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [conversationUuid, setConversationUuid] = useState<string | null>(null);
+  const [chatAttachFiles, setChatAttachFiles] = useState<File[]>([]);
+  const chatFileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showMobileChat, setShowMobileChat] = useState(false);
+
+  const chatAttachUrls = useMemo(() => chatAttachFiles.map((f) => ({
+    url: URL.createObjectURL(f),
+    name: f.name,
+    size: f.size,
+    type: f.type,
+  })), [chatAttachFiles]);
+
+  useEffect(() => {
+    return () => chatAttachUrls.forEach((f) => URL.revokeObjectURL(f.url));
+  }, [chatAttachUrls]);
 
   const [revisionDialogOpen, setRevisionDialogOpen] = useState(false);
   const [revisionProject, setRevisionProject] = useState<WorkspaceProject | null>(null);
@@ -226,21 +259,41 @@ export default function EmployerWorkspacePage() {
   useEffect(() => { scrollToBottom(); }, [chatMessages, scrollToBottom]);
 
   const sendMessage = async () => {
-    if (!chatInput.trim() || !otherParty || !currentUserId) return;
+    if ((!chatInput.trim() && chatAttachFiles.length === 0) || !otherParty || !currentUserId) return;
     const text = chatInput.trim();
+    const files = [...chatAttachFiles];
     const tempId = -Date.now();
     setChatMessages((prev) => [
       ...prev,
-      { id: tempId, sender_id: currentUserId, receiver_id: otherParty.id, message: text, created_at: new Date().toISOString(), is_read: true, pending: true },
+      {
+        id: tempId,
+        sender_id: currentUserId,
+        receiver_id: otherParty.id,
+        message: text,
+        created_at: new Date().toISOString(),
+        is_read: true,
+        pending: true,
+        attachment_path: files[0] ? URL.createObjectURL(files[0]) : undefined,
+      },
     ]);
     setChatInput("");
+    setChatAttachFiles([]);
     try {
-      const res = await api.post(`/messages/direct/${otherParty.id}`, { message: text });
+      let res;
+      if (files.length > 0) {
+        const formData = new FormData();
+        formData.append("message", text);
+        files.forEach((f) => formData.append("attachment", f));
+        res = await api.post(`/messages/direct/${otherParty.id}`, formData);
+      } else {
+        res = await api.post(`/messages/direct/${otherParty.id}`, { message: text });
+      }
       const saved = res.data.data;
       setChatMessages((prev) => prev.map((m) => (m.id === tempId ? saved : m)));
     } catch {
       setChatMessages((prev) => prev.filter((m) => m.id !== tempId));
       setChatInput(text);
+      setChatAttachFiles(files);
       toast.error(isBn ? "বার্তা পাঠাতে ব্যর্থ" : "Failed to send message");
     }
   };
@@ -525,6 +578,13 @@ export default function EmployerWorkspacePage() {
                     <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
                       <div className={`max-w-[75%] rounded-lg px-4 py-2 ${isOwn ? "bg-primary text-primary-foreground" : "bg-muted"} ${msg.pending ? "opacity-70" : ""}`}>
                         {!isOwn && otherParty && <p className="text-xs font-medium mb-0.5 opacity-70">{otherParty.name}</p>}
+                        {msg.attachment_path && (
+                          <MessageAttachment
+                            url={getStorageUrl(msg.attachment_path) || `/storage/${msg.attachment_path}`}
+                            name={msg.attachment_path.split("/").pop() || ""}
+                            mine={isOwn}
+                          />
+                        )}
                         <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
                         <p className={`text-[10px] mt-1 flex items-center gap-1 ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
                           {msg.pending && <Loader2 className="h-3 w-3 animate-spin" />}
@@ -539,9 +599,75 @@ export default function EmployerWorkspacePage() {
             </div>
 
             <div className="p-4 border-t shrink-0">
+              {chatAttachFiles.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {chatAttachUrls.map((f, i) => {
+                    const isImage = f.type.startsWith("image/");
+                    const FileIcon = getFileIcon(f.name);
+                    return (
+                      <div key={i} className="relative group">
+                        {isImage ? (
+                          <img
+                            src={f.url}
+                            alt={f.name}
+                            className="h-16 w-16 object-cover rounded-lg border"
+                          />
+                        ) : (
+                          <div className="h-16 w-24 flex flex-col items-center justify-center rounded-lg border bg-muted gap-1">
+                            <FileIcon className="h-5 w-5 text-muted-foreground" />
+                            <span className="text-[9px] text-muted-foreground truncate max-w-[80px] px-1">
+                              {f.name}
+                            </span>
+                          </div>
+                        )}
+                        <div className="absolute -top-1.5 -right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setChatAttachFiles((prev) =>
+                                prev.filter((_, idx) => idx !== i)
+                              )
+                            }
+                            className="h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-sm"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <p className="text-[9px] text-muted-foreground text-center mt-0.5 truncate max-w-[64px]">
+                          {formatFileSize(f.size)}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="flex items-end gap-2">
+                <input
+                  ref={chatFileInputRef}
+                  type="file"
+                  className="hidden"
+                  multiple
+                  accept="image/*,.pdf,.doc,.docx,.zip,.rar,.7z,.txt,.js,.ts,.jsx,.tsx,.py,.java,.php,.html,.css,.json,.xml"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length > 0) {
+                      setChatAttachFiles((prev) => [...prev, ...files].slice(0, 5));
+                    }
+                    e.target.value = "";
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground"
+                  onClick={() => chatFileInputRef.current?.click()}
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
                 <Input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder={isBn ? "বার্তা লিখুন..." : "Type a message..."} className="flex-1" autoComplete="off" />
-                <Button type="submit" size="icon" className="h-10 w-10 shrink-0" disabled={!chatInput.trim()}>
+                <Button type="submit" size="icon" className="h-10 w-10 shrink-0" disabled={!chatInput.trim() && chatAttachFiles.length === 0}>
                   <Send className="h-4 w-4" />
                 </Button>
               </form>

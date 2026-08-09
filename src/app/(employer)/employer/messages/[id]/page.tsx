@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useThemeStore } from "@/store/theme-store";
 import { useAuth } from "@/hooks/use-auth";
 import { messagesService } from "@/services/messages.service";
+import { MessageAttachment } from "@/components/messages/MessageAttachment";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -217,22 +218,11 @@ export default function EmployerConversationPage() {
                 ? attachmentPath
                 : `/api/messages/attachment/${encodeURIComponent(attachmentPath)}`
               : null;
-            const isImage = attachmentUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(attachmentUrl);
             const attachmentName = attachmentPath ? attachmentPath.split("/").pop() : "";
             return (
               <div key={msg.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${isMine ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                  {attachmentUrl && isImage && (
-                    <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="block mb-1.5">
-                      <img src={attachmentUrl} alt="attachment" className="rounded-lg max-h-48 object-cover" loading="lazy" />
-                    </a>
-                  )}
-                  {attachmentUrl && !isImage && (
-                    <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 p-2 rounded-lg mb-1.5 ${isMine ? "bg-primary-foreground/10" : "bg-background/50"} hover:opacity-80 transition-opacity`}>
-                      <Paperclip className="h-4 w-4 shrink-0" />
-                      <span className="text-xs truncate">{attachmentName}</span>
-                    </a>
-                  )}
+                  <MessageAttachment url={attachmentUrl} name={attachmentName} mine={isMine} />
                   {msg.message || msg.content ? (
                     <p className="text-sm whitespace-pre-wrap break-words">{msg.message || msg.content}</p>
                   ) : null}

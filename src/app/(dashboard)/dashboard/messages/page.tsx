@@ -7,13 +7,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRealtimeMessages } from "@/hooks/use-realtime-messages";
 import api from "@/lib/api-client";
 import { messagesService } from "@/services/messages.service";
+import { MessageAttachment } from "@/components/messages/MessageAttachment";
 import { toast } from "sonner";
 import { DefaultAvatar } from "@/components/ui/default-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageSquare, RefreshCw, Search, Send, ArrowLeft, Paperclip, Clock } from "lucide-react";
+import { MessageSquare, RefreshCw, Search, Send, ArrowLeft, Clock } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 
 function MessagesContent() {
@@ -259,7 +260,6 @@ function MessagesContent() {
                       ? attachmentPath
                       : `/api/messages/attachment/${encodeURIComponent(attachmentPath)}`
                     : null;
-                  const isImage = attachmentUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(attachmentUrl);
                   const attachmentName = attachmentPath ? attachmentPath.split("/").pop() : "";
                   return (
                     <div key={msg.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
@@ -271,17 +271,7 @@ function MessagesContent() {
                           </div>
                         )}
                         <div className={`rounded-2xl px-4 py-2 ${mine ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                          {attachmentUrl && isImage && (
-                            <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="block mb-1.5">
-                              <img src={attachmentUrl} alt="attachment" className="rounded-lg max-h-48 object-cover" loading="lazy" />
-                            </a>
-                          )}
-                          {attachmentUrl && !isImage && (
-                            <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 p-2 rounded-lg mb-1.5 ${mine ? "bg-primary-foreground/10" : "bg-background/50"} hover:opacity-80 transition-opacity`}>
-                              <Paperclip className="h-4 w-4 shrink-0" />
-                              <span className="text-xs truncate">{attachmentName}</span>
-                            </a>
-                          )}
+                          <MessageAttachment url={attachmentUrl} name={attachmentName} mine={mine} />
                           <p className="text-sm whitespace-pre-wrap break-words">{msg.message || msg.content || msg.body || ""}</p>
                           <p className={`text-[10px] mt-1 flex items-center gap-1 ${mine ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
                             {formatRelativeTime(msg.created_at)}

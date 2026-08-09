@@ -6,6 +6,7 @@ import { useThemeStore } from "@/store/theme-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listenToMessages } from "@/lib/echo";
+import { MessageAttachment } from "@/components/messages/MessageAttachment";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -799,36 +800,11 @@ export default function CandidateWorkspacePage() {
                           {msg.message}
                         </p>
                         {msg.attachment_path && (
-                          <div className="mt-2">
-                            {/\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachment_path) ? (
-                              <a href={getStorageUrl(msg.attachment_path) || `/storage/${msg.attachment_path}`} target="_blank" rel="noopener noreferrer">
-                                <img
-                                  src={getStorageUrl(msg.attachment_path) || `/storage/${msg.attachment_path}`}
-                                  alt="attachment"
-                                  className="max-h-48 rounded-lg border object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                />
-                              </a>
-                            ) : (
-                              <a
-                                href={getStorageUrl(msg.attachment_path) || `/storage/${msg.attachment_path}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`flex items-center gap-2 p-2 rounded-lg text-xs transition-colors ${
-                                  isOwn
-                                    ? "bg-primary-foreground/10 hover:bg-primary-foreground/20"
-                                    : "bg-background hover:bg-muted"
-                                }`}
-                              >
-                                {(() => {
-                                  const FileIcon = getFileIcon(msg.attachment_path);
-                                  return <FileIcon className="h-4 w-4 shrink-0" />;
-                                })()}
-                                <span className="truncate max-w-[180px]">
-                                  {msg.attachment_path.split("/").pop()}
-                                </span>
-                              </a>
-                            )}
-                          </div>
+                          <MessageAttachment
+                            url={getStorageUrl(msg.attachment_path) || `/storage/${msg.attachment_path}`}
+                            name={msg.attachment_path.split("/").pop() || ""}
+                            mine={isOwn}
+                          />
                         )}
                         <p
                           className={`text-[10px] mt-1 flex items-center gap-1 ${

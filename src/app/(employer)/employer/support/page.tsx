@@ -34,6 +34,7 @@ import {
   XCircle,
   ImageIcon,
   Paperclip,
+  Download,
 } from "lucide-react";
 
 /* ─── Interfaces ─── */
@@ -122,7 +123,6 @@ export default function EmployerSupportPage() {
   const [ticketDetailLoading, setTicketDetailLoading] = useState(false);
   const [replyMessage, setReplyMessage] = useState("");
   const [replyAttachments, setReplyAttachments] = useState<File[]>([]);
-  const [sendingReply, setSendingReply] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const ticketFileInputRef = useRef<HTMLInputElement>(null);
   const replyFileInputRef = useRef<HTMLInputElement>(null);
@@ -287,7 +287,6 @@ export default function EmployerSupportPage() {
 
   const handleSendReply = async () => {
     if (!selectedTicket || !replyMessage.trim()) return;
-    setSendingReply(true);
     try {
       const prepared = await prepareAttachments(replyAttachments);
       const attachments = await Promise.all(
@@ -303,8 +302,6 @@ export default function EmployerSupportPage() {
       toast.success(isBn ? "উত্তর পাঠানো হয়েছে" : "Reply sent successfully");
     } catch {
       toast.error(isBn ? "উত্তর পাঠাতে ব্যর্থ" : "Failed to send reply");
-    } finally {
-      setSendingReply(false);
     }
   };
 
@@ -396,18 +393,56 @@ export default function EmployerSupportPage() {
     if (!attachments || !attachments.length) return null;
     return (
       <div className="mt-2 space-y-1">
-        {attachments.map((item, idx) => (
-          <a
-            key={idx}
-            href={item}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-2 text-xs text-primary underline"
-          >
-            <Paperclip className="h-3 w-3" />
-            {isBn ? "সংযুক্তি" : "Attachment"} {idx + 1}
-          </a>
-        ))}
+        {attachments.map((item, idx) => {
+          const isImage = item.startsWith("data:image") || /\.(jpg|jpeg|png|gif|webp)$/i.test(item);
+          const name = item.split("/").pop()?.split("?")[0] || `attachment-${idx + 1}`;
+          return (
+            <div
+              key={idx}
+              className="flex items-center gap-2 text-xs"
+            >
+              {isImage ? (
+                <div className="relative group">
+                  <a href={item} target="_blank" rel="noreferrer" className="block">
+                    <img
+                      src={item}
+                      alt={name}
+                      className="h-16 w-16 object-cover rounded-lg border"
+                    />
+                  </a>
+                  <a
+                    href={item}
+                    download={name}
+                    title="Download"
+                    className="absolute top-1 right-1 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Download className="h-3 w-3" />
+                  </a>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-lg border bg-muted px-2 py-1.5 min-w-0">
+                  <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <a
+                    href={item}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="truncate text-primary underline max-w-[200px]"
+                  >
+                    {name}
+                  </a>
+                  <a
+                    href={item}
+                    download={name}
+                    title="Download"
+                    className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -735,7 +770,6 @@ export default function EmployerSupportPage() {
                             ? "আপনার উত্তর লিখুন..."
                             : "Write your reply..."
                         }
-                        disabled={sendingReply}
                         className="flex-1 resize-none"
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
@@ -746,7 +780,7 @@ export default function EmployerSupportPage() {
                       />
                       <Button
                         onClick={handleSendReply}
-                        disabled={sendingReply || !replyMessage.trim()}
+                        disabled={!replyMessage.trim()}
                         size="icon"
                         className="h-10 w-10 shrink-0"
                       >
