@@ -75,7 +75,7 @@ export default function RemoteJobsClient() {
       const params = new URLSearchParams();
       params.append("page", String(page));
       if (searchQuery) params.append("search", searchQuery);
-      if (category !== "all") params.append("category", category);
+      if (category !== "all") params.append("category_id", category);
       if (budgetMin) params.append("budget_min", budgetMin);
       if (budgetMax) params.append("budget_max", budgetMax);
       if (selectedExperience !== "All Levels") params.append("experience_level", selectedExperience);
@@ -96,8 +96,8 @@ export default function RemoteJobsClient() {
 
   useEffect(() => {
     api.get("/categories").then((res) => setCategories((res.data?.data || []).filter((c: any) => c.is_remote).map((c: any) => ({ value: c.id.toString(), label: c.name_en || c.name, count: c.jobs_count || 0 })))).catch(() => {});
-    api.get("/jobs/stats").then((res: any) => setPlatformStats(res.data || res)).catch(() => {});
-    api.get("/jobs/popular-skills").then((res: any) => setTopSkills(res.data || res)).catch(() => {});
+    api.get("/jobs/stats").then((res: any) => setPlatformStats(res.data?.data || res.data || {})).catch(() => {});
+    api.get("/jobs/popular-skills").then((res: any) => setTopSkills(res.data?.data || [])).catch(() => {});
   }, []);
 
   const toggleSkill = (s: string) => setSelectedSkills((p) => p.includes(s) ? p.filter((x) => x !== s) : [...p, s]);
