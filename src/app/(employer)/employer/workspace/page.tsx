@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import api from "@/lib/api-client";
 import { useThemeStore } from "@/store/theme-store";
 import { useAuthStore } from "@/store/auth-store";
+import { useRealtimeMessages } from "@/hooks/use-realtime-messages";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,13 +68,16 @@ interface WorkspaceProject {
 }
 
 interface ChatMessage {
-  id: number;
+  id: number | string;
   sender_id: number;
   receiver_id: number;
   message: string;
   created_at: string;
   is_read: boolean;
   pending?: boolean;
+  _pending?: boolean;
+  _failed?: boolean;
+  attachment_path?: string;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
@@ -126,6 +130,7 @@ export default function EmployerWorkspacePage() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [conversationUuid, setConversationUuid] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -159,7 +164,15 @@ export default function EmployerWorkspacePage() {
   const fetchMessages = useCallback(async (targetUserId: number) => {
     try {
       const res = await api.get(`/messages/direct/${targetUserId}`);
-      setChatMessages(res.data.data?.messages || []);
+      const list = res.data.data?.messages || [];
+      if (res.data.conversation?.uuid) setConversationUuid(res.data.conversation.uuid);
+      // Merge — keep any optimistic (temp-*) bubbles that are still in flight
+      setChatMessages((prev) => {
+        const temp = prev.filter((m) => typeof m.id === "string" && m.id.startsWith("temp-"));
+        const known = new Set(list.map((m: any) => m.id));
+        const merged = [...list, ...temp.filter((t) => !known.has(t.id))];
+        return merged;
+      });
     } catch { /* silent on poll */ }
   }, []);
 
@@ -168,12 +181,14 @@ export default function EmployerWorkspacePage() {
     setShowMobileChat(true);
     setChatMessages([]);
     setChatInput("");
+    setConversationUuid(null);
     const other = project.candidate;
     if (!other) return;
     setChatLoading(true);
     try {
       const res = await api.get(`/messages/direct/${other.id}`);
       setChatMessages(res.data.data?.messages || []);
+      if (res.data.conversation?.uuid) setConversationUuid(res.data.conversation.uuid);
     } catch {
       toast.error(isBn ? "বার্তা লোড করতে ব্যর্থ" : "Failed to load messages");
     } finally {
@@ -188,6 +203,26 @@ export default function EmployerWorkspacePage() {
     }
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [selectedProject, fetchMessages]);
+
+  // Realtime incoming messages (WebSocket)
+  useRealtimeMessages(conversationUuid, (incoming) => {
+    setChatMessages((prev) => {
+      if (prev.some((m) => m.id === incoming.id)) return prev;
+      return [...prev, incoming];
+    });
+  });
+
+  // Flash tab title when a new incoming message arrives, reset on focus
+  useEffect(() => {
+    if (!chatMessages.length) return;
+    const last = chatMessages[chatMessages.length - 1];
+    if (!last || last.sender_id === currentUserId || last.pending) return;
+    const base = isBn ? "eJobs | কর্মক্ষেত্র" : "eJobs | Workspace";
+    document.title = `(1) New Message | ${base}`;
+    const reset = () => { document.title = base; };
+    window.addEventListener("focus", reset);
+    return () => window.removeEventListener("focus", reset);
+  }, [chatMessages, currentUserId, isBn]);
 
   useEffect(() => { scrollToBottom(); }, [chatMessages, scrollToBottom]);
 

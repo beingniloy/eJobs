@@ -80,13 +80,15 @@ interface Project {
 }
 
 interface ChatMessage {
-  id: number;
+  id: number | string;
   sender_id: number;
   receiver_id: number;
   message: string;
   attachment_path?: string;
   created_at: string;
   is_read: boolean;
+  _pending?: boolean;
+  _failed?: boolean;
 }
 
 /* ─── Status Config ─── */
@@ -325,6 +327,18 @@ export default function CandidateWorkspacePage() {
     scrollToBottom();
   }, [chatMessages, scrollToBottom]);
 
+  // Flash tab title when a new incoming message arrives, reset on focus
+  useEffect(() => {
+    if (!chatMessages.length) return;
+    const last = chatMessages[chatMessages.length - 1];
+    if (!last || last.sender_id === currentUserId || last._pending) return;
+    const base = isBn ? "eJobs | কর্মক্ষেত্র" : "eJobs | Workspace";
+    document.title = `(1) New Message | ${base}`;
+    const reset = () => { document.title = base; };
+    window.addEventListener("focus", reset);
+    return () => window.removeEventListener("focus", reset);
+  }, [chatMessages, currentUserId, isBn]);
+
   const sendMessage = async () => {
     if ((!chatInput.trim() && attachFiles.length === 0) || !otherParty) return;
 
@@ -333,6 +347,17 @@ export default function CandidateWorkspacePage() {
     setChatInput("");
     setAttachFiles([]);
     setSendingMessage(true);
+
+    // Optimistic bubble — instant like Messenger
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: any = {
+      id: tempId,
+      sender_id: user?.id,
+      message: text,
+      created_at: new Date().toISOString(),
+      _pending: true,
+    };
+    setChatMessages((prev) => [...prev, optimistic]);
 
     try {
       let res;
@@ -345,22 +370,38 @@ export default function CandidateWorkspacePage() {
         res = await api.post(`/messages/direct/${otherParty.id}`, { message: text });
       }
       const sentMsg = res.data?.data;
-      if (sentMsg) {
-        setChatMessages((prev) => {
-          if (prev.some((m) => m.id === sentMsg.id)) return prev;
-          return [...prev, sentMsg];
-        });
+      if (sentMsg?.id) {
+        setChatMessages((prev) => prev.map((m) => (m.id === tempId ? { ...sentMsg, _pending: false } : m)));
+      } else {
+        setChatMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, _pending: false } : m)));
       }
     } catch {
       toast.error(
         isBn ? "বার্তা পাঠাতে ব্যর্থ" : "Failed to send message"
       );
+      setChatMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, _pending: false, _failed: true } : m)));
       setChatInput(text);
       setAttachFiles(files);
     } finally {
       setSendingMessage(false);
     }
   };
+
+  // Fallback polling for open chat when WebSocket is unavailable
+  useEffect(() => {
+    if (!conversationUuid) return;
+    const id = setInterval(() => {
+      api.get(`/messages/conversation/${conversationUuid}`).then((res: any) => {
+        const list = res?.data?.data || [];
+        setChatMessages((prev) => {
+          const known = new Set(prev.map((m: any) => m.id));
+          const fresh = list.filter((m: any) => !known.has(m.id) && !String(m.id).startsWith("temp-"));
+          return fresh.length ? [...prev, ...fresh] : prev;
+        });
+      }).catch(() => {});
+    }, 15000);
+    return () => clearInterval(id);
+  }, [conversationUuid]);
 
   /* ─── Submit Work ─── */
 
@@ -794,13 +835,15 @@ export default function CandidateWorkspacePage() {
                           </div>
                         )}
                         <p
-                          className={`text-[10px] mt-1 ${
+                          className={`text-[10px] mt-1 flex items-center gap-1 ${
                             isOwn
                               ? "text-primary-foreground/60"
                               : "text-muted-foreground"
                           }`}
                         >
                           {formatChatTime(msg.created_at)}
+                          {msg._pending && <Clock className="h-3 w-3" />}
+                          {msg._failed && <span className="text-red-400">{isBn ? "ব্যর্থ" : "Failed"}</span>}
                         </p>
                       </div>
                     </div>
