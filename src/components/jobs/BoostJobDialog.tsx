@@ -117,7 +117,8 @@ export default function BoostJobDialog({
       onComplete?.();
     } catch (err: any) {
       const msg = err?.response?.data?.message || (isBn ? "বুস্ট করতে ব্যর্থ" : "Failed to boost job");
-      toast.error(msg);
+      const reason = err?.response?.data?.reason;
+      toast.error(reason ? (isBn ? `${msg} ${reason}` : `${msg} ${reason}`) : msg, { duration: 6000 });
     } finally {
       setSubmitting(false);
     }

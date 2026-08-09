@@ -36,7 +36,7 @@ import {
 import { toast } from "sonner";
 import {
   Plus, Briefcase, Zap, Search, Edit, Pause, Play, Trash2,
-  Users, TrendingUp, Clock, XCircle, Loader2, Copy,
+  Users, TrendingUp, Clock, XCircle, Loader2, Copy, CheckCircle,
 } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
 
@@ -285,6 +285,7 @@ export default function ManageJobsPage() {
                 const promo = getBoostInfo(job.id);
                 const boost = promo ? getBoostTimeRemaining(promo) : null;
                 const typeLabel = getJobType(job);
+                const boostLocked = !!(promo && (promo.status === "active" || promo.status === "pending_review"));
                 return (
                   <TableRow key={job.id}>
                     <TableCell><div className="font-medium">{job.title}</div>{job.location && <div className="text-xs text-muted-foreground sm:hidden">{job.location}</div>}</TableCell>
@@ -313,7 +314,9 @@ export default function ManageJobsPage() {
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
                         {hasBoostAccess && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950" onClick={() => { setBoostJobId(job.id); setBoostJobTitle(job.title); }} disabled={job.status !== "active" && !job.is_active} title={isBn ? "বুস্ট" : "Boost"}><Zap className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950" onClick={() => { setBoostJobId(job.id); setBoostJobTitle(job.title); }} disabled={(job.status !== "active" && !job.is_active) || boostLocked} title={boostLocked ? (isBn ? "ইতিমধ্যে বুস্টেড" : "Already boosted") : isBn ? "বুস্ট" : "Boost"}>
+                            {boostLocked ? <CheckCircle className="h-4 w-4" /> : <Zap className="h-4 w-4" />}
+                          </Button>
                         )}
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950" onClick={() => handleCopyLink(job)} title="Copy Link"><Copy className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" asChild title="Edit"><Link href={`/employer/manage-jobs/${job.id}/edit`}><Edit className="h-4 w-4" /></Link></Button>
