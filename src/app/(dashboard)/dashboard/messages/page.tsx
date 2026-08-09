@@ -4,6 +4,7 @@ import React, { Suspense, useEffect, useState, useRef, useCallback } from "react
 import { useSearchParams } from "next/navigation";
 import { useThemeStore } from "@/store/theme-store";
 import { useAuth } from "@/hooks/use-auth";
+import { useRealtimeMessages } from "@/hooks/use-realtime-messages";
 import api from "@/lib/api-client";
 import { messagesService } from "@/services/messages.service";
 import { toast } from "sonner";
@@ -12,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageSquare, Loader2, RefreshCw, Search, Send, ArrowLeft, Paperclip } from "lucide-react";
+import { MessageSquare, Loader2, RefreshCw, Search, Send, ArrowLeft, Paperclip, Clock } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 
 function MessagesContent() {
@@ -80,18 +81,64 @@ function MessagesContent() {
   // Auto-scroll
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  // Send
+  // Realtime incoming messages (WebSocket)
+  useRealtimeMessages(selectedConv?.uuid, (incoming) => {
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === incoming.id)) return prev;
+      return [...prev, incoming];
+    });
+    // Bump conversation preview in sidebar
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.uuid === selectedConv?.uuid ? { ...c, messages: [...(c.messages || []), incoming] } : c
+      )
+    );
+  });
+
+  // Fallback polling when WebSocket is unavailable — light refresh of open chat
+  useEffect(() => {
+    if (!selectedConv?.uuid) return;
+    const id = setInterval(() => {
+      messagesService.getMessages(selectedConv.uuid).then((res: any) => {
+        const list = res?.messages || [];
+        setMessages((prev) => {
+          const known = new Set(prev.map((m) => m.id));
+          const fresh = list.filter((m: any) => !known.has(m.id));
+          return fresh.length ? [...prev, ...fresh] : prev;
+        });
+      }).catch(() => {});
+    }, 15000);
+    return () => clearInterval(id);
+  }, [selectedConv?.uuid]);
+
+  // Send (optimistic — instant like Messenger)
   const handleSend = async () => {
     const t = body.trim();
     if (!t || sending || !selectedConv) return;
     setSending(true);
+    const tempId = `temp-${Date.now()}`;
+    const optimistic = {
+      id: tempId,
+      sender_id: user?.id,
+      message: t,
+      created_at: new Date().toISOString(),
+      _pending: true,
+    };
+    setMessages((p) => [...p, optimistic]);
+    setBody("");
     try {
       const res = await messagesService.sendMessage(selectedConv.uuid, t);
-      const msg = res?.data || res;
-      if (msg?.id) { setMessages((p) => [...p, msg]); }
-      else { setMessages((p) => [...p, { id: Date.now(), sender_id: user?.id, message: t, created_at: new Date().toISOString() }]); }
-      setBody("");
-    } catch { toast.error(isBn ? "বার্তা পাঠাতে ব্যর্থ" : "Failed to send"); }
+      const msg = res?.data?.data || res?.data || res?.message || res;
+      setMessages((p) => p.map((m) => (m.id === tempId ? { ...msg, _pending: false } : m)));
+      // Move conversation to top of sidebar
+      setConversations((prev) => {
+        const others = prev.filter((c) => c.uuid !== selectedConv.uuid);
+        return [{ ...selectedConv, messages: [...(selectedConv.messages || []), msg] }, ...others];
+      });
+    } catch {
+      setMessages((p) => p.map((m) => (m.id === tempId ? { ...m, _pending: false, _failed: true } : m)));
+      toast.error(isBn ? "বার্তা পাঠাতে ব্যর্থ" : "Failed to send");
+    }
     finally { setSending(false); inputRef.current?.focus(); }
   };
 
@@ -208,7 +255,11 @@ function MessagesContent() {
                             </a>
                           )}
                           <p className="text-sm whitespace-pre-wrap break-words">{msg.message || msg.content || msg.body || ""}</p>
-                          <p className={`text-[10px] mt-1 ${mine ? "text-primary-foreground/60" : "text-muted-foreground"}`}>{formatRelativeTime(msg.created_at)}</p>
+                          <p className={`text-[10px] mt-1 flex items-center gap-1 ${mine ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                            {formatRelativeTime(msg.created_at)}
+                            {msg._pending && <Clock className="h-3 w-3" />}
+                            {msg._failed && <span className="text-red-400">{isBn ? "ব্যর্থ" : "Failed"}</span>}
+                          </p>
                         </div>
                       </div>
                     </div>
