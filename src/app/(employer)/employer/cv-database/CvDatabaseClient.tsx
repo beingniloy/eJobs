@@ -164,8 +164,8 @@ export default function CvDatabaseClient() {
       const params = new URLSearchParams();
       if (skills) params.set("skills", skills);
       if (location) params.set("location", location);
-      if (education) params.set("education", education);
-      if (availability) params.set("availability", availability);
+      if (education && education !== "any") params.set("education", education);
+      if (availability && availability !== "any") params.set("availability", availability);
       if (expMin) params.set("experience_min", expMin);
       if (expMax) params.set("experience_max", expMax);
 
