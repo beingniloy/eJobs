@@ -42,10 +42,17 @@ import {
   FileDown,
   UserPlus,
   X,
+  MessageSquare,
+  UserCheck,
+  UserMinus,
+  Send,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Candidate {
   id: number;
+  username?: string | null;
+  user_id?: number;
   name: string;
   email: string;
   profile: {
@@ -72,6 +79,11 @@ export default function CvDatabaseClient() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [previewCandidate, setPreviewCandidate] = useState<Candidate | null>(null);
+  const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
+  const [followLoadingMap, setFollowLoadingMap] = useState<Record<number, boolean>>({});
+  const [messageCandidate, setMessageCandidate] = useState<Candidate | null>(null);
+  const [messageText, setMessageText] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -187,6 +199,47 @@ export default function CvDatabaseClient() {
       setSelectedIds([]);
     } else {
       setSelectedIds(candidates.map((c) => c.id));
+    }
+  };
+
+  const toggleFollow = async (candidate: Candidate) => {
+    if (!candidate.username) return;
+    setFollowLoadingMap((prev) => ({ ...prev, [candidate.id]: true }));
+    try {
+      const res = await api.post(`/candidate/profile/${candidate.username}/follow`);
+      const following = res.data?.following ?? res.data?.data?.following ?? false;
+      setFollowingMap((prev) => ({ ...prev, [candidate.username as string]: following }));
+      toast.success(following ? `Now following ${candidate.name}` : `Unfollowed ${candidate.name}`);
+    } catch {
+      toast.error("Failed to update follow status");
+    } finally {
+      setFollowLoadingMap((prev) => ({ ...prev, [candidate.id]: false }));
+    }
+  };
+
+  const loadFollowStatus = (candidate: Candidate) => {
+    if (!candidate.username || candidate.username in followingMap) return;
+    api.get(`/candidate/profile/${candidate.username}/follow-status`)
+      .then((res: any) => {
+        const following = res.data?.following ?? res.data?.data?.following ?? false;
+        setFollowingMap((prev) => ({ ...prev, [candidate.username as string]: following }));
+      })
+      .catch(() => {});
+  };
+
+  const handleSendMessage = async () => {
+    if (!messageCandidate || !messageText.trim()) return;
+    setSendingMessage(true);
+    try {
+      const targetUserId = messageCandidate.user_id || messageCandidate.id;
+      await api.post(`/messages/direct/${targetUserId}`, { message: messageText.trim() });
+      toast.success("Message sent");
+      setMessageCandidate(null);
+      setMessageText("");
+    } catch {
+      toast.error("Failed to send message");
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -449,13 +502,13 @@ export default function CvDatabaseClient() {
                         )}
                       </DialogContent>
                     </Dialog>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <Mail className="mr-2 h-4 w-4" />
-                      Contact
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => { setMessageCandidate(candidate); setMessageText(""); }}>
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Message
                     </Button>
-                    <Button size="sm" className="flex-1">
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Invite
+                    <Button size="sm" className="flex-1" disabled={!!followLoadingMap[candidate.id]} onClick={() => toggleFollow(candidate)} onMouseEnter={() => loadFollowStatus(candidate)}>
+                      {followLoadingMap[candidate.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : followingMap[candidate.username as string] ? <UserMinus className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                      {followingMap[candidate.username as string] ? "Following" : "Follow"}
                     </Button>
                   </div>
                 </CardContent>
@@ -489,6 +542,33 @@ export default function CvDatabaseClient() {
           </div>
         </>
       )}
+
+      {/* Message Candidate Dialog */}
+      <Dialog open={!!messageCandidate} onOpenChange={(open) => { if (!open) setMessageCandidate(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Message {messageCandidate?.name || ""}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Send a message to {messageCandidate?.name || "this candidate"}.
+            </p>
+            <Textarea
+              placeholder="Write your message..."
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              rows={5}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setMessageCandidate(null)}>Cancel</Button>
+              <Button onClick={handleSendMessage} disabled={sendingMessage || !messageText.trim()}>
+                {sendingMessage ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                Send
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
