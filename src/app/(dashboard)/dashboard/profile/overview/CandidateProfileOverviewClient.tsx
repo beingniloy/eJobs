@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Briefcase, GraduationCap, Code, Loader2, Plus, Award, BookOpen } from "lucide-react";
+import { compressImageToWebP } from "@/lib/image-compression";
 
 import ProfileHeader from "@/components/profile/overview/ProfileHeader";
 import ProfileStatsBar from "@/components/profile/overview/ProfileStatsBar";
@@ -102,6 +103,23 @@ export default function CandidateProfileOverviewClient() {
     }
   };
 
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImageToWebP(file);
+      const formData = new FormData();
+      formData.append("avatar", compressed);
+      await api.post("/candidate/profile-update", formData);
+      toast.success(isBn ? "ছবি পরিবর্তন হয়েছে" : "Photo updated");
+      load();
+    } catch {
+      toast.error(isBn ? "ছবি পরিবর্তন ব্যর্থ" : "Photo update failed");
+    } finally {
+      e.target.value = "";
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-[1200px] mx-auto space-y-6">
@@ -183,7 +201,7 @@ export default function CandidateProfileOverviewClient() {
 
   return (
     <div className="space-y-6 max-w-[1200px] mx-auto">
-      <ProfileHeader profile={p} user={user} isPublic={isPublic} activeBadges={activeBadges} isBn={isBn} />
+      <ProfileHeader profile={p} user={user} isPublic={isPublic} activeBadges={activeBadges} isBn={isBn} onAvatarChange={handleAvatarChange} />
       <ProfileStatsBar applicationsCount={applicationsCount} profileViewsCount={p.profile_views_count || profileViews.length || 0} searchAppearances={stats?.search_appearances || 0} strengthPercent={strengthPercent} isBn={isBn} profile={p} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

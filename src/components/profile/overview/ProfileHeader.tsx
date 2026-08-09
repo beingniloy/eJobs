@@ -15,9 +15,10 @@ interface Props {
   isPublic: boolean;
   activeBadges: any[];
   isBn: boolean;
+  onAvatarChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-export default function ProfileHeader({ profile, user, isPublic, activeBadges, isBn }: Props) {
+export default function ProfileHeader({ profile, user, isPublic, activeBadges, isBn, onAvatarChange }: Props) {
   const fullName = profile.full_name_en || profile.full_name || user.name || "";
   const position = profile.current_position || "";
   const city = profile.city || profile.district || "";
@@ -45,9 +46,12 @@ export default function ProfileHeader({ profile, user, isPublic, activeBadges, i
                 <Zap className="h-3 w-3 text-white" />
               </div>
             )}
-            <label className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer">
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            </label>
+            {onAvatarChange && (
+              <label className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer">
+                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={onAvatarChange} />
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              </label>
+            )}
           </div>
 
           {/* Info */}
