@@ -111,6 +111,25 @@ function MessagesContent() {
     return () => clearInterval(id);
   }, [selectedConv?.uuid]);
 
+  // Poll conversation list so the sidebar stays fresh (previews, unread counts, ordering)
+  useEffect(() => {
+    const id = setInterval(() => {
+      messagesService.getConversations().then((res) => {
+        const list = (res || []).filter((c: any) => c?.uuid);
+        setConversations((prev) => {
+          const merged = list.map((c: any) => {
+            const existing = prev.find((p) => p.uuid === c.uuid);
+            return existing ? { ...c, messages: existing.messages?.length ? existing.messages : c.messages } : c;
+          });
+          const freshUuids = new Set(merged.map((c: any) => c.uuid));
+          const stale = prev.filter((c) => !freshUuids.has(c.uuid));
+          return [...stale, ...merged];
+        });
+      }).catch(() => {});
+    }, 15000);
+    return () => clearInterval(id);
+  }, []);
+
   // Send (optimistic — instant like Messenger)
   const handleSend = async () => {
     const t = body.trim();
