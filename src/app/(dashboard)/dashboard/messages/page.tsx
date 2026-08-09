@@ -81,6 +81,18 @@ function MessagesContent() {
   // Auto-scroll
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
+  // Flash tab title when a new incoming message arrives, reset on focus
+  useEffect(() => {
+    if (!messages.length) return;
+    const last = messages[messages.length - 1];
+    if (!last || last.sender_id === user?.id || last._pending) return;
+    const base = isBn ? "eJobs | বার্তা" : "eJobs | Messages";
+    document.title = `(1) New Message | ${base}`;
+    const reset = () => { document.title = base; };
+    window.addEventListener("focus", reset);
+    return () => window.removeEventListener("focus", reset);
+  }, [messages, user?.id, isBn]);
+
   // Realtime incoming messages (WebSocket)
   useRealtimeMessages(selectedConv?.uuid, (incoming) => {
     setMessages((prev) => {
