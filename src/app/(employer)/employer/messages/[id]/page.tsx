@@ -15,7 +15,6 @@ import {
   ArrowLeft,
   Send,
   MessageSquare,
-  Loader2,
   MoreVertical,
   Ban,
   Flag,
@@ -36,7 +35,6 @@ export default function EmployerConversationPage() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
   const [body, setBody] = useState("");
   const [showMenu, setShowMenu] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
@@ -64,8 +62,7 @@ export default function EmployerConversationPage() {
 
   const handleSend = async () => {
     const trimmed = body.trim();
-    if ((!trimmed && !attachment) || sending) return;
-    setSending(true);
+    if ((!trimmed && !attachment)) return;
     try {
       const res = await messagesService.sendMessage(id, trimmed, attachment || undefined);
       const newMsg = res?.data || res?.message;
@@ -90,7 +87,6 @@ export default function EmployerConversationPage() {
     } catch {
       toast.error(isBn ? "বার্তা পাঠাতে ব্যর্থ" : "Failed to send message");
     } finally {
-      setSending(false);
       inputRef.current?.focus();
     }
   };
@@ -282,11 +278,10 @@ export default function EmployerConversationPage() {
             value={body}
             onChange={(e) => setBody(e.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={sending}
             className="flex-1"
           />
-          <Button size="icon" onClick={handleSend} disabled={(!body.trim() && !attachment) || sending}>
-            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          <Button size="icon" onClick={handleSend} disabled={!body.trim() && !attachment}>
+            <Send className="h-4 w-4" />
           </Button>
         </div>
       </div>

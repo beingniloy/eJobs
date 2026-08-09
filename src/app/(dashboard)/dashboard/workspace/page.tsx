@@ -189,7 +189,6 @@ export default function CandidateWorkspacePage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
-  const [sendingMessage, setSendingMessage] = useState(false);
   const [conversationUuid, setConversationUuid] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -346,7 +345,6 @@ export default function CandidateWorkspacePage() {
     const files = [...attachFiles];
     setChatInput("");
     setAttachFiles([]);
-    setSendingMessage(true);
 
     // Optimistic bubble — instant like Messenger
     const tempId = `temp-${Date.now()}`;
@@ -382,8 +380,6 @@ export default function CandidateWorkspacePage() {
       setChatMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, _pending: false, _failed: true } : m)));
       setChatInput(text);
       setAttachFiles(files);
-    } finally {
-      setSendingMessage(false);
     }
   };
 
@@ -926,7 +922,6 @@ export default function CandidateWorkspacePage() {
                   size="icon"
                   className="h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={sendingMessage}
                 >
                   <Paperclip className="h-4 w-4" />
                 </Button>
@@ -936,7 +931,6 @@ export default function CandidateWorkspacePage() {
                   placeholder={
                     isBn ? "বার্তা লিখুন..." : "Type a message..."
                   }
-                  disabled={sendingMessage}
                   className="flex-1"
                   autoComplete="off"
                 />
@@ -944,7 +938,7 @@ export default function CandidateWorkspacePage() {
                   type="submit"
                   size="icon"
                   className="h-10 w-10 shrink-0"
-                  disabled={(!chatInput.trim() && attachFiles.length === 0) || sendingMessage}
+                  disabled={!chatInput.trim() && attachFiles.length === 0}
                 >
                   <Send className="h-4 w-4" />
                 </Button>

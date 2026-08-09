@@ -30,7 +30,6 @@ function EmployerMessagesContent() {
   const [messages, setMessages] = useState<any[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [body, setBody] = useState("");
-  const [sending, setSending] = useState(false);
   const [search, setSearch] = useState("");
   const [showChat, setShowChat] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
@@ -185,8 +184,7 @@ function EmployerMessagesContent() {
   // Send message (optimistic — instant like Messenger)
   const handleSend = async () => {
     const t = body.trim();
-    if ((!t && !attachment) || sending || !selectedConv) return;
-    setSending(true);
+    if ((!t && !attachment) || !selectedConv) return;
     const tempId = `temp-${Date.now()}`;
     const optimistic = {
       id: tempId,
@@ -212,8 +210,7 @@ function EmployerMessagesContent() {
     } catch {
       setMessages((p) => p.map((m) => (m.id === tempId ? { ...m, _pending: false, _failed: true } : m)));
       toast.error(isBn ? "বার্তা পাঠাতে ব্যর্থ" : "Failed to send");
-    }
-    finally { setSending(false); inputRef.current?.focus(); }
+    } finally { inputRef.current?.focus(); }
   };
 
   const onKey = (e: React.KeyboardEvent) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } };
@@ -408,9 +405,9 @@ function EmployerMessagesContent() {
                 <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} title={isBn ? "ফাইল সংযুক্ত করুন" : "Attach file"} className="h-9 w-9 shrink-0">
                   <Paperclip className="h-4 w-4" />
                 </Button>
-                <Input ref={inputRef} value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={onKey} placeholder={isBn ? "বার্তা লিখুন..." : "Type a message..."} className="flex-1 min-w-0" disabled={sending} />
-                <Button onClick={handleSend} disabled={(!body.trim() && !attachment) || sending} size="icon" className="h-9 w-9 shrink-0">
-                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                <Input ref={inputRef} value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={onKey} placeholder={isBn ? "বার্তা লিখুন..." : "Type a message..."} className="flex-1 min-w-0" />
+                <Button onClick={handleSend} disabled={(!body.trim() && !attachment)} size="icon" className="h-9 w-9 shrink-0">
+                  <Send className="h-4 w-4" />
                 </Button>
               </div>
             </div>

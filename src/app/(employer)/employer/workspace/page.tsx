@@ -129,7 +129,6 @@ export default function EmployerWorkspacePage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
-  const [sendingMessage, setSendingMessage] = useState(false);
   const [conversationUuid, setConversationUuid] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -166,9 +165,9 @@ export default function EmployerWorkspacePage() {
       const res = await api.get(`/messages/direct/${targetUserId}`);
       const list = res.data.data?.messages || [];
       if (res.data.conversation?.uuid) setConversationUuid(res.data.conversation.uuid);
-      // Merge — keep any optimistic (temp-*) bubbles that are still in flight
+      // Merge — keep any optimistic bubbles still in flight
       setChatMessages((prev) => {
-        const temp = prev.filter((m) => typeof m.id === "string" && m.id.startsWith("temp-"));
+        const temp = prev.filter((m) => (typeof m.id === "string" && m.id.startsWith("temp-")) || m.pending);
         const known = new Set(list.map((m: any) => m.id));
         const merged = [...list, ...temp.filter((t) => !known.has(t.id))];
         return merged;
@@ -235,7 +234,6 @@ export default function EmployerWorkspacePage() {
       { id: tempId, sender_id: currentUserId, receiver_id: otherParty.id, message: text, created_at: new Date().toISOString(), is_read: true, pending: true },
     ]);
     setChatInput("");
-    setSendingMessage(true);
     try {
       const res = await api.post(`/messages/direct/${otherParty.id}`, { message: text });
       const saved = res.data.data;
@@ -244,8 +242,6 @@ export default function EmployerWorkspacePage() {
       setChatMessages((prev) => prev.filter((m) => m.id !== tempId));
       setChatInput(text);
       toast.error(isBn ? "বার্তা পাঠাতে ব্যর্থ" : "Failed to send message");
-    } finally {
-      setSendingMessage(false);
     }
   };
 
@@ -544,9 +540,9 @@ export default function EmployerWorkspacePage() {
 
             <div className="p-4 border-t shrink-0">
               <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="flex items-end gap-2">
-                <Input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder={isBn ? "বার্তা লিখুন..." : "Type a message..."} disabled={sendingMessage} className="flex-1" autoComplete="off" />
-                <Button type="submit" size="icon" className="h-10 w-10 shrink-0" disabled={!chatInput.trim() || sendingMessage}>
-                  {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                <Input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder={isBn ? "বার্তা লিখুন..." : "Type a message..."} className="flex-1" autoComplete="off" />
+                <Button type="submit" size="icon" className="h-10 w-10 shrink-0" disabled={!chatInput.trim()}>
+                  <Send className="h-4 w-4" />
                 </Button>
               </form>
             </div>

@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageSquare, Loader2, RefreshCw, Search, Send, ArrowLeft, Paperclip, Clock } from "lucide-react";
+import { MessageSquare, RefreshCw, Search, Send, ArrowLeft, Paperclip, Clock } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 
 function MessagesContent() {
@@ -30,7 +30,6 @@ function MessagesContent() {
   const [messages, setMessages] = useState<any[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [body, setBody] = useState("");
-  const [sending, setSending] = useState(false);
   const [search, setSearch] = useState("");
   const [showChat, setShowChat] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
@@ -145,8 +144,7 @@ function MessagesContent() {
   // Send (optimistic — instant like Messenger)
   const handleSend = async () => {
     const t = body.trim();
-    if (!t || sending || !selectedConv) return;
-    setSending(true);
+    if (!t || !selectedConv) return;
     const tempId = `temp-${Date.now()}`;
     const optimistic = {
       id: tempId,
@@ -169,8 +167,7 @@ function MessagesContent() {
     } catch {
       setMessages((p) => p.map((m) => (m.id === tempId ? { ...m, _pending: false, _failed: true } : m)));
       toast.error(isBn ? "বার্তা পাঠাতে ব্যর্থ" : "Failed to send");
-    }
-    finally { setSending(false); inputRef.current?.focus(); }
+    } finally { inputRef.current?.focus(); }
   };
 
   const onKey = (e: React.KeyboardEvent) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } };
@@ -303,9 +300,9 @@ function MessagesContent() {
             {/* Input */}
             <div className="border-t p-3 shrink-0">
               <div className="flex gap-2 items-end">
-                <Input ref={inputRef} value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={onKey} placeholder={isBn ? "বার্তা লিখুন..." : "Type a message..."} className="flex-1 min-w-0" disabled={sending} />
-                <Button onClick={handleSend} disabled={!body.trim() || sending} size="icon" className="h-9 w-9 shrink-0">
-                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                <Input ref={inputRef} value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={onKey} placeholder={isBn ? "বার্তা লিখুন..." : "Type a message..."} className="flex-1 min-w-0" />
+                <Button onClick={handleSend} disabled={!body.trim()} size="icon" className="h-9 w-9 shrink-0">
+                  <Send className="h-4 w-4" />
                 </Button>
               </div>
             </div>
