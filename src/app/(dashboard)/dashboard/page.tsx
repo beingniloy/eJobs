@@ -92,7 +92,7 @@ export default function CandidateDashboardPage() {
       {/* Welcome */}
       <div>
         <h1 className="text-2xl font-bold">
-          {isBn ? `স্বাগতম, ${user?.name}` : `Welcome back, ${user?.name}`}
+          {isBn ? `স্বাগতম, ${user?.name ?? "সদস্য"}` : `Welcome back${user?.name ? `, ${user.name}` : ""}`}
         </h1>
         <p className="text-muted-foreground mt-1">
           {isBn

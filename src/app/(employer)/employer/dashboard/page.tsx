@@ -95,7 +95,7 @@ export default function EmployerDashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">
-            {isBn ? `স্বাগতম, ${user?.name}` : `Welcome, ${user?.name}`}
+            {isBn ? `স্বাগতম, ${user?.name ?? "সদস্য"}` : `Welcome${user?.name ? `, ${user.name}` : ""}`}
           </h1>
           <p className="text-muted-foreground mt-1">
             {isBn ? "আপনার নিয়োগকর্তা ড্যাশবোর্ড" : "Employer Dashboard Overview"}
