@@ -292,9 +292,22 @@ export function useProfileForm() {
   };
 
   const getCompletionPct = () => {
-    const total = 25;
-    const filled = [fullNameEn, gender, dob, phone, presentAddress, careerObjective, skills, email].filter(Boolean).length;
-    return Math.round((filled / total) * 100);
+    const skillCount = skills.split(",").map((s) => s.trim()).filter(Boolean).length;
+    const hasSocial = [linkedinUrl, githubUrl, facebookUrl, portfolioUrl, twitterUrl, instagramUrl, youtubeUrl, stackoverflowUrl, whatsappUrl, telegramUrl].some(Boolean);
+    const checks: [boolean, number][] = [
+      [Boolean(fullNameEn || fullNameBn) && Boolean(gender) && Boolean(dob), 15],
+      [Boolean(phone) && Boolean(email) && Boolean(presentAddress) && Boolean(district), 15],
+      [Boolean(careerObjective) && Boolean(currentProfession), 10],
+      [educations.some((e) => e.level && e.institute_name), 10],
+      [experiences.some((e) => e.company_name && e.designation), 10],
+      [skillCount >= 1, 10],
+      [languages.length > 0, 5],
+      [trainings.some((t) => t.title && t.institute_name), 5],
+      [certifications.length > 0, 5],
+      [documents.length > 0, 5],
+      [hasSocial, 10],
+    ];
+    return Math.min(100, checks.reduce((sum, [ok, w]) => sum + (ok ? w : 0), 0));
   };
 
   return {

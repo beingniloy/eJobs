@@ -82,10 +82,27 @@ export default function EmployerProfilePage() {
     if (await handleSave(true)) { setSavedSteps((p) => new Set(p).add(step)); if (step < STEPS.length - 1) setStep(step + 1); }
   };
 
-  const completionPct = Math.round(([
-    form.companyName, form.industry, form.description, form.contactPerson,
-    form.contactPhone, form.contactEmail, form.headOffice, form.district,
-  ].filter(Boolean).length / 30) * 100);
+  const completionPct = (() => {
+    const hasLogo = Boolean(form.logoPreview || form.logoFile);
+    const hasCover = Boolean(form.coverPreview || form.coverFile || form.videoUrl);
+    const hasVerification = Boolean(
+      form.businessRegNo || form.tradeLicenseNo || form.tradeLicensePath || form.tradeLicenseFile ||
+      form.nidPath || form.nidFile || form.regCertPath || form.regCertFile
+    );
+    const hasSocial = Boolean(form.facebookPage || form.linkedinPage || form.website || form.youtubeChannel || form.instagramProfile);
+    const checks: [boolean, number][] = [
+      [Boolean(form.companyName && form.industry && form.companyType), 15],
+      [Boolean(form.contactPerson && form.contactPhone && form.contactEmail), 10],
+      [Boolean(form.headOffice && form.district), 10],
+      [Boolean(form.description && (form.mission || form.vision)), 10],
+      [Boolean((form.hrName && form.hrEmail) || form.hrTeam.length > 0), 10],
+      [hasVerification, 15],
+      [Boolean(hasLogo && hasCover), 10],
+      [hasSocial, 10],
+      [form.hrTeam.length > 0, 10],
+    ];
+    return Math.min(100, checks.reduce((sum, [ok, w]) => sum + (ok ? w : 0), 0));
+  })();
 
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
