@@ -95,6 +95,7 @@ export default function CandidateProfilePage() {
   };
 
   const completionPct = form.getCompletionPct();
+  const completedSteps = new Set([...form.getCompletedSteps(), ...savedSteps]);
 
   if (loading) {
     return (
@@ -201,9 +202,9 @@ export default function CandidateProfilePage() {
           return (
             <button key={s.key} onClick={() => setStep(i)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                i === step ? "bg-primary text-primary-foreground" : savedSteps.has(i) ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                i === step ? "bg-primary text-primary-foreground" : completedSteps.has(i) ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}>
-              {savedSteps.has(i) ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+              {completedSteps.has(i) ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
               {isBn ? s.labelBn : s.labelEn}
             </button>
           );

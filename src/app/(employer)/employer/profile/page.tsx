@@ -82,27 +82,50 @@ export default function EmployerProfilePage() {
     if (await handleSave(true)) { setSavedSteps((p) => new Set(p).add(step)); if (step < STEPS.length - 1) setStep(step + 1); }
   };
 
+  const isStepComplete = (key: string): boolean => {
+    switch (key) {
+      case "basic":
+        return Boolean(form.companyName && form.industry && form.companyType);
+      case "contact":
+        return Boolean(form.contactPerson && form.contactPhone && form.contactEmail);
+      case "address":
+        return Boolean(form.headOffice && form.district);
+      case "overview":
+        return Boolean(form.description && (form.mission || form.vision));
+      case "hr":
+        return Boolean((form.hrName && form.hrEmail) || form.hrTeam.length > 0);
+      case "settings":
+        return true;
+      case "verification":
+        return Boolean(
+          form.businessRegNo || form.tradeLicenseNo || form.tradeLicensePath || form.tradeLicenseFile ||
+          form.nidPath || form.nidFile || form.regCertPath || form.regCertFile
+        );
+      case "media":
+        return Boolean((form.logoPreview || form.logoFile) && (form.coverPreview || form.coverFile || form.videoUrl));
+      case "social":
+        return Boolean(form.facebookPage || form.linkedinPage || form.website || form.youtubeChannel || form.instagramProfile);
+      case "stats":
+        return true;
+      case "team":
+        return form.hrTeam.length > 0;
+      default:
+        return false;
+    }
+  };
+
   const completionPct = (() => {
-    const hasLogo = Boolean(form.logoPreview || form.logoFile);
-    const hasCover = Boolean(form.coverPreview || form.coverFile || form.videoUrl);
-    const hasVerification = Boolean(
-      form.businessRegNo || form.tradeLicenseNo || form.tradeLicensePath || form.tradeLicenseFile ||
-      form.nidPath || form.nidFile || form.regCertPath || form.regCertFile
-    );
-    const hasSocial = Boolean(form.facebookPage || form.linkedinPage || form.website || form.youtubeChannel || form.instagramProfile);
-    const checks: [boolean, number][] = [
-      [Boolean(form.companyName && form.industry && form.companyType), 15],
-      [Boolean(form.contactPerson && form.contactPhone && form.contactEmail), 10],
-      [Boolean(form.headOffice && form.district), 10],
-      [Boolean(form.description && (form.mission || form.vision)), 10],
-      [Boolean((form.hrName && form.hrEmail) || form.hrTeam.length > 0), 10],
-      [hasVerification, 15],
-      [Boolean(hasLogo && hasCover), 10],
-      [hasSocial, 10],
-      [form.hrTeam.length > 0, 10],
-    ];
-    return Math.min(100, checks.reduce((sum, [ok, w]) => sum + (ok ? w : 0), 0));
+    const weights: Record<string, number> = {
+      basic: 15, contact: 10, address: 10, overview: 10, hr: 10,
+      verification: 15, media: 10, social: 10, team: 10,
+    };
+    return Math.min(100, STEPS.reduce((sum, s) => sum + (isStepComplete(s.key) ? weights[s.key] ?? 0 : 0), 0));
   })();
+
+  const completedSteps = new Set([
+    ...STEPS.map((s, i) => (isStepComplete(s.key) ? i : -1)).filter((i) => i >= 0),
+    ...savedSteps,
+  ]);
 
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
@@ -150,8 +173,8 @@ export default function EmployerProfilePage() {
           const Icon = s.icon;
           return (
             <button key={s.key} onClick={() => setStep(i)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${i === step ? "bg-primary text-primary-foreground" : savedSteps.has(i) ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
-              {savedSteps.has(i) ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${i === step ? "bg-primary text-primary-foreground" : completedSteps.has(i) ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+              {completedSteps.has(i) ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
               {isBn ? s.labelBn : s.labelEn}
             </button>
           );

@@ -291,23 +291,45 @@ export function useProfileForm() {
     }
   };
 
-  const getCompletionPct = () => {
+  const isStepCompleted = (key: string): boolean => {
     const skillCount = skills.split(",").map((s) => s.trim()).filter(Boolean).length;
-    const hasSocial = [linkedinUrl, githubUrl, facebookUrl, portfolioUrl, twitterUrl, instagramUrl, youtubeUrl, stackoverflowUrl, whatsappUrl, telegramUrl].some(Boolean);
-    const checks: [boolean, number][] = [
-      [Boolean(fullNameEn || fullNameBn) && Boolean(gender) && Boolean(dob), 15],
-      [Boolean(phone) && Boolean(email) && Boolean(presentAddress) && Boolean(district), 15],
-      [Boolean(careerObjective) && Boolean(currentProfession), 10],
-      [educations.some((e) => e.level && e.institute_name), 10],
-      [experiences.some((e) => e.company_name && e.designation), 10],
-      [skillCount >= 1, 10],
-      [languages.length > 0, 5],
-      [trainings.some((t) => t.title && t.institute_name), 5],
-      [certifications.length > 0, 5],
-      [documents.length > 0, 5],
-      [hasSocial, 10],
-    ];
-    return Math.min(100, checks.reduce((sum, [ok, w]) => sum + (ok ? w : 0), 0));
+    switch (key) {
+      case "personal":
+        return Boolean(fullNameEn || fullNameBn) && Boolean(gender) && Boolean(dob);
+      case "contact":
+        return Boolean(phone) && Boolean(email) && Boolean(presentAddress) && Boolean(district);
+      case "career":
+        return Boolean(careerObjective) && Boolean(currentProfession);
+      case "education":
+        return educations.some((e) => e.level && e.institute_name);
+      case "experience":
+        return experiences.some((e) => e.company_name && e.designation);
+      case "skills":
+        return skillCount >= 1;
+      case "languages":
+        return languages.length > 0;
+      case "training":
+        return trainings.some((t) => t.title && t.institute_name);
+      case "certifications":
+        return certifications.length > 0;
+      case "documents":
+        return documents.length > 0;
+      case "social":
+        return [linkedinUrl, githubUrl, facebookUrl, portfolioUrl, twitterUrl, instagramUrl, youtubeUrl, stackoverflowUrl, whatsappUrl, telegramUrl].some(Boolean);
+      default:
+        return false;
+    }
+  };
+
+  const getCompletedSteps = (): number[] =>
+    STEPS_KEYS.map((key, i) => (isStepCompleted(key) ? i : -1)).filter((i) => i >= 0);
+
+  const getCompletionPct = () => {
+    const weights: Record<string, number> = {
+      personal: 15, contact: 15, career: 10, education: 10, experience: 10,
+      skills: 10, languages: 5, training: 5, certifications: 5, documents: 5, social: 10,
+    };
+    return Math.min(100, STEPS_KEYS.reduce((sum, key) => sum + (isStepCompleted(key) ? weights[key] : 0), 0));
   };
 
   return {
@@ -315,6 +337,7 @@ export function useProfileForm() {
     handleSave: saveSection,
     avatarExisting,
     getCompletionPct,
+    getCompletedSteps,
     // Personal
     fullNameBn, setFullNameBn, fullNameEn, setFullNameEn,
     fatherName, setFatherName, motherName, setMotherName,
