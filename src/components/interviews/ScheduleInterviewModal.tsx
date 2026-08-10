@@ -46,6 +46,21 @@ export default function ScheduleInterviewModal({ application, onClose, onSchedul
       return;
     }
 
+    if (form.type === "in_person" && !form.location.trim()) {
+      toast.error(isBn ? "ব্যক্তিগত সাক্ষাৎকারের জন্য ঠিকানা আবশ্যক" : "Location is required for in-person interviews");
+      return;
+    }
+
+    if (form.type === "video" && !form.location.trim()) {
+      toast.error(isBn ? "ভিডিও সাক্ষাৎকারের জন্য ভিডিও লিংক আবশ্যক" : "Video link is required for video interviews");
+      return;
+    }
+
+    if (form.type === "phone" && !form.location.trim()) {
+      toast.error(isBn ? "ফোন সাক্ষাৎকারের জন্য ফোন নম্বর আবশ্যক" : "Phone number is required for phone interviews");
+      return;
+    }
+
     setSubmitting(true);
     try {
       await interviewService.scheduleInterview(application.id, {
@@ -148,9 +163,9 @@ export default function ScheduleInterviewModal({ application, onClose, onSchedul
           {/* Location */}
           <div>
             <Label className="text-sm font-medium">
-              {form.type === "video" ? (isBn ? "ভিডিও লিংক" : "Video Link") :
-               form.type === "phone" ? (isBn ? "ফোন নম্বর" : "Phone Number") :
-               (isBn ? "ঠিকানা" : "Location")}
+              {form.type === "video" ? (isBn ? "ভিডিও লিংক *" : "Video Link *") :
+               form.type === "phone" ? (isBn ? "ফোন নম্বর *" : "Phone Number *") :
+               (isBn ? "ঠিকানা *" : "Location *")}
             </Label>
             <Input
               value={form.location}
@@ -160,6 +175,7 @@ export default function ScheduleInterviewModal({ application, onClose, onSchedul
                 form.type === "phone" ? "+880 1XXXXXXXXX" :
                 isBn ? "ঠিকানা লিখুন" : "Enter location"
               }
+              required
             />
           </div>
 

@@ -19,3 +19,138 @@
  GET /jobs/category/72 200 in 1934ms (next.js: 1111ms, generate-params: 399ms, application-code: 823ms)
  GET / 200 in 50ms (next.js: 4ms, application-code: 46ms)
  GET / 200 in 71ms (next.js: 5ms, application-code: 66ms)
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+ GET /employer/profile 200 in 852ms (next.js: 816ms, application-code: 36ms)
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+✓ Compiled in 153ms
+ GET / 200 in 661ms (next.js: 243ms, application-code: 418ms)
+ GET /employer/profile 200 in 669ms (next.js: 99ms, application-code: 571ms)
+ GET / 200 in 356ms (next.js: 48ms, application-code: 307ms)
+ GET /employer/profile 200 in 392ms (next.js: 5ms, application-code: 387ms)
+ GET / 200 in 328ms (next.js: 161ms, application-code: 167ms)
+ GET / 200 in 327ms (next.js: 213ms, application-code: 114ms)
+ GET / 200 in 329ms (next.js: 182ms, application-code: 147ms)
+ GET /employer/profile 200 in 337ms (next.js: 10ms, application-code: 327ms)
+ GET /employer/profile 200 in 337ms (next.js: 77ms, application-code: 260ms)
+ GET /employer/profile 200 in 338ms (next.js: 118ms, application-code: 220ms)
+ GET / 200 in 89ms (next.js: 9ms, application-code: 80ms)
+ GET /employer/profile 200 in 58ms (next.js: 7ms, application-code: 51ms)
+ GET /employer/profile 200 in 22ms (next.js: 7ms, application-code: 15ms)
+ GET /employer/profile 200 in 51ms (next.js: 4ms, application-code: 48ms)
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+✓ Compiled in 142ms
+ GET / 200 in 585ms (next.js: 130ms, application-code: 455ms)
+ GET /employer/profile 200 in 591ms (next.js: 272ms, application-code: 319ms)
+ GET / 200 in 252ms (next.js: 5ms, application-code: 247ms)
+ GET / 200 in 203ms (next.js: 47ms, application-code: 156ms)
+ GET / 200 in 206ms (next.js: 7ms, application-code: 198ms)
+ GET / 200 in 205ms (next.js: 71ms, application-code: 134ms)
+ GET /employer/profile 200 in 289ms (next.js: 6ms, application-code: 283ms)
+ GET /employer/profile 200 in 157ms (next.js: 7ms, application-code: 150ms)
+ GET /employer/profile 200 in 157ms (next.js: 33ms, application-code: 124ms)
+ GET / 200 in 136ms (next.js: 8ms, application-code: 127ms)
+ GET /employer/profile 200 in 104ms (next.js: 8ms, application-code: 97ms)
+ GET /employer/profile 200 in 60ms (next.js: 8ms, application-code: 52ms)
+ GET /employer/profile 200 in 13ms (next.js: 3ms, application-code: 10ms)
+ GET /employer/profile 200 in 31ms (next.js: 3ms, application-code: 28ms)
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+ GET / 200 in 190ms (next.js: 156ms, application-code: 34ms)
+ GET /employer/profile 200 in 194ms (next.js: 62ms, application-code: 132ms)
+ GET / 200 in 198ms (next.js: 163ms, application-code: 36ms)
+ GET /employer/profile 200 in 201ms (next.js: 60ms, application-code: 142ms)
+✓ Compiled in 110ms
+ GET / 200 in 195ms (next.js: 155ms, application-code: 40ms)
+ GET /employer/profile 200 in 199ms (next.js: 85ms, application-code: 114ms)
+✓ Compiled in 129ms
+ GET / 200 in 234ms (next.js: 169ms, application-code: 65ms)
+ GET /employer/profile 200 in 237ms (next.js: 81ms, application-code: 156ms)
+ GET /employer/profile 200 in 207ms (next.js: 3ms, application-code: 205ms)
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+✓ Compiled in 135ms
+ GET / 200 in 629ms (next.js: 101ms, application-code: 528ms)
+ GET /employer/profile 200 in 637ms (next.js: 228ms, application-code: 409ms)
+ GET / 200 in 310ms (next.js: 3ms, application-code: 307ms)
+ GET / 200 in 276ms (next.js: 9ms, application-code: 267ms)
+ GET / 200 in 277ms (next.js: 33ms, application-code: 244ms)
+ GET / 200 in 276ms (next.js: 68ms, application-code: 208ms)
+ GET /employer/profile 200 in 319ms (next.js: 5ms, application-code: 314ms)
+ GET /employer/profile 200 in 219ms (next.js: 36ms, application-code: 182ms)
+ GET /employer/profile 200 in 220ms (next.js: 67ms, application-code: 153ms)
+ GET /employer/profile 200 in 221ms (next.js: 97ms, application-code: 124ms)
+ GET /employer/profile 200 in 224ms (next.js: 127ms, application-code: 96ms)
+ GET / 200 in 54ms (next.js: 9ms, application-code: 45ms)
+✓ Compiled in 118ms
+ GET / 200 in 624ms (next.js: 234ms, application-code: 390ms)
+ GET /employer/profile 200 in 634ms (next.js: 104ms, application-code: 530ms)
+ GET / 200 in 279ms (next.js: 13ms, application-code: 267ms)
+ GET /employer/profile 200 in 329ms (next.js: 6ms, application-code: 324ms)
+ GET / 200 in 270ms (next.js: 107ms, application-code: 163ms)
+ GET / 200 in 271ms (next.js: 131ms, application-code: 140ms)
+ GET / 200 in 272ms (next.js: 154ms, application-code: 118ms)
+ GET /employer/profile 200 in 281ms (next.js: 6ms, application-code: 276ms)
+ GET /employer/profile 200 in 283ms (next.js: 44ms, application-code: 240ms)
+ GET /employer/profile 200 in 285ms (next.js: 77ms, application-code: 208ms)
+ GET / 200 in 93ms (next.js: 9ms, application-code: 85ms)
+ GET /employer/profile 200 in 63ms (next.js: 7ms, application-code: 56ms)
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+ GET /employer/company-overview 200 in 714ms (next.js: 674ms, application-code: 40ms)
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+ GET /employer/profile 200 in 30ms (next.js: 3ms, application-code: 27ms)
+ GET /dashboard/settings 200 in 733ms (next.js: 682ms, application-code: 51ms)
+✓ Compiled in 303ms
+ GET /dashboard/accepted-jobs 200 in 754ms (next.js: 501ms, application-code: 253ms)
+ GET /login 200 in 1198ms (next.js: 1059ms, application-code: 139ms)
+ GET /dashboard 200 in 738ms (next.js: 636ms, application-code: 103ms)
+ GET /dashboard 200 in 72ms (next.js: 5ms, application-code: 67ms)
+ GET /uploads/companies/logos/ff1b92c1981e7ae4482d5eae010fd74f.webp 404 in 105ms (next.js: 38ms, application-code: 67ms)
+ GET /dashboard/accepted-jobs 200 in 58ms (next.js: 3ms, application-code: 55ms)
+✓ Compiled in 314ms
+ GET /dashboard/settings 200 in 363ms (next.js: 84ms, application-code: 280ms)
+ GET /dashboard/accepted-jobs 200 in 208ms (next.js: 136ms, application-code: 72ms)
+✓ Compiled in 141ms
+ GET /dashboard/settings 200 in 233ms (next.js: 170ms, application-code: 62ms)
+ GET /dashboard/accepted-jobs 200 in 236ms (next.js: 92ms, application-code: 144ms)
+✓ Compiled in 252ms
+ GET /dashboard/accepted-jobs 200 in 265ms (next.js: 95ms, application-code: 170ms)
+ GET /dashboard/settings 200 in 266ms (next.js: 204ms, application-code: 62ms)
+ GET /dashboard/accepted-jobs 200 in 250ms (next.js: 3ms, application-code: 248ms)
+✓ Compiled in 189ms
+ GET /dashboard/accepted-jobs 200 in 306ms (next.js: 86ms, application-code: 220ms)
+ GET /dashboard/settings 200 in 308ms (next.js: 155ms, application-code: 153ms)
+ GET /dashboard/accepted-jobs 200 in 117ms (next.js: 4ms, application-code: 113ms)
+ GET /dashboard/settings 200 in 75ms (next.js: 10ms, application-code: 66ms)
+ GET /dashboard/accepted-jobs 200 in 220ms (next.js: 3ms, application-code: 217ms)
+ GET /dashboard/messages?employer=2 200 in 599ms (next.js: 568ms, application-code: 31ms)
+ GET /jobs/14 200 in 1618ms (next.js: 1195ms, generate-params: 540ms, application-code: 423ms)
+ GET /jobs/uploads/companies/logos/ff1b92c1981e7ae4482d5eae010fd74f.webp 404 in 74ms (next.js: 13ms, application-code: 61ms)
+✓ Compiled in 288ms
+ GET /dashboard/applied-jobs 200 in 588ms (next.js: 518ms, application-code: 70ms)
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[browser] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+ GET /dashboard/interviews 200 in 561ms (next.js: 522ms, application-code: 39ms)
+✓ Compiled in 405ms
+ GET /dashboard/interviews 200 in 428ms (next.js: 102ms, application-code: 326ms)
+ GET /dashboard/settings 200 in 432ms (next.js: 182ms, application-code: 250ms)
+ GET /dashboard/interviews 200 in 202ms (next.js: 6ms, application-code: 196ms)
+ GET /dashboard/settings 200 in 143ms (next.js: 11ms, application-code: 133ms)
+ GET /dashboard/interviews 200 in 221ms (next.js: 4ms, application-code: 218ms)
+ GET /employer/applicants 200 in 948ms (next.js: 834ms, application-code: 113ms)
+ GET /login 200 in 142ms (next.js: 8ms, application-code: 134ms)
+ GET /dashboard 200 in 79ms (next.js: 16ms, application-code: 63ms)
+ GET /uploads/companies/logos/ff1b92c1981e7ae4482d5eae010fd74f.webp 404 in 76ms (next.js: 13ms, application-code: 64ms)
+ GET /login 200 in 51ms (next.js: 4ms, application-code: 46ms)
+ GET /employer/dashboard 200 in 772ms (next.js: 689ms, application-code: 84ms)
+ GET /employer/dashboard 200 in 58ms (next.js: 4ms, application-code: 53ms)
+ GET /employer/applicants 200 in 53ms (next.js: 3ms, application-code: 50ms)
+ GET /dashboard/settings 200 in 64ms (next.js: 5ms, application-code: 59ms)

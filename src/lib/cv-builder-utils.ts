@@ -42,6 +42,8 @@ export function editorDataToProfile(ed: Record<string, any>): CvProfile {
     awards: ed.awards || [],
     hobbies: ed.hobbies || [],
     social_links: ed.social_links || {},
+    references: ed.references || [],
+    training: ed.training || [],
   } as CvProfile;
 }
 

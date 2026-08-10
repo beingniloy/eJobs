@@ -19,6 +19,7 @@ export function TwoFactorSettings() {
   const [enabled, setEnabled] = useState(false);
   const [method, setMethod] = useState<Method>("totp");
   const [hasPhone, setHasPhone] = useState(false);
+  const [userPhone, setUserPhone] = useState<string>("");
 
   const [setupMode, setSetupMode] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<Method>("totp");
@@ -41,6 +42,7 @@ export function TwoFactorSettings() {
       setEnabled(res.enabled);
       setMethod(res.method);
       setHasPhone(res.has_phone);
+      setUserPhone(res.phone || res.user_phone || "");
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -67,9 +69,14 @@ export function TwoFactorSettings() {
   };
 
   const sendOtp = async (ch: "sms" | "email") => {
+    if (ch === "sms" && !userPhone) {
+      toast.error("Please add a phone number to your profile first");
+      return;
+    }
     setSendingOtp(true);
     try {
-      const res = await authService.send2faOtp(ch);
+      const phone = ch === "sms" ? userPhone : undefined;
+      const res = await authService.send2faOtp(ch, phone);
       if (res.status) {
         setOtpSent(true);
         setSelectedMethod(ch);

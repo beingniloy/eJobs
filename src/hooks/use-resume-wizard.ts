@@ -69,6 +69,20 @@ interface CustomSection {
   description: string;
 }
 
+interface Reference {
+  name: string;
+  designation: string;
+  organization: string;
+  phone: string;
+  email: string;
+}
+
+interface Training {
+  title: string;
+  institute: string;
+  duration: string;
+}
+
 export interface ResumeData {
   personal: Personal;
   resume_objective: ResumeObjective;
@@ -79,6 +93,8 @@ export interface ResumeData {
   languages: Language[];
   achievements: Achievement[];
   custom_sections: CustomSection[];
+  references: Reference[];
+  training: Training[];
   template_slug: string | null;
 }
 
@@ -114,6 +130,8 @@ export function useResumeWizard() {
     languages: [],
     achievements: [{ description: "" }],
     custom_sections: [],
+    references: [],
+    training: [],
     template_slug: null,
   });
 

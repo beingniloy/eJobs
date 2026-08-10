@@ -75,6 +75,8 @@ export default function TemplateStep({ wizard, onPrev }: { wizard: ReturnType<ty
         certifications: [],
         awards: data.achievements.filter((a) => a.description.trim()).map((a) => ({ name: a.description })),
         projects: [], hobbies: data.interests.map((i) => i.hobby),
+        references: (data.references || []).map((r) => ({ name: r.name, designation: r.designation, organization: r.organization, phone: r.phone, email: r.email })),
+        training: (data.training || []).map((t) => ({ title: t.title, institute: t.institute, duration: t.duration })),
         social_links: { linkedin_url: data.personal.linkedin, portfolio_url: data.personal.website },
       });
       const resume = await resumeService.createResume({ title: data.personal.first_name + " " + data.personal.last_name + " CV", template_slug: selectedSlug });

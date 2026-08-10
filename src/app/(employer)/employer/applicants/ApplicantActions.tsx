@@ -20,6 +20,7 @@ import {
   Download,
   ClipboardList,
   Loader2,
+  Calendar,
 } from "lucide-react";
 import type { JobApplication } from "@/types";
 import { getAvailableStatuses, getStatusLabel, candidateLabel } from "./applicants-utils";
@@ -29,6 +30,7 @@ interface Props {
   profileUrl: string | null;
   isBn: boolean;
   onStatusChange: (app: JobApplication, status: string) => void;
+  onScheduleInterview?: (app: JobApplication) => void;
   pending?: boolean;
 }
 

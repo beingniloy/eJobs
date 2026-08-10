@@ -91,8 +91,12 @@ export const authService = {
     return res.data;
   },
 
-  send2faOtp: async (channel: "sms" | "email") => {
-    const res = await api.post("/two-factor/send-otp", { channel });
+  send2faOtp: async (channel: "sms" | "email", phone?: string) => {
+    const payload: Record<string, string> = { channel };
+    if (channel === "sms" && phone) {
+      payload.phone = phone;
+    }
+    const res = await api.post("/two-factor/send-otp", payload);
     return res.data;
   },
 
