@@ -518,18 +518,18 @@ export default function Navbar() {
                     );
                   })
                 )}
+                {isAuthenticated && (
+                  <button onClick={() => { setMobileOpen(false); logout(); }}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold text-destructive hover:bg-destructive/10 transition-colors w-full">
+                    <LogOut className="h-4 w-4 shrink-0" />
+                    {isBn ? "লগআউট" : "Logout"}
+                  </button>
+                )}
               </nav>
 
               {/* Bottom Actions */}
               <div className="p-4 border-t">
-                {isAuthenticated ? (
-                  <Button variant="outline"
-                    className="w-full justify-center gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => { setMobileOpen(false); logout(); }}>
-                    <LogOut className="h-4 w-4" />
-                    {isBn ? "লগআউট" : "Logout"}
-                  </Button>
-                ) : (
+                {!isAuthenticated && (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <Button variant="outline" size="sm" onClick={toggleLanguage} className="flex-1 gap-1.5">
