@@ -1,6 +1,12 @@
 import axios from "axios";
 import type { AxiosError, InternalAxiosRequestConfig } from "axios";
 
+declare module "axios" {
+  export interface InternalAxiosRequestConfig {
+    _csrfRetried?: boolean;
+  }
+}
+
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api").replace(/\/api\/?$/, "");
 const api = axios.create({
   baseURL: `${API_BASE}/api`,
@@ -13,16 +19,33 @@ const api = axios.create({
 
 // Fetch CSRF cookie before making state-changing requests
 let csrfFetched = false;
+let csrfFetchPromise: Promise<void> | null = null;
+
 async function ensureCsrfCookie() {
   if (csrfFetched) return;
-  try {
-    await axios.get("/sanctum/csrf-cookie", {
-      withCredentials: true,
-    });
-    csrfFetched = true;
-  } catch {
-    // CSRF cookie may not be required for all setups
+  if (!csrfFetchPromise) {
+    csrfFetchPromise = axios
+      .get("/sanctum/csrf-cookie", {
+        withCredentials: true,
+      })
+      .then(() => {
+        csrfFetched = true;
+      })
+      .catch(() => {
+        // CSRF cookie may not be required for all setups
+        csrfFetched = false;
+      })
+      .finally(() => {
+        csrfFetchPromise = null;
+      });
   }
+  return csrfFetchPromise;
+}
+
+// Invalidate the cached CSRF cookie so the next request fetches a fresh token.
+// Needed after logout / session expiry where the old token no longer matches.
+export function resetCsrf() {
+  csrfFetched = false;
 }
 
 // Read token from Zustand persist store
@@ -75,8 +98,23 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ message?: string; security_status?: string }>) => {
+  async (error: AxiosError<{ message?: string; security_status?: string }>) => {
     const status = error.response?.status;
+
+    // Stale or expired CSRF token (session rotated/logged out): invalidate the
+    // cached token, refetch it, and retry the request once.
+    if (status === 419 && typeof window !== "undefined") {
+      csrfFetched = false;
+      const cfg = error.config;
+      if (cfg && !cfg._csrfRetried) {
+        cfg._csrfRetried = true;
+        try {
+          return await api.request(cfg);
+        } catch {
+          // Retry failed — fall through to the standard error handling below.
+        }
+      }
+    }
 
     if (typeof window !== "undefined") {
       // Handle 403 banned/suspended — redirect to restricted page

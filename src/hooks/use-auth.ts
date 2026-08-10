@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth-store";
 import { authService, type LoginPayload, type RegisterPayload } from "@/services/auth.service";
+import { resetCsrf } from "@/lib/api-client";
 import type { UserRole } from "@/types";
 import { toast } from "sonner";
 
@@ -102,6 +103,7 @@ export function useAuth() {
     } catch {
       // Ignore error on logout
     }
+    resetCsrf();
     storeLogout();
     queryClient.clear();
     router.push("/login");
