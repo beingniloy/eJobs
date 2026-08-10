@@ -585,7 +585,7 @@ export default function CategoryJobsClient({ categoryId }: { categoryId: string 
                     </div>
                     <div className="space-y-3">
                       {featuredCompanies.map((c: any) => (
-                        <Link key={c.id || c.slug} href={`/companies/${c.slug || ""}`} className="flex items-center gap-3 hover:bg-muted/50 rounded-lg p-1 -m-1 transition-colors">
+                        <Link key={c.id || c.slug} href={`/companies/${c.slug || c.id || ""}`} className="flex items-center gap-3 hover:bg-muted/50 rounded-lg p-1 -m-1 transition-colors">
                           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0 overflow-hidden">
                             <CompanyLogo src={c.logo} name={c.name}>
                               {c.name?.charAt(0) || "C"}

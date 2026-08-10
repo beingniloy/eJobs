@@ -73,35 +73,42 @@ export function useTheme() {
     }
   }, []);
 
-  // Background refresh from API
+  // Background refresh from API — deduped to a single request per session
   useEffect(() => {
-    api
-      .get("/settings/theme")
-      .then((res) => {
-        const data = res.data.data;
-        if (data) {
-          store.setSettings(data);
-          store.setLoadingSettings(false);
+    if (store.loadingSettings === false && Object.keys(store.settings).length > 0) {
+      return;
+    }
 
-          applySettingsToDOM(data);
+    const themePromise = (globalThis as any).__themeSettingsPromise as
+      | Promise<Record<string, any> | null>
+      | undefined;
+    if (!themePromise) {
+      const p = api
+        .get("/settings/theme")
+        .then((res) => res.data?.data || null)
+        .catch(() => null);
+      (globalThis as any).__themeSettingsPromise = p;
+    }
 
-          if (data.timezone) {
-            localStorage.setItem("timezone", data.timezone);
-          }
-
-          if (data.default_language && !localStorage.getItem("theme-storage")) {
-            document.documentElement.lang = data.default_language;
-            store.setLanguage(data.default_language as "en" | "bn");
-          }
-
-          if (data.behavior_tracking_enabled !== undefined) {
-            localStorage.setItem("behavior_tracking_enabled", String(data.behavior_tracking_enabled));
-          }
-        }
-      })
-      .catch(() => {
+    (globalThis as any).__themeSettingsPromise.then((data: Record<string, any> | null) => {
+      if (data) {
+        store.setSettings(data);
         store.setLoadingSettings(false);
-      });
+        applySettingsToDOM(data);
+        if (data.timezone) {
+          localStorage.setItem("timezone", data.timezone);
+        }
+        if (data.default_language && !localStorage.getItem("theme-storage")) {
+          document.documentElement.lang = data.default_language;
+          store.setLanguage(data.default_language as "en" | "bn");
+        }
+        if (data.behavior_tracking_enabled !== undefined) {
+          localStorage.setItem("behavior_tracking_enabled", String(data.behavior_tracking_enabled));
+        }
+      } else {
+        store.setLoadingSettings(false);
+      }
+    });
   }, [store.setSettings, store.setLoadingSettings]);
 
   return store;

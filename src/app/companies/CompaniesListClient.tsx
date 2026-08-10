@@ -351,7 +351,7 @@ export default function CompaniesListClient() {
             </div>
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
               {featured.map((company) => (
-                <Link key={company.id} href={`/companies/${company.slug}`} className="shrink-0 w-72">
+                <Link key={company.id} href={`/companies/${company.slug || company.id}`} className="shrink-0 w-72">
                   <Card className="hover:shadow-md transition-all hover:-translate-y-0.5 h-full">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3 mb-3">
@@ -442,7 +442,7 @@ export default function CompaniesListClient() {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filtered.map((company) => (
-                  <Link key={company.id} href={`/companies/${company.slug}`}>
+                  <Link key={company.id} href={`/companies/${company.slug || company.id}`}>
                     <Card className="group hover:shadow-lg transition-all hover:-translate-y-0.5 h-full">
                       <CardContent className="p-5">
                         <div className="flex items-center gap-3 mb-3">

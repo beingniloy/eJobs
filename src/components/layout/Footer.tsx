@@ -2,44 +2,19 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
 import { Phone, Mail, Globe, Download } from "lucide-react";
 import { toast } from "sonner";
-import api from "@/lib/api-client";
 import { useThemeStore } from "@/store/theme-store";
 import { getStorageUrl } from "@/lib/utils";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
 
-interface PublicSettings {
-  support_phone?: string;
-  support_email?: string;
-  support_website?: string;
-  facebook_page?: string;
-  facebook_messenger?: string;
-  whatsapp_number?: string;
-  telegram_channel?: string;
-  youtube_channel?: string;
-  footer_copyright_text?: string;
-}
-
 export default function Footer() {
-  const [pub, setPub] = useState<PublicSettings>({});
   const { settings, language } = useThemeStore();
   const isBn = language === "bn";
 
-  const siteName = settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs";
+  const pub = settings as Record<string, any>;
 
-  useEffect(() => {
-    api
-      .get("/settings/public")
-      .then((res) => {
-        const d = res.data?.data;
-        if (d) {
-          setPub(d);
-        }
-      })
-      .catch(() => { /* handled */ });
-  }, []);
+  const siteName = settings.site_name || process.env.NEXT_PUBLIC_APP_NAME || "eJobs";
 
   const socialLinks = [
     { url: pub.facebook_page, label: "Facebook" },

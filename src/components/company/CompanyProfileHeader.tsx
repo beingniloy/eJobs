@@ -131,7 +131,7 @@ export default function CompanyProfileHeader({
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
             {mode === "owner" ? (
               <>
-                <Link href={`/companies/${company.slug || ""}`} target="_blank">
+                <Link href={`/companies/${company.slug || company.id || ""}`} target="_blank">
                   <Button variant="ghost" size="sm" className="text-muted-foreground">
                     <ExternalLink className="h-4 w-4 mr-1" />{isBn ? "পাবলিক প্রোফাইল" : "Public Profile"}
                   </Button>

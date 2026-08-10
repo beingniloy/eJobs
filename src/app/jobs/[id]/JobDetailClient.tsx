@@ -175,7 +175,7 @@ export default function JobDetailClient({ jobId }: Props) {
   const matchedSkills = matchData?.matched_skills || matchData?.analysis?.matched_skills || [];
   const missingSkills = matchData?.missing_skills || matchData?.analysis?.missing_skills || [];
   const companyName = typeof job.company === "object" ? job.company?.name : job.company;
-  const companySlug = typeof job.company === "object" ? job.company?.slug : "";
+  const companySlug = typeof job.company === "object" ? (job.company?.slug || job.company?.id || "") : "";
   const companyLogo = typeof job.company === "object" ? job.company?.logo : null;
   const companyLocation = typeof job.company === "object" ? job.company?.location : null;
   const skills = (job.required_skills || []).filter(Boolean);

@@ -118,6 +118,18 @@ function buildClientPreview(demoHtml: string, data: Record<string, any>): string
     .join(" | ");
   sectionContent["social"] = socialLinks;
 
+  // Training
+  const trainings = (data.training || []) as any[];
+  sectionContent["training"] = trainings.map(t =>
+    `<div style="margin-bottom:8px"><strong>${get(t.title)}</strong>${t.institute ? " — " + get(t.institute) : ""}${t.duration ? " (" + get(t.duration) + ")" : ""}</div>`
+  ).join("");
+
+  // References
+  const refs = (data.references || []) as any[];
+  sectionContent["references"] = refs.map(r =>
+    `<div style="margin-bottom:8px"><strong>${get(r.name)}</strong>${r.designation ? " — " + get(r.designation) : ""}${r.organization ? "<br/>" + get(r.organization) : ""}</div>`
+  ).join("");
+
   // Try to replace content in HTML by matching common patterns
   let html = demoHtml;
 
@@ -150,6 +162,8 @@ function buildClientPreview(demoHtml: string, data: Record<string, any>): string
     "awards": ["Awards", "Awards & Honors", "Awards & Recognition"],
     "hobbies": ["Hobbies", "Hobbies & Interests", "Interests"],
     "social": ["Social Links", "Social Profiles", "Links"],
+    "training": ["Training", "Training Summary", "Professional Training"],
+    "references": ["References", "Professional References"],
   };
 
   for (const [key, headings] of Object.entries(sectionMappings)) {

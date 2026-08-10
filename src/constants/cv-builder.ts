@@ -1,4 +1,4 @@
-import { User, Briefcase, GraduationCap, Zap, Award, Languages, Code, Star, Heart, Globe } from "lucide-react";
+import { User, Briefcase, GraduationCap, Zap, Award, Languages, Code, Star, Heart, Globe, Users, BookOpen } from "lucide-react";
 
 export const RESUME_STORAGE_KEY = "user_resumes";
 
@@ -24,6 +24,8 @@ export const CV_SECTIONS = [
   { key: "awards", label_en: "Awards & Honors", label_bn: "পুরস্কার", icon: Star },
   { key: "hobbies", label_en: "Hobbies & Interests", label_bn: "শখ ও আগ্রহ", icon: Heart },
   { key: "social_links", label_en: "Social Links", label_bn: "সামাজিক সংযোগ", icon: Globe },
+  { key: "references", label_en: "References", label_bn: "রেফারেন্স", icon: Users },
+  { key: "training", label_en: "Training", label_bn: "প্রশিক্ষণ", icon: BookOpen },
 ];
 
 export const FAQ_ITEMS = [

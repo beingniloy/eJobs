@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toSafeStrings } from "./utils";
 
 export default function ProjectsSectionForm({ data, onChange, isBn }: { data: any[]; onChange: (d: any) => void; isBn: boolean }) {
-  const addEntry = () => onChange(toSafeStrings([...data, { name: "", description: "", url: "", technologies: "" }]));
+  const addEntry = () => onChange(toSafeStrings([...data, { name: "", description: "", url: "", technologies: "", supervisor: "" }]));
   const update = (i: number, key: string, val: string) => { const n = [...data]; n[i] = { ...n[i], [key]: val }; onChange(toSafeStrings(n)); };
   const remove = (i: number) => onChange(toSafeStrings(data.filter((_, idx) => idx !== i)));
 
@@ -20,6 +20,7 @@ export default function ProjectsSectionForm({ data, onChange, isBn }: { data: an
           <Input value={proj.name || proj.project_name || ""} onChange={(e) => update(i, "name", e.target.value)} placeholder={isBn ? "প্রকল্পের নাম" : "Project Name"} className="h-8 text-sm" />
           <Input value={proj.url || ""} onChange={(e) => update(i, "url", e.target.value)} placeholder={isBn ? "লিঙ্ক (ঐচ্ছিক)" : "URL (optional)"} className="h-8 text-sm" />
           <Input value={proj.technologies || ""} onChange={(e) => update(i, "technologies", e.target.value)} placeholder={isBn ? "প্রযুক্তি (কমা দিয়ে)" : "Technologies (comma-separated)"} className="h-8 text-sm" />
+          <Input value={proj.supervisor || ""} onChange={(e) => update(i, "supervisor", e.target.value)} placeholder={isBn ? "সুপারভাইজার (ঐচ্ছিক)" : "Supervisor (optional)"} className="h-8 text-sm" />
           <Textarea value={proj.description || ""} onChange={(e) => update(i, "description", e.target.value)} placeholder={isBn ? "বিবরণ..." : "Description..."} className="min-h-[60px] text-sm" />
         </div>
       ))}

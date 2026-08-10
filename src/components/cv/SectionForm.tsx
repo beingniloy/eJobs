@@ -10,6 +10,8 @@ import ProjectsSectionForm from "./sections/ProjectsSectionForm";
 import AwardsSectionForm from "./sections/AwardsSectionForm";
 import HobbiesSectionForm from "./sections/HobbiesSectionForm";
 import SocialSectionForm from "./sections/SocialSectionForm";
+import ReferencesSectionForm from "./sections/ReferencesSectionForm";
+import TrainingSectionForm from "./sections/TrainingSectionForm";
 
 export default function SectionForm({ section, data, onChange, isBn }: { section: string; data: any; onChange: (d: any) => void; isBn: boolean }) {
   switch (section) {
@@ -23,6 +25,8 @@ export default function SectionForm({ section, data, onChange, isBn }: { section
     case "awards":          return <AwardsSectionForm data={data || []} onChange={onChange} isBn={isBn} />;
     case "hobbies":         return <HobbiesSectionForm data={data || []} onChange={onChange} isBn={isBn} />;
     case "social_links":    return <SocialSectionForm data={data || {}} onChange={onChange} isBn={isBn} />;
+    case "references":      return <ReferencesSectionForm data={data || []} onChange={onChange} isBn={isBn} />;
+    case "training":        return <TrainingSectionForm data={data || []} onChange={onChange} isBn={isBn} />;
     default:                return <p className="text-sm text-muted-foreground">{isBn ? "এই সেকশনটি শীঘ্রই আসছে..." : "Coming soon..."}</p>;
   }
 }

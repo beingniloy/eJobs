@@ -13,6 +13,7 @@ export default function EducationSectionForm({ data, onChange, isBn }: { data: a
     degree: "", institution: "", board: "", field: "",
     group_or_subject: "", start_date: "", end_date: "",
     year: "", result: "", gpa_or_cgpa: "", description: "",
+    registration_number: "",
   }]));
   const remove = (i: number) => onChange(toSafeStrings(data.filter((_, idx) => idx !== i)));
   const update = (i: number, key: string, val: any) => {
@@ -80,6 +81,11 @@ export default function EducationSectionForm({ data, onChange, isBn }: { data: a
                 <Label className="text-[10px] text-muted-foreground">{isBn ? "গ্রেড / ফলাফল" : "Grade / Result"}</Label>
                 <Input value={edu.grade || edu.result || ""} onChange={(e) => updateMulti(i, { grade: e.target.value, result: e.target.value })} placeholder={isBn ? "যেমন: A+" : "e.g. A+, First Class"} className="h-8 text-sm" />
               </div>
+            </div>
+
+            <div>
+              <Label className="text-[10px] text-muted-foreground">{isBn ? "রেজিস্ট্রেশন / আরএন নম্বর" : "Registration / RN Number"}</Label>
+              <Input value={edu.registration_number || ""} onChange={(e) => update(i, "registration_number", e.target.value)} placeholder={isBn ? "যেমন: ৯০৬৭৫" : "e.g. 90675"} className="h-8 text-sm" />
             </div>
 
             <div>

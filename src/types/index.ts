@@ -47,6 +47,13 @@ export interface PersonalInfo {
   date_of_birth?: string;
   nationality?: string;
   photo_url?: string;
+  father_name?: string;
+  mother_name?: string;
+  gender?: string;
+  marital_status?: string;
+  religion?: string;
+  blood_group?: string;
+  postal_code?: string;
   [key: string]: any;
 }
 
@@ -55,6 +62,7 @@ export interface Experience {
   company: string;
   position: string;
   location?: string;
+  department?: string;
   start_date: string;
   end_date?: string;
   is_current?: boolean;
@@ -72,6 +80,7 @@ export interface Education {
   end_date?: string;
   grade?: string;
   description?: string;
+  registration_number?: string;
   [key: string]: any;
 }
 
@@ -81,6 +90,7 @@ export interface Project {
   description?: string;
   url?: string;
   technologies?: string[];
+  supervisor?: string;
   start_date?: string;
   end_date?: string;
   [key: string]: any;
@@ -95,6 +105,8 @@ export interface CvProfile {
   skills?: (string | { name: string; level?: string | null; category?: string | null })[];
   languages?: { name: string; proficiency: string }[];
   certifications?: { name: string; issuer: string; date: string }[];
+  references?: { name: string; designation?: string; organization?: string; phone?: string; email?: string }[];
+  training?: { institute: string; title: string; duration?: string }[];
   [key: string]: any;
 }
 

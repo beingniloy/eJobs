@@ -5,6 +5,7 @@ import { User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { toSafeStrings, compressToWebp, uploadPhoto } from "./utils";
 import { getStorageUrl } from "@/lib/utils";
@@ -43,6 +44,18 @@ export default function PersonalSectionForm({ data, onChange, isBn }: { data: Re
     </div>
   );
 
+  const selectField = (en: string, bn: string, key: string, options: { value: string; label_en: string; label_bn: string }[]) => (
+    <div className="space-y-1.5">
+      <Label className="text-xs font-medium">{isBn ? bn : en}</Label>
+      <Select value={data[key] || ""} onValueChange={(v) => onChange(toSafeStrings({ ...data, [key]: v }))}>
+        <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={isBn ? bn : en} /></SelectTrigger>
+        <SelectContent>
+          {options.map((o) => <SelectItem key={o.value} value={o.value}>{isBn ? o.label_bn : o.label_en}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-4">
@@ -63,6 +76,33 @@ export default function PersonalSectionForm({ data, onChange, isBn }: { data: Re
       {field("Address", "ঠিকানা", "address", "text", isBn ? "পুরো ঠিকানা" : "Full address")}
       {field("Website", "ওয়েবসাইট", "website", "url", "https://...", (v) => v.trim() && !/^https?:\/\//i.test(v) ? (isBn ? "https:// দিয়ে শুরু করুন" : "Must start with http(s)") : null)}
       {field("LinkedIn", "LinkedIn", "linkedin", "url", "https://linkedin.com/in/...", (v) => v.trim() && !/^https?:\/\//i.test(v) ? (isBn ? "https:// দিয়ে শুরু করুন" : "Must start with http(s)") : null)}
+      {field("Date of Birth", "জন্ম তারিখ", "date_of_birth", "date")}
+      {selectField("Gender", "লিঙ্গ", "gender", [
+        { value: "male", label_en: "Male", label_bn: "পুরুষ" },
+        { value: "female", label_en: "Female", label_bn: "নারী" },
+        { value: "other", label_en: "Other", label_bn: "অন্যান্য" },
+      ])}
+      {selectField("Marital Status", "বৈবাহিক অবস্থা", "marital_status", [
+        { value: "unmarried", label_en: "Unmarried", label_bn: "অবিবাহিত" },
+        { value: "married", label_en: "Married", label_bn: "বিবাহিত" },
+        { value: "divorced", label_en: "Divorced", label_bn: "বিবাহবিচ্ছেদ" },
+        { value: "widowed", label_en: "Widowed", label_bn: "বিধবা" },
+      ])}
+      {field("Father's Name", "পিতার নাম", "father_name", "text", isBn ? "পিতার নাম" : "Father's name")}
+      {field("Mother's Name", "মাতার নাম", "mother_name", "text", isBn ? "মাতার নাম" : "Mother's name")}
+      {field("Religion", "ধর্ম", "religion", "text", isBn ? "যেমন: ইসলাম" : "e.g. Islam")}
+      {selectField("Blood Group", "রক্তের গ্রুপ", "blood_group", [
+        { value: "A+", label_en: "A+", label_bn: "A+" },
+        { value: "A-", label_en: "A-", label_bn: "A-" },
+        { value: "B+", label_en: "B+", label_bn: "B+" },
+        { value: "B-", label_en: "B-", label_bn: "B-" },
+        { value: "AB+", label_en: "AB+", label_bn: "AB+" },
+        { value: "AB-", label_en: "AB-", label_bn: "AB-" },
+        { value: "O+", label_en: "O+", label_bn: "O+" },
+        { value: "O-", label_en: "O-", label_bn: "O-" },
+      ])}
+      {field("Nationality", "জাতীয়তা", "nationality", "text", isBn ? "বাংলাদেশী" : "Bangladeshi")}
+      {field("Postal Code", "পোস্টাল কোড", "postal_code", "text", isBn ? "১০০০" : "1000")}
       <div className="space-y-1.5">
         <Label className="text-xs font-medium">{isBn ? "সারসংক্ষেপ" : "Summary"}</Label>
         <Textarea value={data.summary || ""} onChange={(e) => onChange(toSafeStrings({ ...data, summary: e.target.value }))} placeholder={isBn ? "পেশাদার সারসংক্ষেপ..." : "Professional summary..."} className="min-h-[100px] text-sm" />
