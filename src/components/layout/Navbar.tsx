@@ -520,7 +520,7 @@ export default function Navbar() {
                 )}
                 {isAuthenticated && (
                   <button onClick={() => { setMobileOpen(false); logout(); }}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold text-destructive hover:bg-destructive/10 transition-colors w-full">
+                    className="flex items-center gap-3 px-3 py-2 mb-8 rounded-lg text-sm font-bold text-destructive hover:bg-destructive/10 transition-colors w-full">
                     <LogOut className="h-4 w-4 shrink-0" />
                     {isBn ? "লগআউট" : "Logout"}
                   </button>
