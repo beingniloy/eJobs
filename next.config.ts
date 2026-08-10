@@ -85,6 +85,12 @@ const nextConfig: NextConfig = {
       { source: "/cv/share/:path*", destination: `${backendUrl}/cv/share/:path*` },
     ];
   },
+  async redirects() {
+    return [
+      { source: "/employer/login", destination: "/login", permanent: true },
+      { source: "/employer-login", destination: "/login", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;
