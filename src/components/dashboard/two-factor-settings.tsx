@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Shield, Smartphone, Mail, KeyRound, Loader2, Copy, Check } from "lucide-react";
 import { authService } from "@/services/auth.service";
 import { toast } from "sonner";
-import Image from "next/image";
+import { QRCodeSVG } from "qrcode.react";
 
 type Method = "totp" | "sms" | "email";
 
@@ -23,7 +23,7 @@ export function TwoFactorSettings() {
 
   const [setupMode, setSetupMode] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<Method>("totp");
-  const [qrCodeUrl, setQrCodeUrl] = useState("");
+  const [otpauthUri, setOtpauthUri] = useState("");
   const [secret, setSecret] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -57,7 +57,7 @@ export function TwoFactorSettings() {
     setSubmitting(true);
     try {
       const res = await authService.setup2faTotp();
-      setQrCodeUrl(res.qr_code_url);
+      setOtpauthUri(res.otpauth_uri || "");
       setSecret(res.secret);
       setSetupMode(true);
       setSelectedMethod("totp");
@@ -252,8 +252,10 @@ export function TwoFactorSettings() {
         {setupMode && selectedMethod === "totp" && (
           <div className="space-y-4">
             <div className="flex flex-col items-center gap-4">
-              {qrCodeUrl && (
-                <Image src={qrCodeUrl} alt="QR Code" width={200} height={200} className="rounded-lg" unoptimized />
+              {otpauthUri && (
+                <div className="rounded-lg border p-3 bg-white">
+                  <QRCodeSVG value={otpauthUri} size={200} />
+                </div>
               )}
               <div className="text-center">
                 <p className="text-xs text-muted-foreground mb-1">Or enter this key manually:</p>
