@@ -35,7 +35,7 @@ const PUBLIC_ROUTES = [
 
 const GUEST_ONLY_ROUTES = ["/login", "/register", "/employer/register"];
 
-const EMPLOYEE_AUTH_ROUTES = ["/employer/register", "/employer/forgot-password"];
+const EMPLOYEE_AUTH_ROUTES = ["/employer/register"];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();

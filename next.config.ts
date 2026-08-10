@@ -89,6 +89,8 @@ const nextConfig: NextConfig = {
     return [
       { source: "/employer/login", destination: "/login", permanent: true },
       { source: "/employer-login", destination: "/login", permanent: true },
+      { source: "/employer/forgot-password", destination: "/forgot-password", permanent: true },
+      { source: "/employer-register", destination: "/employer/register", permanent: true },
     ];
   },
 };
