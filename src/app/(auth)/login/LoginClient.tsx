@@ -75,13 +75,10 @@ function LoginClientInner() {
   const [twoFactorMethod, setTwoFactorMethod] = useState<"totp" | "sms" | "email">("totp");
   const [otpSent, setOtpSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [accountTypeWarning, setAccountTypeWarning] = useState<string | null>(null);
-  const [checkingEmail, setCheckingEmail] = useState(false);
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<LoginForm>({
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   });
-  const emailValue = watch("email", "");
 
   useEffect(() => {
     if (login.data?.requires_2fa && login.data?.temp_token) {
@@ -98,23 +95,6 @@ function LoginClientInner() {
   useEffect(() => {
     if (countdown <= 0) return; const t = setTimeout(() => setCountdown((c) => c - 1), 1000); return () => clearTimeout(t);
   }, [countdown]);
-
-  useEffect(() => {
-    if (!emailValue || !emailValue.includes("@")) { setAccountTypeWarning(null); return; }
-    const timer = setTimeout(async () => {
-      setCheckingEmail(true);
-      try {
-        const res = await api.post("/check-account-type", { email: emailValue });
-        if (res.data?.exists && res.data?.role === "employer") {
-          setAccountTypeWarning(isBn
-            ? "এই ইমেইলটি নিয়োগকর্তা অ্যাকাউন্টে ব্যবহার করা হয়েছে। অনুগ্রহ করে নিয়োগকর্তা লগইন পেজে যান।"
-            : "This email is registered as an employer account. Please use the employer login page.");
-        } else { setAccountTypeWarning(null); }
-      } catch { setAccountTypeWarning(null); }
-      setCheckingEmail(false);
-    }, 600);
-    return () => clearTimeout(timer);
-  }, [emailValue, isBn]);
 
   const handleSendCode = async () => {
     if (!tempToken) return;
@@ -134,13 +114,12 @@ function LoginClientInner() {
           if (result.status) {
             const { setAuth } = useAuthStore.getState();
             const userRole = (result.role || result.user?.role || "candidate") as UserRole;
-            if (userRole === "employer") { toast.error(isBn ? "নিয়োগকর্তা অ্যাকাউন্ট" : "This is an employer account."); router.push("/employer/login"); return; }
             setAuth(result.user ?? null, result.token || "", userRole);
             toast.success(isBn ? "লগইন সফল!" : "Login successful!");
-            router.push(userRole === "admin" ? "/admin/dashboard" : "/dashboard");
+            router.push(userRole === "employer" ? "/employer/dashboard" : userRole === "admin" ? "/admin/dashboard" : "/dashboard");
           } else { toast.error(result.message || "Verification failed"); }
         } catch { toast.error(isBn ? "যাচাইকরণ ব্যর্থ" : "Verification failed"); }
-      } else { verify2fa.mutate({ data: { temp_token: tempToken, code: otpCode }, expectedRole: "candidate" }); }
+      } else { verify2fa.mutate({ temp_token: tempToken, code: otpCode }); }
     };
 
     return (
@@ -191,18 +170,11 @@ function LoginClientInner() {
             <CardDescription>{isBn ? "আপনার অ্যাকাউন্টে লগইন করুন" : "Sign in to your account"}</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit((data) => login.mutate({ data, expectedRole: "candidate" }))} className="space-y-4">
+            <form onSubmit={handleSubmit((data) => login.mutate(data))} className="space-y-4">
               <div className="space-y-2">
                 <Label>{isBn ? "ইমেইল" : "Email"}</Label>
                 <Input type="email" placeholder="you@example.com" {...register("email")} />
                 {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-                {accountTypeWarning && (
-                  <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-                    <p className="text-sm text-amber-700 dark:text-amber-400 flex-1">{accountTypeWarning}</p>
-                    <Link href="/employer/login" className="text-sm font-medium text-amber-800 dark:text-amber-300 hover:underline whitespace-nowrap">{isBn ? "নিয়োগকর্তা লগইন" : "Employer Login"}</Link>
-                  </div>
-                )}
-                {checkingEmail && <p className="text-xs text-muted-foreground">{isBn ? "চেক করা হচ্ছে..." : "Checking..."}</p>}
               </div>
               <div className="space-y-2">
                 <Label>{isBn ? "পাসওয়ার্ড" : "Password"}</Label>
@@ -215,7 +187,7 @@ function LoginClientInner() {
             <div className="mt-6"><Suspense fallback={<div className="h-16 bg-muted rounded animate-pulse" />}><SocialLoginButtons role="candidate" /></Suspense></div>
             <div className="mt-4 text-center text-sm space-y-2">
               <p>{isBn ? "নতুন প্রার্থী?" : "New candidate?"}{" "}<Link href="/register" className="text-primary hover:underline font-medium">{isBn ? "নিবন্ধন করুন" : "Register"}</Link></p>
-              <p>{isBn ? "নিয়োগকর্তা?" : "Employer?"}{" "}<Link href="/employer/login" className="text-primary hover:underline">{isBn ? "এখানে লগইন করুন" : "Login here"}</Link></p>
+              <p>{isBn ? "নিয়োগকর্তা?" : "Employer?"}{" "}<Link href="/employer/register" className="text-primary hover:underline">{isBn ? "নিবন্ধন করুন" : "Register here"}</Link></p>
             </div>
           </CardContent>
         </Card>

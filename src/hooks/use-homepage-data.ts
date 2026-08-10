@@ -17,90 +17,34 @@ async function fetchWithRetry<T>(url: string, retries = 2, delayMs = 1000): Prom
   return null;
 }
 
-function normalizeArray(data: any): any[] {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  const raw = data?.data;
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.data)) return raw.data;
-  return [];
-}
-
 export function useHomepageData() {
-  const categoriesQuery = useQuery({
-    queryKey: ["homepage", "categories"],
-    queryFn: () => fetchWithRetry<any[]>("/categories/highlighted"),
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-  });
-
-  const companiesQuery = useQuery({
-    queryKey: ["homepage", "companies"],
-    queryFn: async () => {
-      const data = await fetchWithRetry<any>("/companies?per_page=30");
-      return normalizeArray(data).slice(0, 6);
-    },
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-  });
-
-  const noticesQuery = useQuery({
-    queryKey: ["homepage", "notices"],
-    queryFn: async () => {
-      const data = await fetchWithRetry<any>("/notices");
-      return normalizeArray(data).slice(0, 5);
-    },
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-  });
-
-  const jobsQuery = useQuery({
-    queryKey: ["homepage", "jobs"],
-    queryFn: async () => {
-      const data = await fetchWithRetry<any>("/jobs?per_page=6");
-      return normalizeArray(data).slice(0, 6);
-    },
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-  });
-
   const homepageQuery = useQuery({
-    queryKey: ["homepage", "settings"],
-    queryFn: () => fetchWithRetry<Record<string, any>>("/settings/homepage"),
+    queryKey: ["homepage"],
+    queryFn: () => fetchWithRetry<any>("/homepage/data"),
     staleTime: 2 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
   });
 
-  const hotJobsQuery = useQuery({
-    queryKey: ["homepage", "hot-jobs"],
-    queryFn: async () => {
-      const data = await fetchWithRetry<any>("/jobs/hot");
-      const hotData = data?.data ?? data ?? {};
-      return {
-        hot_jobs: Array.isArray(hotData.hot_jobs) ? hotData.hot_jobs : [],
-        remote_jobs: Array.isArray(hotData.remote_jobs) ? hotData.remote_jobs : [],
-      };
-    },
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-  });
-
-  const loading = categoriesQuery.isLoading || companiesQuery.isLoading || jobsQuery.isLoading;
-
-  const categories = Array.isArray(categoriesQuery.data)
-    ? categoriesQuery.data
-    : (categoriesQuery.data as any)?.data ?? [];
+  const raw = homepageQuery.data ?? {};
+  const categories = Array.isArray(raw.categories) ? raw.categories : [];
+  const companies = Array.isArray(raw.companies) ? raw.companies : [];
+  const notices = Array.isArray(raw.notices) ? raw.notices.slice(0, 5) : [];
+  const featuredJobs = Array.isArray(raw.featured_jobs) ? raw.featured_jobs.slice(0, 6) : [];
+  const remoteJobs = Array.isArray(raw.remote_jobs) ? raw.remote_jobs.slice(0, 6) : [];
+  const hotJobs = Array.isArray(raw.featured_jobs) ? raw.featured_jobs.slice(0, 6) : [];
+  const hpData = raw.settings ?? {};
+  const loading = homepageQuery.isLoading;
 
   return {
     categories,
-    categoriesLoading: categoriesQuery.isLoading,
-    categoriesError: categoriesQuery.isError,
-    companies: companiesQuery.data ?? [],
-    notices: noticesQuery.data ?? [],
-    jobs: jobsQuery.data ?? [],
-    hpData: homepageQuery.data?.data ?? homepageQuery.data ?? {},
-    hotJobs: hotJobsQuery.data?.hot_jobs ?? [],
-    remoteJobs: hotJobsQuery.data?.remote_jobs ?? [],
+    categoriesLoading: loading,
+    categoriesError: homepageQuery.isError,
+    companies,
+    notices,
+    jobs: featuredJobs,
+    hpData,
+    hotJobs,
+    remoteJobs,
     loading,
   };
 }

@@ -109,11 +109,10 @@ api.interceptors.response.use(
 
         if (!isSilent) {
           const currentPath = window.location.pathname;
-          const authPaths = ["/login", "/employer/login", "/register", "/employer/register"];
+          const authPaths = ["/login", "/register", "/employer/register"];
           if (!authPaths.some((p) => currentPath.startsWith(p))) {
-            const isEmployerPath = currentPath.startsWith("/employer");
             setTimeout(() => {
-              window.location.href = isEmployerPath ? "/employer/login" : "/login";
+              window.location.href = "/login";
             }, 0);
           }
         }

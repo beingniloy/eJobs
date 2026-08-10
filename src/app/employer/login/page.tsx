@@ -1,13 +1,10 @@
-import type { Metadata } from "next";
-import EmployerLoginClient from "@/app/(auth)/employer-login/EmployerLoginClient";
+import { redirect } from "next/navigation";
 
-const siteName = process.env.NEXT_PUBLIC_APP_NAME || "eJobs";
-
-export const metadata: Metadata = {
-  title: "Employer Login",
-  description: `Login to your employer account on ${siteName}.`,
+export const metadata = {
+  title: "Login",
+  description: "Sign in to your eJobs account.",
 };
 
 export default function EmployerLoginPage() {
-  return <EmployerLoginClient />;
+  redirect("/login");
 }

@@ -124,7 +124,7 @@ export default function EmployerRegisterClient() {
             </form>
             <div className="mt-6"><Suspense fallback={<div className="h-16 bg-muted rounded animate-pulse" />}><SocialLoginButtons role="employer" /></Suspense></div>
             <div className="mt-4 text-center text-sm">
-              <p>{isBn ? "ইতিমধ্যে অ্যাকাউন্ট আছে?" : "Already have an account?"}{" "}<Link href="/employer/login" className="text-primary hover:underline font-medium">{isBn ? "লগইন" : "Sign In"}</Link></p>
+              <p>{isBn ? "ইতিমধ্যে অ্যাকাউন্ট আছে?" : "Already have an account?"}{" "}<Link href="/login" className="text-primary hover:underline font-medium">{isBn ? "লগইন" : "Sign In"}</Link></p>
             </div>
           </CardContent>
         </Card>

@@ -218,7 +218,7 @@ const DEFAULT_SERVICE_FEATURES = [
     button_bg_dark: "#7E22CE",
     button_text_color_dark: "#FFFFFF",
     icon: "briefcase",
-    url: "/employer/login",
+    url: "/login",
     enabled: true,
   },
   {
@@ -942,7 +942,7 @@ export default function HomePage() {
           </div>
         ) : companies.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-            {companies.map((company, i) => {
+            {companies.map((company: any, i: number) => {
               const cardColors = [
                 "bg-pink-50 dark:bg-pink-950/40 border-pink-200 dark:border-pink-800",
                 "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800",

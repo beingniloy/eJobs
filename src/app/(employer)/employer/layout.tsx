@@ -148,8 +148,8 @@ export default function EmployerDashboardLayout({
           <p className="text-muted-foreground">
             {isBn ? "এই পৃষ্ঠাটি শুধুমাত্র নিয়োগকর্তাদের জন্য" : "This page is for employers only"}
           </p>
-          <a href="/employer/login" className="text-primary underline">
-            {isBn ? "নিয়োগকর্তা লগইন" : "Employer Login"}
+          <a href="/login" className="text-primary underline">
+            {isBn ? "লগইন" : "Login"}
           </a>
         </div>
       </div>

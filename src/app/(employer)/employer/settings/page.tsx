@@ -251,7 +251,7 @@ export default function EmployerSettingsPage() {
             className="w-full"
             onClick={() => {
               logout();
-              router.push("/employer/login");
+              router.push("/login");
             }}
           >
             <LogOut className="h-4 w-4 mr-2" />

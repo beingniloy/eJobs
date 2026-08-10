@@ -34,28 +34,12 @@ export function useAuth() {
   });
 
   const loginMutation = useMutation({
-    mutationFn: ({ data, expectedRole }: { data: LoginPayload; expectedRole?: UserRole }) =>
-      authService.login(data).then((res) => ({ ...res, _expectedRole: expectedRole })),
+    mutationFn: (data: LoginPayload) => authService.login(data),
     onSuccess: (data) => {
       if (data.requires_2fa) {
         return;
       }
       const userRole = (data.role || data.user?.role || "candidate") as UserRole;
-      const expectedRole = (data as any)._expectedRole as UserRole | undefined;
-
-      // Role validation: reject if user role doesn't match the login page's expected role
-      if (expectedRole && userRole !== expectedRole && userRole !== "admin") {
-        setAuth(null, "", null as any);
-        queryClient.clear();
-        if (userRole === "employer") {
-          toast.error("This is an employer account. Please use the employer login page.");
-          router.push("/employer/login");
-        } else {
-          toast.error("This is a candidate account. Please use the candidate login page.");
-          router.push("/login");
-        }
-        return;
-      }
 
       setAuth(data.user ?? null, data.token || "", userRole);
       queryClient.clear();
@@ -74,24 +58,9 @@ export function useAuth() {
   });
 
   const verify2faMutation = useMutation({
-    mutationFn: ({ data, expectedRole }: { data: { temp_token: string; code: string }; expectedRole?: UserRole }) =>
-      authService.verify2fa(data).then((res) => ({ ...res, _expectedRole: expectedRole })),
+    mutationFn: (data: { temp_token: string; code: string }) => authService.verify2fa(data),
     onSuccess: (data) => {
       const userRole = (data.role || data.user?.role || "candidate") as UserRole;
-      const expectedRole = (data as any)._expectedRole as UserRole | undefined;
-
-      if (expectedRole && userRole !== expectedRole && userRole !== "admin") {
-        setAuth(null, "", null as any);
-        queryClient.clear();
-        if (userRole === "employer") {
-          toast.error("This is an employer account. Please use the employer login page.");
-          router.push("/employer/login");
-        } else {
-          toast.error("This is a candidate account. Please use the candidate login page.");
-          router.push("/login");
-        }
-        return;
-      }
 
       setAuth(data.user ?? null, data.token || "", userRole);
       queryClient.clear();

@@ -13,7 +13,6 @@ const PUBLIC_ROUTES = [
   "/leaderboard",
   "/login",
   "/register",
-  "/employer/login",
   "/employer/register",
   "/forgot-password",
   "/verify-email",
@@ -34,9 +33,9 @@ const PUBLIC_ROUTES = [
   "/account-restricted",
 ];
 
-const GUEST_ONLY_ROUTES = ["/login", "/register", "/employer/login", "/employer/register"];
+const GUEST_ONLY_ROUTES = ["/login", "/register", "/employer/register"];
 
-const EMPLOYEE_AUTH_ROUTES = ["/employer/login", "/employer/register", "/employer/forgot-password"];
+const EMPLOYEE_AUTH_ROUTES = ["/employer/register", "/employer/forgot-password"];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -100,11 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isDashboard = pathname.startsWith("/dashboard") || (pathname.startsWith("/employer") && !isEmployeeAuth) || pathname.startsWith("/admin");
 
     if (!currentAuth.isAuthenticated && isDashboard) {
-      if (pathname.startsWith("/employer")) {
-        router.push("/employer/login");
-      } else {
-        router.push("/login");
-      }
+      router.push("/login");
     }
 
     if (currentAuth.isAuthenticated && isGuestOnly) {
