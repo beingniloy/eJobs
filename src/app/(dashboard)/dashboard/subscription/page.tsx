@@ -404,7 +404,6 @@ export default function SubscriptionPage() {
         isBn={isBn}
         walletBalance={walletBalance}
         walletLoading={walletLoading}
-        taxSettings={[]}
         onSuccess={loadData}
       />
 

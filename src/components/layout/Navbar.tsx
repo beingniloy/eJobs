@@ -14,7 +14,6 @@ import { subscriptionService } from "@/services/subscription.service";
 import { notificationsService } from "@/services/notifications.service";
 import PremiumBadge from "@/components/badges/PremiumBadge";
 import CurrencySwitcher from "@/components/currency-switcher";
-import VerificationWarningBanner from "@/components/verification-warning-banner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -38,7 +37,7 @@ import {
   ChevronDown, Sparkles, Briefcase, Globe, Building2, Users,
   FileText, CreditCard, Home, Trophy, GraduationCap, BookOpen, Plus,
   MessageSquare, FolderKanban, Wallet, ShoppingCart,
-  Megaphone, ShieldCheck, BarChart3, Headphones, Plane, Send, Calendar, Award, Shield, Receipt,
+  Megaphone, ShieldCheck, BarChart3, Headphones, Plane, Send, Calendar, Award, Shield,
   CheckCircle, Bookmark,
 } from "lucide-react";
 import { getInitials, getStorageUrl } from "@/lib/utils";
@@ -167,7 +166,6 @@ export default function Navbar() {
       { href: "/dashboard/wallet", label: isBn ? "ওয়ালেট" : "Wallet", icon: Wallet },
       { href: "/dashboard/purchases", label: isBn ? "ক্রয়সমূহ" : "Purchases", icon: ShoppingCart },
       { href: "/dashboard/subscription", label: isBn ? "সাবস্ক্রিপশন" : "Subscription", icon: CreditCard },
-      { href: "/dashboard/tax-info", label: isBn ? "ট্যাক্স তথ্য" : "Tax Info", icon: Receipt },
     ]},
     { group: isBn ? "অ্যাকাউন্ট" : "Account", items: [
       { href: "/dashboard/messages", label: isBn ? "বার্তা" : "Messages", icon: MessageSquare },
@@ -195,7 +193,6 @@ export default function Navbar() {
 
   return (
     <>
-    <VerificationWarningBanner mode="global" />
     <header
       className="sticky top-0 z-50 w-full navbar-surface"
       style={{

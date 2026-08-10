@@ -313,15 +313,6 @@ export default function InvoicesPage() {
                         {inv.subtotal?.toLocaleString()}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {t("Tax", "কর")}
-                      </span>
-                      <span>
-                        {symbol}
-                        {inv.tax_amount?.toLocaleString()}
-                      </span>
-                    </div>
                     <div className="flex justify-between text-base font-bold border-t pt-2">
                       <span>{t("Total", "মোট")}</span>
                       <span>

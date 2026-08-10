@@ -19,19 +19,6 @@ import PricingPlanCard from "@/components/pricing/PricingPlanCard";
 import PricingPurchaseModal from "@/components/pricing/PricingPurchaseModal";
 import type { Plan, Subscription } from "@/types";
 
-interface TaxSetting {
-  id: number;
-  name: string;
-  label?: string;
-  rate: number;
-  country_code?: string | null;
-  is_inclusive?: boolean;
-  is_active: boolean;
-  is_default?: boolean;
-  applies_to?: string;
-  [key: string]: any;
-}
-
 interface FinancialSettings {
   remote_job_service_charge: number;
   regular_job_apply_fee: number;
@@ -52,7 +39,6 @@ export default function PricingClient() {
   const [loading, setLoading] = useState(true);
   const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const [taxSettings, setTaxSettings] = useState<TaxSetting[]>([]);
   const [financial, setFinancial] = useState<FinancialSettings>({
     remote_job_service_charge: 0,
     regular_job_apply_fee: 0,
@@ -124,7 +110,6 @@ export default function PricingClient() {
         regular_job_apply_fee_enabled: !!s.regular_job_apply_fee_enabled,
         exchange_rate_usd: Number(s.exchange_rate_usd ?? 115),
       });
-      if (Array.isArray(s.tax_settings)) setTaxSettings(s.tax_settings);
     } catch {}
   };
 
@@ -315,7 +300,6 @@ export default function PricingClient() {
         isBn={isBn}
         walletBalance={walletBalance}
         walletLoading={false}
-        taxSettings={taxSettings}
         upgradeCredit={currentSubscription ? getUpgradeCredit(currentSubscription) : 0}
         onSuccess={loadData}
       />

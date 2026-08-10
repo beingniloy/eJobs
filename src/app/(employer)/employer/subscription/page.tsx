@@ -579,7 +579,6 @@ export default function EmployerSubscriptionPage() {
         isBn={isBn}
         walletBalance={walletBalance}
         walletLoading={walletLoading}
-        taxSettings={[]}
         onSuccess={loadData}
       />
     </div>

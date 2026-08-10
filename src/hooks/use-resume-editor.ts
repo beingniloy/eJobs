@@ -6,7 +6,7 @@ import { useThemeStore } from "@/store/theme-store";
 import { resumeService } from "@/services/resume.service";
 import { toast } from "sonner";
 import type { CvTemplate, CvProfile } from "@/types";
-import { profileDataToEditorData } from "@/lib/cv-builder-utils";
+import { profileDataToEditorData, sanitizeForBlade } from "@/lib/cv-builder-utils";
 import { getStorageUrl } from "@/lib/utils";
 
 interface UseResumeEditorOptions {
@@ -203,26 +203,6 @@ function buildClientPreview(demoHtml: string, data: Record<string, any>): string
   return html;
 }
 
-/** Ensure all values are strings/arrays-of-strings for Blade templates. */
-function sanitizeForBlade(data: Record<string, any>): Record<string, any> {
-  const safe = (v: any): any => {
-    if (v === null || v === undefined) return '';
-    if (typeof v === 'string') return v;
-    if (typeof v === 'number') return String(v);
-    if (typeof v === 'boolean') return v ? 'true' : 'false';
-    if (Array.isArray(v)) return v.map(safe);
-    if (typeof v === 'object') {
-      const out: Record<string, any> = {};
-      for (const [k, val] of Object.entries(v)) { out[k] = safe(val); }
-      return out;
-    }
-    return String(v);
-  };
-  const result: Record<string, any> = {};
-  for (const [key, val] of Object.entries(data)) { result[key] = safe(val); }
-  return result;
-}
-
 const EMPTY_PROJECT = { name: "", description: "", url: "" };
 
 export function useResumeEditor({ slug, onNotFound }: UseResumeEditorOptions) {
@@ -378,7 +358,9 @@ export function useResumeEditor({ slug, onNotFound }: UseResumeEditorOptions) {
         awards: editorData.awards || [],
         hobbies: editorData.hobbies || [],
         social_links: editorData.social_links || {},
-      });
+        references: editorData.references || [],
+        training: editorData.training || [],
+      } as any);
 
       const resume = await resumeService.createResume({
         title: template.name + " " + (isBn ? "সিভি" : "CV"),

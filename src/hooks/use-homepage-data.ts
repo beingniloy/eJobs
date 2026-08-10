@@ -29,9 +29,9 @@ export function useHomepageData() {
   const categories = Array.isArray(raw.categories) ? raw.categories : [];
   const companies = Array.isArray(raw.companies) ? raw.companies : [];
   const notices = Array.isArray(raw.notices) ? raw.notices.slice(0, 5) : [];
-  const featuredJobs = Array.isArray(raw.featured_jobs) ? raw.featured_jobs.slice(0, 6) : [];
-  const remoteJobs = Array.isArray(raw.remote_jobs) ? raw.remote_jobs.slice(0, 6) : [];
-  const hotJobs = Array.isArray(raw.featured_jobs) ? raw.featured_jobs.slice(0, 6) : [];
+  const featuredJobs = Array.isArray(raw.featured_jobs) ? raw.featured_jobs.slice(0, 30) : [];
+  const remoteJobs = Array.isArray(raw.remote_jobs) ? raw.remote_jobs.slice(0, 30) : [];
+  const hotJobs = Array.isArray(raw.featured_jobs) ? raw.featured_jobs.slice(0, 30) : [];
   const hpData = raw.settings ?? {};
   const loading = homepageQuery.isLoading;
 

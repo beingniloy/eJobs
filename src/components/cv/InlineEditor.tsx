@@ -131,7 +131,8 @@ export default function InlineEditor({ template, data, onChange, previewHtml, pr
                 ) : (
                   <div className="flex flex-col items-center justify-center h-[400px] sm:h-[600px] text-muted-foreground">
                     <FileText className="h-16 w-16 mb-4" />
-                    <p>{isBn ? "প্রিভিউ লোড হচ্ছে..." : "Loading preview..."}</p>
+                    <p className="font-medium">{isBn ? "প্রিভিউ পাওয়া যায়নি" : "Preview not available"}</p>
+                    <p className="text-xs mt-1">{isBn ? "টেমপ্লেট লোড হয়নি" : "Template failed to load. Try refreshing."}</p>
                   </div>
                 )}
               </div>

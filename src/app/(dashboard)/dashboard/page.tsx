@@ -6,8 +6,8 @@ import api from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
 import { useThemeStore } from "@/store/theme-store";
 import RecommendedJobs from "@/components/jobs/RecommendedJobs";
+import VerificationWarningBanner from "@/components/verification-warning-banner";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
@@ -18,9 +18,6 @@ import {
   Eye,
   TrendingUp,
   ArrowRight,
-  ShieldAlert,
-  CheckCircle,
-  XCircle,
 } from "lucide-react";
 
 interface DashboardData {
@@ -37,7 +34,6 @@ export default function CandidateDashboardPage() {
   const isBn = language === "bn";
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [verification, setVerification] = useState<any>(null);
 
   useEffect(() => {
     api
@@ -100,39 +96,6 @@ export default function CandidateDashboardPage() {
             : "Here's an overview of your career dashboard"}
         </p>
       </div>
-
-      {/* Verification Warning Bar */}
-      {verification && !verification.summary?.is_fully_verified && (
-        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
-          <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-              <ShieldAlert className="h-5 w-5 shrink-0" />
-              <p className="font-medium text-sm">
-                {isBn ? "আপনার অ্যাকাউন্ট যাচাইকৃত নয়" : "Your account is not fully verified"}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className={`flex items-center gap-1 ${verification.summary?.email_verified ? "text-emerald-600" : "text-muted-foreground"}`}>
-                {verification.summary?.email_verified ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                {isBn ? "ইমেইল" : "Email"}
-              </span>
-              <span className={`flex items-center gap-1 ${verification.summary?.phone_verified ? "text-emerald-600" : "text-muted-foreground"}`}>
-                {verification.summary?.phone_verified ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                {isBn ? "ফোন" : "Phone"}
-              </span>
-              <span className={`flex items-center gap-1 ${verification.summary?.nid_verified ? "text-emerald-600" : "text-muted-foreground"}`}>
-                {verification.summary?.nid_verified ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                {isBn ? "NID" : "NID"}
-              </span>
-            </div>
-            <Button asChild size="sm" variant="outline" className="sm:ml-auto border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900">
-              <Link href="/dashboard/verify">
-                {isBn ? "এখনই যাচাই করুন" : "Verify Now"}
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Stats */}
       {loading ? (
@@ -206,6 +169,9 @@ export default function CandidateDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Verification banner between sections */}
+      <VerificationWarningBanner mode="dashboard" />
 
       {/* Recommended Jobs */}
       <RecommendedJobs />

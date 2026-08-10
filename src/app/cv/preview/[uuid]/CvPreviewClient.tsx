@@ -57,25 +57,40 @@ export default function CvPreviewClient() {
         const slug = resume.template_slug;
         if (!slug) throw new Error("No template assigned to this resume");
 
+        // Try renderPreview first — reads from the resume's frozen data_snapshot
+        try {
+          const snapshotHtml = await resumeService.renderPreview(uuid);
+          if (snapshotHtml && snapshotHtml.length > 50) {
+            setHtml(snapshotHtml);
+            return;
+          }
+        } catch {
+          // Fallback to live preview using current profile data
+        }
+
+        // Fallback: live preview (may show stale data if profile changed after resume creation)
         try {
           const previewHtml = await resumeService.getLivePreview(slug);
           if (previewHtml && previewHtml.length > 50) {
             setHtml(previewHtml);
-          } else {
-            throw new Error("Empty preview");
+            return;
           }
         } catch {
-          try {
-            const demoHtml = await resumeService.getPreviewDemo(slug);
-            if (demoHtml && demoHtml.length > 50) {
-              setHtml(demoHtml);
-            } else {
-              throw new Error("Empty preview");
-            }
-          } catch {
-            throw new Error("Preview not available for this template");
-          }
+          // Fallback to demo
         }
+
+        // Last resort: demo template
+        try {
+          const demoHtml = await resumeService.getPreviewDemo(slug);
+          if (demoHtml && demoHtml.length > 50) {
+            setHtml(demoHtml);
+            return;
+          }
+        } catch {
+          // give up
+        }
+
+        throw new Error("Preview not available for this template");
       })
       .catch((err: any) => {
         setError(

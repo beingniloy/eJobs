@@ -24,16 +24,6 @@ import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import type { Plan } from "@/types";
 
-interface TaxSetting {
-  id: number;
-  name: string;
-  label?: string;
-  rate: number;
-  is_inclusive?: boolean;
-  is_active: boolean;
-  applies_to?: string;
-}
-
 interface PricingPurchaseModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -41,38 +31,8 @@ interface PricingPurchaseModalProps {
   isBn: boolean;
   walletBalance: number | null;
   walletLoading: boolean;
-  taxSettings: TaxSetting[];
   upgradeCredit?: number;
   onSuccess: () => void;
-}
-
-function calculateTax(
-  basePrice: number,
-  taxSettings: TaxSetting[]
-): { rate: number; amount: number; label: string; is_inclusive: boolean } {
-  if (!taxSettings.length) {
-    return { rate: 0, amount: 0, label: "Tax", is_inclusive: false };
-  }
-  const applicable = taxSettings.find(
-    (t) =>
-      t.is_active &&
-      t.rate > 0 &&
-      (t.applies_to === "all" || t.applies_to === "subscription")
-  );
-  if (!applicable) {
-    return { rate: 0, amount: 0, label: "Tax", is_inclusive: false };
-  }
-  const rate = Number(applicable.rate);
-  const isInclusive = applicable.is_inclusive ?? false;
-  const amount = isInclusive
-    ? Math.round(basePrice - (basePrice / (1 + rate / 100)) * 100) / 100
-    : Math.round(basePrice * (rate / 100) * 100) / 100;
-  return {
-    rate,
-    amount,
-    label: applicable.label || applicable.name || "Tax",
-    is_inclusive: isInclusive,
-  };
 }
 
 export default function PricingPurchaseModal({
@@ -82,7 +42,6 @@ export default function PricingPurchaseModal({
   isBn,
   walletBalance,
   walletLoading,
-  taxSettings,
   upgradeCredit = 0,
   onSuccess,
 }: PricingPurchaseModalProps) {
@@ -95,9 +54,7 @@ export default function PricingPurchaseModal({
 
   if (!plan) return null;
 
-  const planTax = calculateTax(plan.price, taxSettings);
-  const taxAmount = planTax.is_inclusive ? 0 : planTax.amount;
-  const totalPrice = Math.max(0, plan.price + taxAmount - upgradeCredit);
+  const totalPrice = Math.max(0, plan.price - upgradeCredit);
   const hasSufficientBalance =
     walletBalance !== null && walletBalance >= totalPrice;
   const deficit = hasSufficientBalance ? 0 : totalPrice - (walletBalance || 0);
@@ -197,14 +154,6 @@ export default function PricingPurchaseModal({
                     : "Credit from previous plan"}
                 </span>
                 <span>-{formatCurrency(upgradeCredit)}</span>
-              </div>
-            )}
-            {planTax.rate > 0 && (
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>
-                  {planTax.label} ({planTax.rate}%)
-                </span>
-                <span>{formatCurrency(planTax.amount)}</span>
               </div>
             )}
             <div className="flex items-center justify-between pt-2 border-t font-bold">

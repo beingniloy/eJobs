@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   LayoutDashboard, Briefcase, Bookmark, Send, FileText, Wallet,
   Settings, Bell, User, MessageSquare, BarChart3, Shield, CreditCard,
-  FolderKanban, Receipt, Headphones, ShoppingCart, Home, Calendar, Plane,
+  FolderKanban, Headphones, ShoppingCart, Home, Calendar, Plane,
   GraduationCap, Award, ClipboardCheck, CheckCircle,
 } from "lucide-react";
 
@@ -40,7 +40,6 @@ const sidebarItems = [
   { href: "/dashboard/notifications", label: "Notifications", labelBn: "নোটিফিকেশন", icon: Bell },
   { href: "/dashboard/notifications/preferences", label: "Notification Prefs", labelBn: "নোটিফিকেশন পছন্দ", icon: Settings },
   { href: "/dashboard/disputes", label: "Disputes", labelBn: "বিরোধসমূহ", icon: Shield },
-  { href: "/dashboard/tax-info", label: "Tax Info", labelBn: "ট্যাক্স তথ্য", icon: Receipt },
   { href: "/dashboard/settings", label: "Settings", labelBn: "সেটিংস", icon: Settings },
   { href: "/dashboard/support", label: "Support", labelBn: "সাপোর্ট", icon: Headphones },
 ];
@@ -49,7 +48,7 @@ const sidebarGroups: SidebarGroup[] = [
   { group: "Overview", groupBn: "সারসংক্ষেপ", color: "text-blue-500", items: sidebarItems.filter(i => ["/dashboard", "/dashboard/profile/overview", "/dashboard/profile", "/dashboard/analytics"].includes(i.href)) },
   { group: "Jobs & Work", groupBn: "চাকরি ও কাজ", color: "text-emerald-500", items: sidebarItems.filter(i => ["/dashboard/resume", "/dashboard/applied-jobs", "/dashboard/accepted-jobs", "/dashboard/saved-jobs", "/dashboard/job-alerts", "/dashboard/workspace", "/dashboard/interviews"].includes(i.href)) },
   { group: "Skill Center", groupBn: "দক্ষতা কেন্দ্র", color: "text-orange-500", items: sidebarItems.filter(i => ["/dashboard/skill-center", "/dashboard/skill-center/certificates"].includes(i.href)) },
-  { group: "Finance", groupBn: "আর্থিক", color: "text-amber-500", items: sidebarItems.filter(i => ["/dashboard/wallet", "/dashboard/purchases", "/dashboard/subscription", "/dashboard/tax-info"].includes(i.href)) },
+  { group: "Finance", groupBn: "আর্থিক", color: "text-amber-500", items: sidebarItems.filter(i => ["/dashboard/wallet", "/dashboard/purchases", "/dashboard/subscription"].includes(i.href)) },
   { group: "Account", groupBn: "অ্যাকাউন্ট", color: "text-purple-500", items: sidebarItems.filter(i => ["/dashboard/messages", "/dashboard/verify", "/dashboard/notifications", "/dashboard/notifications/preferences", "/dashboard/disputes", "/dashboard/settings", "/dashboard/support"].includes(i.href)) },
 ];
 

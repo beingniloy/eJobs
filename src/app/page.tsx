@@ -760,7 +760,7 @@ export default function HomePage() {
                 ))}
               </div>
             ) : hotJobs.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                 {hotJobs.slice(0, 30).map((job: any) => (
                   <Link key={job.id} href={`/jobs/${job.id}`}>
                     <div className="border border-border rounded-xl p-4 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer h-full flex flex-col dark:hidden" style={{ backgroundColor: hjCardBg, color: hjCardText }}>

@@ -409,3 +409,41 @@
     gap: var(--spacing-section);
   }
 }
+
+/* ============================================
+   THIN SCROLLBAR
+   ============================================ */
+* {
+  scrollbar-width: thin !important;
+  scrollbar-color: hsl(214.3 31.8% 75%) transparent !important;
+}
+
+.dark * {
+  scrollbar-color: hsl(217.2 32.6% 30%) transparent !important;
+}
+
+*::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: hsl(214.3 31.8% 75%) !important;
+  border-radius: 999px !important;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background-color: hsl(217.2 32.6% 30%) !important;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(214.3 31.8% 60%) !important;
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(217.2 32.6% 40%) !important;
+}

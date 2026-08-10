@@ -159,6 +159,12 @@ export const resumeService = {
     return res.data.data ?? res.data;
   },
 
+  // Render preview from resume's data_snapshot (uses frozen data, not live profile)
+  renderPreview: async (uuid: string): Promise<string> => {
+    const res = await api.get(`/cv/resumes/${uuid}/preview`, { responseType: "text" });
+    return res.data;
+  },
+
   // Get live preview with actual user profile data (auth required)
   getLivePreview: async (slug: string): Promise<string> => {
     const res = await api.get(`/candidate/cv/live-preview/${slug}`, { responseType: "text" });
