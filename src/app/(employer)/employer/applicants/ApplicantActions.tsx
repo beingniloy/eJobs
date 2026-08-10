@@ -34,7 +34,7 @@ interface Props {
   pending?: boolean;
 }
 
-export default function ApplicantActions({ app, profileUrl, isBn, onStatusChange, pending }: Props) {
+export default function ApplicantActions({ app, profileUrl, isBn, onStatusChange, onScheduleInterview, pending }: Props) {
   const router = useRouter();
   const available = getAvailableStatuses(app.status || "pending");
 
@@ -105,6 +105,14 @@ export default function ApplicantActions({ app, profileUrl, isBn, onStatusChange
               ))}
               <DropdownMenuSeparator />
             </>
+          )}
+
+          {/* Schedule Interview — only for shortlisted */}
+          {app.status === "shortlisted" && onScheduleInterview && (
+            <DropdownMenuItem onClick={() => onScheduleInterview(app)}>
+              <Calendar className="h-4 w-4 mr-2 text-purple-600" />
+              {isBn ? "সাক্ষাৎকার নির্ধারণ" : "Schedule Interview"}
+            </DropdownMenuItem>
           )}
 
           {(app as any).resume_url && (
