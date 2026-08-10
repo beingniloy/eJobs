@@ -387,31 +387,59 @@ export default function Navbar() {
             </div>
 
             <div className="flex flex-col h-full">
-              {/* User Info — clickable to profile */}
+              {/* User Info — dropdown like desktop */}
               {isAuthenticated && (
                 <div className="p-4 border-b bg-muted/30">
-                  <Link href={profilePath} onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-3 hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors">
-                    <DefaultAvatar src={user?.avatar} name={user?.name} className="h-10 w-10" />
-                    <div className="min-w-0">
-                      <p className="font-semibold text-sm truncate">{user?.name}</p>
-                      {subscription?.status === "active" && subscription.plan_name && (
-                        <PremiumBadge plan={subscription.plan_name} />
-                      )}
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />
-                  </Link>
-                  <div className="flex items-center gap-2 mt-3">
-                    <CurrencySwitcher />
-                    <Button variant="outline" size="sm" onClick={toggleLanguage} className="flex-1 gap-1.5">
-                      <Globe className="h-3.5 w-3.5" />
-                      {isBn ? "English" : "বাংলা"}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setTheme(activeTheme === "dark" ? "light" : "dark")} className="flex-1 gap-1.5">
-                      {mounted ? (activeTheme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />) : <Moon className="h-3.5 w-3.5" />}
-                      {mounted ? (activeTheme === "dark" ? "Light" : "Dark") : "Theme"}
-                    </Button>
-                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-3 hover:bg-muted/50 rounded-lg p-2 -m-2 w-full text-left transition-colors">
+                        <DefaultAvatar src={user?.avatar} name={user?.name} className="h-10 w-10" />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-sm truncate">{user?.name}</p>
+                          {subscription?.status === "active" && subscription.plan_name && (
+                            <PremiumBadge plan={subscription.plan_name} />
+                          )}
+                        </div>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56">
+                      <div className="px-3 py-2 border-b">
+                        <p className="text-sm font-semibold truncate">{user?.name}</p>
+                        {subscription?.status === "active" && subscription.plan_name && (
+                          <PremiumBadge plan={subscription.plan_name} />
+                        )}
+                      </div>
+                      <div className="px-3 py-2 border-b">
+                        <div className="flex items-center gap-2">
+                          <CurrencySwitcher />
+                          <Button variant="ghost" size="sm" onClick={toggleLanguage} className="text-xs font-medium hover:bg-black/5 dark:hover:bg-white/10">
+                            {isBn ? "EN" : "বাং"}
+                          </Button>
+                          <Button variant="ghost" size="icon" className="hover:bg-black/5 dark:hover:bg-white/10" onClick={() => setTheme(activeTheme === "dark" ? "light" : "dark")}>
+                            {mounted ? (activeTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />) : <Moon className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                      <DropdownMenuItem onClick={() => { setMobileOpen(false); router.push(dashboardPath); }}>
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        {isBn ? "ড্যাশবোর্ড" : "Dashboard"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setMobileOpen(false); router.push(profilePath); }}>
+                        <User className="mr-2 h-4 w-4" />
+                        {isBn ? "প্রোফাইল" : "Profile"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setMobileOpen(false); router.push(settingsPath); }}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        {isBn ? "সেটিংস" : "Settings"}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => { setMobileOpen(false); logout(); }} className="text-destructive">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        {isBn ? "লগআউট" : "Logout"}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               )}
 
