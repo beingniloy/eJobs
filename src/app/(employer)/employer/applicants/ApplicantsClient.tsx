@@ -17,6 +17,7 @@ import { StatusChangeDialog } from "./StatusChangeDialog";
 import { tryEndpoints, groupByJob } from "./applicants-utils";
 import { BulkMessageDialog } from "./BulkMessageDialog";
 import { DeliveryMonitorDialog } from "./DeliveryMonitor";
+import ScheduleInterviewModal from "@/components/interviews/ScheduleInterviewModal";
 
 export default function ApplicantsClient() {
   const { language, settings } = useThemeStore();
@@ -33,6 +34,7 @@ export default function ApplicantsClient() {
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [monitorOpen, setMonitorOpen] = useState(false);
+  const [scheduleInterviewApp, setScheduleInterviewApp] = useState<JobApplication | null>(null);
 
   useEffect(() => {
     document.title = isBn ? `আবেদনকারী | ${siteName}` : `Applicants | ${siteName}`;
@@ -145,6 +147,7 @@ export default function ApplicantsClient() {
               isBn={isBn}
               onToggle={() => setExpandedJobs((p) => ({ ...p, [group.jobId]: p[group.jobId] !== false ? false : true }))}
               onStatusChange={handleStatusChange}
+              onScheduleInterview={(app) => setScheduleInterviewApp(app)}
               pendingId={pendingId}
             />
           ))}
@@ -182,6 +185,18 @@ export default function ApplicantsClient() {
         onOpenChange={setMonitorOpen}
         isBn={isBn}
       />
+
+      {scheduleInterviewApp && (
+        <ScheduleInterviewModal
+          application={scheduleInterviewApp}
+          onClose={() => setScheduleInterviewApp(null)}
+          onScheduled={() => {
+            setScheduleInterviewApp(null);
+            refreshStatus(scheduleInterviewApp.id, "interview");
+            toast.success(isBn ? "সাক্ষাৎকার নির্ধারিত হয়েছে" : "Interview scheduled");
+          }}
+        />
+      )}
     </div>
   );
 }

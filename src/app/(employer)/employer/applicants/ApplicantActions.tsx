@@ -80,6 +80,13 @@ export default function ApplicantActions({ app, profileUrl, isBn, onStatusChange
         </>
       )}
 
+      {/* Quick schedule interview for shortlisted */}
+      {app.status === "shortlisted" && onScheduleInterview && (
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-purple-600" title={isBn ? "সাক্ষাৎকার নির্ধারণ" : "Schedule Interview"} onClick={() => onScheduleInterview(app)}>
+          <Calendar className="h-3.5 w-3.5" />
+        </Button>
+      )}
+
       {/* Overflow dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
