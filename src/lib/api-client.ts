@@ -8,8 +8,12 @@ declare module "axios" {
 }
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api").replace(/\/api\/?$/, "");
+const isBrowser = typeof window !== "undefined";
 const api = axios.create({
-  baseURL: `${API_BASE}/api`,
+  // In the browser use relative /api so Next.js rewrites proxy to backend,
+  // keeping same-origin and letting cookies (XSRF-TOKEN, session) work.
+  // On the server (SSR) use the full backend URL directly.
+  baseURL: isBrowser ? "/api" : `${API_BASE}/api`,
   withCredentials: true,
   timeout: 30000,
   headers: {
@@ -25,7 +29,7 @@ async function ensureCsrfCookie() {
   if (csrfFetched) return;
   if (!csrfFetchPromise) {
     csrfFetchPromise = axios
-      .get("/sanctum/csrf-cookie", {
+      .get(isBrowser ? "/sanctum/csrf-cookie" : `${API_BASE}/sanctum/csrf-cookie`, {
         withCredentials: true,
       })
       .then(() => {
@@ -110,8 +114,10 @@ api.interceptors.response.use(
         cfg._csrfRetried = true;
         try {
           return await api.request(cfg);
-        } catch {
-          // Retry failed — fall through to the standard error handling below.
+        } catch (retryError) {
+          // Surface the retry's real outcome (e.g. 401 invalid credentials)
+          // instead of the original 419, so callers show a useful message.
+          return Promise.reject(retryError);
         }
       }
     }
