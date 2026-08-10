@@ -12,7 +12,7 @@ import {
   LayoutDashboard, Briefcase, Bookmark, Send, FileText, Wallet,
   Settings, Bell, User, MessageSquare, BarChart3, Shield, CreditCard,
   FolderKanban, Headphones, ShoppingCart, Home, Calendar, Plane,
-  GraduationCap, Award, ClipboardCheck, CheckCircle,
+  GraduationCap, Award, ClipboardCheck, CheckCircle, LogOut,
 } from "lucide-react";
 
 type SidebarGroup = { group: string; groupBn: string; color: string; items: typeof sidebarItems };
@@ -54,7 +54,7 @@ const sidebarGroups: SidebarGroup[] = [
 
 function Sidebar() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { language } = useThemeStore();
   const { unreadCount } = useNotificationStore();
   const isBn = language === "bn";
@@ -109,6 +109,13 @@ function Sidebar() {
           </div>
         ))}
       </nav>
+      <div className="p-3 border-t border-blue-100 dark:border-blue-900/30">
+        <button onClick={logout}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors w-full text-destructive hover:bg-destructive/10">
+          <LogOut className="h-4 w-4 shrink-0" />
+          {isBn ? "লগআউট" : "Logout"}
+        </button>
+      </div>
     </aside>
   );
 }

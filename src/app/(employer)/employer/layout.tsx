@@ -51,6 +51,7 @@ function Sidebar() {
   const pathname = usePathname();
   const { language } = useThemeStore();
   const { company } = useEmployerCompany();
+  const { logout } = useAuth();
   const isBn = language === "bn";
 
   return (
@@ -106,6 +107,13 @@ function Sidebar() {
           </div>
         ))}
       </nav>
+      <div className="p-3 border-t border-blue-100 dark:border-blue-900/30">
+        <button onClick={logout}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors w-full text-destructive hover:bg-destructive/10">
+          <LogOut className="h-4 w-4 shrink-0" />
+          {isBn ? "লগআউট" : "Logout"}
+        </button>
+      </div>
       <QuotaDisplay />
     </aside>
   );
