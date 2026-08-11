@@ -126,20 +126,16 @@ export default function CompanyDetailClient({ slug }: Props) {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  // Only check follow status when authenticated AND user is a candidate
+  // Check follow status when authenticated (both candidates and employers can follow)
   useEffect(() => {
     if (!company || !isAuthenticated || !user) return;
-    if (user.role === "employer" || user.role === "admin") return;
     api.get(`/candidate/companies/${company.id}/followers/check`)
       .then((res: any) => setFollowing(res.data?.data?.is_following ?? res.data?.is_following ?? false))
       .catch(() => {});
   }, [company, isAuthenticated, user]);
 
-  const isCandidate = isAuthenticated && user?.role === "candidate";
-
   const handleFollow = async () => {
     if (!isAuthenticated) { toast.error(isBn ? "লগইন করুন" : "Please login first"); return; }
-    if (!isCandidate) { toast.error(isBn ? "শুধুমাত্র প্রার্থীরা ফলো করতে পারবেন" : "Only candidates can follow companies"); return; }
     if (!company) return;
     try {
       await companiesService.toggleFollow(company.id);
@@ -243,7 +239,7 @@ export default function CompanyDetailClient({ slug }: Props) {
           avgReview={avgReview}
           totalReviews={totalReviews}
           socialLinks={socialLinks}
-          onFollow={isCandidate ? handleFollow : undefined}
+          onFollow={handleFollow}
           isAuthenticated={isAuthenticated}
           isBn={isBn}
         />
