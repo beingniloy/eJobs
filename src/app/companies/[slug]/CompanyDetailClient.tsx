@@ -135,8 +135,11 @@ export default function CompanyDetailClient({ slug }: Props) {
       .catch(() => {});
   }, [company, isAuthenticated, user]);
 
+  const isCandidate = isAuthenticated && user?.role === "candidate";
+
   const handleFollow = async () => {
     if (!isAuthenticated) { toast.error(isBn ? "লগইন করুন" : "Please login first"); return; }
+    if (!isCandidate) { toast.error(isBn ? "শুধুমাত্র প্রার্থীরা ফলো করতে পারবেন" : "Only candidates can follow companies"); return; }
     if (!company) return;
     try {
       await companiesService.toggleFollow(company.id);
@@ -240,7 +243,7 @@ export default function CompanyDetailClient({ slug }: Props) {
           avgReview={avgReview}
           totalReviews={totalReviews}
           socialLinks={socialLinks}
-          onFollow={handleFollow}
+          onFollow={isCandidate ? handleFollow : undefined}
           isAuthenticated={isAuthenticated}
           isBn={isBn}
         />
