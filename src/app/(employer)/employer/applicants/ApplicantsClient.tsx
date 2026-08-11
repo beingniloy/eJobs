@@ -6,7 +6,7 @@ import { useThemeStore } from "@/store/theme-store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Briefcase, Send, Activity } from "lucide-react";
+import { Users, Send, Activity, FileSpreadsheet, FileDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { JobApplication } from "@/types";
 
@@ -15,6 +15,7 @@ import JobGroupCard from "./JobGroupCard";
 import ApplicantDetailDialog from "./ApplicantDetailDialog";
 import { StatusChangeDialog } from "./StatusChangeDialog";
 import { tryEndpoints, groupByJob } from "./applicants-utils";
+import { exportApplicantsExcel, exportApplicantsPdf } from "./applicants-export";
 import { BulkMessageDialog } from "./BulkMessageDialog";
 import { DeliveryMonitorDialog } from "./DeliveryMonitor";
 import ScheduleInterviewModal from "@/components/interviews/ScheduleInterviewModal";
@@ -35,6 +36,7 @@ export default function ApplicantsClient() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [scheduleInterviewApp, setScheduleInterviewApp] = useState<JobApplication | null>(null);
+  const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
 
   useEffect(() => {
     document.title = isBn ? `আবেদনকারী | ${siteName}` : `Applicants | ${siteName}`;
@@ -100,6 +102,27 @@ export default function ApplicantsClient() {
     }
   }, [isBn, refreshStatus]);
 
+  const handleExport = useCallback(async (type: "excel" | "pdf") => {
+    if (filteredApplicants.length === 0) {
+      toast.error(isBn ? "এক্সপোর্ট করার মতো কোনো আবেদন নেই" : "No applicants to export");
+      return;
+    }
+    setExporting(type);
+    try {
+      if (type === "excel") {
+        exportApplicantsExcel(filteredApplicants, isBn);
+      } else {
+        exportApplicantsPdf(filteredApplicants, isBn);
+      }
+      toast.success(isBn ? "এক্সপোর্ট সম্পন্ন হয়েছে" : "Export successful");
+    } catch (err) {
+      console.error("Export failed", err);
+      toast.error(isBn ? "এক্সপোর্ট ব্যর্থ" : "Export failed");
+    } finally {
+      setExporting(null);
+    }
+  }, [filteredApplicants, isBn]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -115,6 +138,14 @@ export default function ApplicantsClient() {
           <Button size="sm" variant="outline" onClick={() => setMonitorOpen(true)}>
             <Activity className="h-4 w-4 mr-1" />
             {isBn ? "ডেলিভারি লগ" : "Delivery Log"}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => handleExport("excel")} disabled={!!exporting || filteredApplicants.length === 0}>
+            {exporting === "excel" ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileSpreadsheet className="h-4 w-4 mr-1" />}
+            {isBn ? "এক্সেল" : "Excel"}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => handleExport("pdf")} disabled={!!exporting || filteredApplicants.length === 0}>
+            {exporting === "pdf" ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileDown className="h-4 w-4 mr-1" />}
+            {isBn ? "পিডিএফ" : "PDF"}
           </Button>
         </div>
       </div>
