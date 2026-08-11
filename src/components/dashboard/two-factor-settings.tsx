@@ -25,6 +25,7 @@ export function TwoFactorSettings() {
   const [selectedMethod, setSelectedMethod] = useState<Method>("totp");
   const [otpauthUri, setOtpauthUri] = useState("");
   const [secret, setSecret] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
@@ -43,6 +44,7 @@ export function TwoFactorSettings() {
       setMethod(res.method);
       setHasPhone(res.has_phone);
       setUserPhone(res.phone || res.user_phone || "");
+      setUserEmail(res.email || "");
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -57,7 +59,10 @@ export function TwoFactorSettings() {
     setSubmitting(true);
     try {
       const res = await authService.setup2faTotp();
-      setOtpauthUri(res.otpauth_uri || "");
+      const email = encodeURIComponent(userEmail || res.email || "user@example.com");
+      const issuer = encodeURIComponent("JobPortalApp");
+      const otpauth = res.otpauth_uri || `otpauth://totp/JobPortalApp:${email}?secret=${res.secret}&issuer=${issuer}&algorithm=SHA1&digits=6&period=30`;
+      setOtpauthUri(otpauth);
       setSecret(res.secret);
       setSetupMode(true);
       setSelectedMethod("totp");
