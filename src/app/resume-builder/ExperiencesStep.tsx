@@ -5,8 +5,7 @@ import type { useResumeWizard } from "@/hooks/use-resume-wizard";
 import { useThemeStore } from "@/store/theme-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Save } from "lucide-react";
-import { toast } from "sonner";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import ResumeObjectiveSection from "./sections/ResumeObjectiveSection";
 import EducationSection from "./sections/EducationSection";
 import InterestsSection from "./sections/InterestsSection";
@@ -15,6 +14,10 @@ import WorkExperienceSection from "./sections/WorkExperienceSection";
 import LanguagesSection from "./sections/LanguagesSection";
 import AchievementsSection from "./sections/AchievementsSection";
 import CustomSection from "./sections/CustomSection";
+import CertificationsSection from "./sections/CertificationsSection";
+import ProjectsSection from "./sections/ProjectsSection";
+import ReferencesSection from "./sections/ReferencesSection";
+import TrainingSection from "./sections/TrainingSection";
 
 export default function ExperiencesStep({ wizard, onNext, onPrev }: { wizard: ReturnType<typeof useResumeWizard>; onNext: () => void; onPrev: () => void }) {
   const { language } = useThemeStore();
@@ -26,9 +29,6 @@ export default function ExperiencesStep({ wizard, onNext, onPrev }: { wizard: Re
       <div className="lg:col-span-3 space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold">My experiences</h2>
-          <Button variant="ghost" size="sm" onClick={() => toast.info("Draft saved!")}>
-            <Save className="h-4 w-4 mr-1" /> Save
-          </Button>
         </div>
 
         <div className="flex gap-2">
@@ -38,6 +38,9 @@ export default function ExperiencesStep({ wizard, onNext, onPrev }: { wizard: Re
           <button onClick={() => setActiveExpView("qualifications")} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeExpView === "qualifications" ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}>
             Qualifications
           </button>
+          <button onClick={() => setActiveExpView("extras")} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeExpView === "extras" ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}>
+            Extras
+          </button>
         </div>
 
         {activeExpView === "details" ? (
@@ -45,7 +48,7 @@ export default function ExperiencesStep({ wizard, onNext, onPrev }: { wizard: Re
             <ResumeObjectiveSection data={data.resume_objective} onChange={(d) => setSectionData("resume_objective", d)} />
             <CustomSection data={data.custom_sections} onChange={(d) => setSectionData("custom_sections", d)} isBn={isBn} />
           </div>
-        ) : (
+        ) : activeExpView === "qualifications" ? (
           <div className="space-y-6">
             <EducationSection data={data.education} onChange={(d) => setSectionData("education", d)} isBn={isBn} />
             <InterestsSection data={data.interests} onChange={(d) => setSectionData("interests", d)} isBn={isBn} />
@@ -53,6 +56,13 @@ export default function ExperiencesStep({ wizard, onNext, onPrev }: { wizard: Re
             <WorkExperienceSection data={data.work_experience} onChange={(d) => setSectionData("work_experience", d)} isBn={isBn} />
             <LanguagesSection data={data.languages} onChange={(d) => setSectionData("languages", d)} isBn={isBn} />
             <AchievementsSection data={data.achievements} onChange={(d) => setSectionData("achievements", d)} isBn={isBn} />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <CertificationsSection data={data.certifications} onChange={(d) => setSectionData("certifications", d)} isBn={isBn} />
+            <ProjectsSection data={data.projects} onChange={(d) => setSectionData("projects", d)} isBn={isBn} />
+            <ReferencesSection data={data.references} onChange={(d) => setSectionData("references", d)} isBn={isBn} />
+            <TrainingSection data={data.training} onChange={(d) => setSectionData("training", d)} isBn={isBn} />
           </div>
         )}
 

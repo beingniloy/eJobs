@@ -64,7 +64,8 @@ export default function TemplateStep({ wizard, onPrev }: { wizard: ReturnType<ty
           place_of_birth: data.personal.place_of_birth, driving_license: data.personal.driving_license,
           gender: data.personal.gender, nationality: data.personal.nationality,
           marital_status: data.personal.marital_status, linkedin: data.personal.linkedin,
-          website: data.personal.website, additional_info: data.personal.additional_info,
+          github: data.personal.github, website: data.personal.website,
+          additional_info: data.personal.additional_info,
           zip_code: data.personal.zip_code,
         },
         summary: data.resume_objective.description,
@@ -72,12 +73,17 @@ export default function TemplateStep({ wizard, onPrev }: { wizard: ReturnType<ty
         education: data.education.map((e) => ({ institution: e.school, degree: e.degree, location: e.city, start_date: e.start_date, end_date: e.end_date, description: e.description })),
         skills: data.skills.map((s) => ({ name: s.skill, level: s.level || null, category: null })),
         languages: data.languages.map((l) => ({ name: l.language, proficiency: l.level })),
-        certifications: [],
+        certifications: (data.certifications || []).filter((c) => c.name.trim()).map((c) => ({ name: c.name, issuer: c.issuer, date: c.date })),
         awards: data.achievements.filter((a) => a.description.trim()).map((a) => ({ name: a.description })),
-        projects: [], hobbies: data.interests.map((i) => i.hobby),
-        references: (data.references || []).map((r) => ({ name: r.name, designation: r.designation, organization: r.organization, phone: r.phone, email: r.email })),
-        training: (data.training || []).map((t) => ({ title: t.title, institute: t.institute, duration: t.duration })),
-        social_links: { linkedin_url: data.personal.linkedin, portfolio_url: data.personal.website },
+        projects: (data.projects || []).filter((p) => p.name.trim()).map((p) => ({ name: p.name, description: p.description, url: p.url })),
+        hobbies: data.interests.map((i) => i.hobby),
+        references: (data.references || []).filter((r) => r.name.trim()).map((r) => ({ name: r.name, designation: r.designation, organization: r.organization, phone: r.phone, email: r.email })),
+        training: (data.training || []).filter((t) => t.title.trim()).map((t) => ({ title: t.title, institute: t.institute, duration: t.duration })),
+        social_links: {
+          linkedin: data.personal.linkedin,
+          github: data.personal.github,
+          portfolio: data.personal.website,
+        },
       });
       const resume = await resumeService.createResume({ title: data.personal.first_name + " " + data.personal.last_name + " CV", template_slug: selectedSlug });
       const uuid = (resume as any)?.uuid || (resume as any)?.data?.uuid;

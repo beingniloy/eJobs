@@ -20,6 +20,7 @@ interface Personal {
   nationality: string;
   marital_status: string;
   linkedin: string;
+  github: string;
   website: string;
   additional_info: string;
 }
@@ -83,6 +84,18 @@ interface Training {
   duration: string;
 }
 
+interface Certification {
+  name: string;
+  issuer: string;
+  date: string;
+}
+
+interface Project {
+  name: string;
+  description: string;
+  url: string;
+}
+
 export interface ResumeData {
   personal: Personal;
   resume_objective: ResumeObjective;
@@ -95,6 +108,8 @@ export interface ResumeData {
   custom_sections: CustomSection[];
   references: Reference[];
   training: Training[];
+  certifications: Certification[];
+  projects: Project[];
   template_slug: string | null;
 }
 
@@ -102,7 +117,7 @@ const EMPTY_PERSONAL: Personal = {
   full_name: "", first_name: "", last_name: "", current_position: "", email: "",
   phone: "", address: "", zip_code: "", city: "", photo_url: "",
   dob: "", place_of_birth: "", driving_license: "", gender: "",
-  nationality: "", marital_status: "", linkedin: "", website: "", additional_info: "",
+  nationality: "", marital_status: "", linkedin: "", github: "", website: "", additional_info: "",
 };
 
 const STORAGE_KEY = "resume_wizard_data";
@@ -132,11 +147,13 @@ export function useResumeWizard() {
     custom_sections: [],
     references: [],
     training: [],
+    certifications: [],
+    projects: [],
     template_slug: null,
   });
 
   const [step, setStep] = useState(1);
-  const [activeExpView, setActiveExpView] = useState<"details" | "qualifications">("details");
+  const [activeExpView, setActiveExpView] = useState<"details" | "qualifications" | "extras">("details");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

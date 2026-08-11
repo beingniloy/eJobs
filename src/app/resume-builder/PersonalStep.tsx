@@ -52,12 +52,12 @@ export default function PersonalStep({ wizard, onNext }: { wizard: ReturnType<ty
       const prof = res.data?.user?.profile || {};
       if (prof.phone) updates.phone = prof.phone;
       if (prof.city) updates.city = prof.city;
-      if (prof.current_position) updates.additional_info = prof.current_position;
+      if (prof.current_position) updates.current_position = prof.current_position;
       if (prof.date_of_birth) updates.dob = prof.date_of_birth;
       if (prof.gender) updates.gender = prof.gender;
       if (prof.nationality) updates.nationality = prof.nationality;
       if (prof.linkedin_url) updates.linkedin = prof.linkedin_url;
-      if (prof.github_url) updates.website = prof.github_url;
+      if (prof.github_url) updates.github = prof.github_url;
       if (prof.avatar) updates.photo_url = getStorageUrl(prof.avatar) || "";
       if (prof.present_address || prof.address) updates.address = prof.present_address || prof.address;
       if (prof.marital_status) updates.marital_status = prof.marital_status;
@@ -184,14 +184,14 @@ export default function PersonalStep({ wizard, onNext }: { wizard: ReturnType<ty
             <div className="space-y-1.5"><Label>Nationality</Label><Input value={p.nationality} onChange={(e) => set("nationality", e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Marital status</Label><Select value={p.marital_status} onValueChange={(v) => set("marital_status", v)}><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{MARITAL.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></div>
             <div className="space-y-1.5"><Label>LinkedIn</Label><Input value={p.linkedin} onChange={(e) => set("linkedin", e.target.value)} placeholder="https://linkedin.com/in/..." /></div>
+            <div className="space-y-1.5"><Label>GitHub</Label><Input value={p.github} onChange={(e) => set("github", e.target.value)} placeholder="https://github.com/..." /></div>
             <div className="space-y-1.5"><Label>Website</Label><Input value={p.website} onChange={(e) => set("website", e.target.value)} placeholder="https://..." /></div>
             <div className="space-y-1.5"><Label>Additional information</Label><Textarea value={p.additional_info} onChange={(e) => set("additional_info", e.target.value)} rows={3} /></div>
           </div>
         )}
 
-        <div className="flex justify-between pt-6">
-          <Button variant="outline" onClick={() => toast.info("Draft saved!")}>Save draft</Button>
-          <Button onClick={() => { if (!p.first_name || !p.email || !p.phone) { toast.error("Please fill in required fields"); return; } onNext(); }}>
+        <div className="flex justify-end pt-6">
+          <Button onClick={() => { if (!p.first_name || !p.email || !p.phone) { toast.error("Please fill in required fields"); return; } if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) { toast.error("Enter a valid email"); return; } onNext(); }}>
             Next step <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
