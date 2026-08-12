@@ -63,9 +63,9 @@ export default function Footer() {
                 <Image
                   src={getStorageUrl(settings.site_logo)!}
                   alt={siteName}
-                  width={20}
-                  height={20}
-                  className="h-5 w-auto object-contain"
+                  width={48}
+                  height={48}
+                  className="h-12 w-auto object-contain"
                   unoptimized
                 />
               ) : (

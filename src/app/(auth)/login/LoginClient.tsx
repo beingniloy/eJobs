@@ -128,7 +128,7 @@ function LoginClientInner() {
           <Card className="w-full max-w-md">
             <CardHeader className="text-center">
               <div className="mx-auto mb-4">
-                {settings.site_logo ? <Image src={getStorageUrl(settings.site_logo)!} alt="" width={48} height={48} className="h-12 w-auto object-contain" unoptimized /> : <p className="text-xl font-bold text-primary">{settings.site_name || "eJobs"}</p>}
+                {settings.site_logo ? <Image src={getStorageUrl(settings.site_logo)!} alt="" width={64} height={64} className="h-16 w-auto object-contain" unoptimized /> : <p className="text-2xl font-bold text-primary">{settings.site_name || "eJobs"}</p>}
               </div>
               <CardTitle className="text-2xl">{isBn ? "২-ফ্যাক্টর যাচাইকরণ" : "2-Factor Verification"}</CardTitle>
               <CardDescription>{twoFactorMethod === "sms" ? (isBn ? "মোবাইলে কোড লিখুন" : "Enter code sent to your phone") : twoFactorMethod === "email" ? (isBn ? "ইমেইলে কোড লিখুন" : "Enter code sent to your email") : (isBn ? "অ্যাপ থেকে কোড লিখুন" : "Enter code from authenticator app")}</CardDescription>
@@ -164,7 +164,7 @@ function LoginClientInner() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4">
-              {settings.site_logo ? <Image src={getStorageUrl(settings.site_logo)!} alt="" width={48} height={48} className="h-12 w-auto object-contain" unoptimized /> : <p className="text-xl font-bold text-primary">{settings.site_name || "eJobs"}</p>}
+              {settings.site_logo ? <Image src={getStorageUrl(settings.site_logo)!} alt="" width={64} height={64} className="h-16 w-auto object-contain" unoptimized /> : <p className="text-2xl font-bold text-primary">{settings.site_name || "eJobs"}</p>}
             </div>
             <CardTitle className="text-2xl">{isBn ? "লগইন" : "Welcome Back"}</CardTitle>
             <CardDescription>{isBn ? "আপনার অ্যাকাউন্টে লগইন করুন" : "Sign in to your account"}</CardDescription>

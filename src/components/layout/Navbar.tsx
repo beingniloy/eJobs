@@ -201,15 +201,15 @@ export default function Navbar() {
           : (settings.nav_bg ? `${settings.nav_bg}f2` : undefined),
       }}
     >
-      <div className="container mx-auto flex h-14 items-center justify-between gap-2 px-4 sm:px-6 lg:px-8 min-w-0">
+      <div className="container mx-auto flex h-20 items-center justify-between gap-2 px-4 sm:px-6 lg:px-8 min-w-0">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 font-bold text-lg shrink-0 whitespace-nowrap overflow-hidden">
+        <Link href="/" className="flex items-center gap-2 font-bold text-xl shrink-0 whitespace-nowrap overflow-hidden">
           {settings.site_logo ? (
             <Image
               src={getStorageUrl(settings.site_logo)!}
               alt={settings.site_name || "eJobs"}
-              width={40} height={40}
-              className="h-10 w-auto object-contain shrink-0" unoptimized
+              width={72} height={72}
+              className="h-18 w-auto object-contain shrink-0" unoptimized
             />
           ) : (
             <span style={{ color: settings.nav_text_color || undefined }} className="font-bold">{settings.site_name || "eJobs"}</span>
@@ -377,9 +377,9 @@ export default function Navbar() {
             <div className="flex items-center justify-between p-4 border-b">
               <SheetTitle className="flex items-center gap-2 text-lg font-bold">
                  {settings.site_logo ? (
-                   <Image src={getStorageUrl(settings.site_logo)!}
-                     alt={settings.site_name || "eJobs"} width={32} height={32}
-                     className="h-8 w-auto object-contain" unoptimized />
+                    <Image src={getStorageUrl(settings.site_logo)!}
+                      alt={settings.site_name || "eJobs"} width={48} height={48}
+                      className="h-12 w-auto object-contain" unoptimized />
                  ) : (
                   <span className="text-primary">{settings.site_name || "eJobs"}</span>
                 )}
