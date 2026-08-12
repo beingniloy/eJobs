@@ -54,7 +54,7 @@ export default function ProfileSectionPersonal({
         <div>
           <p className="text-sm font-medium">{isBn ? "প্রোফাইল ফটো" : "Profile Photo"}</p>
           <p className="text-xs text-muted-foreground">
-            {isBn ? "JPEG/PNG/WebP — সর্বোচ্চ ২MB। স্বয়ংক্রিয়ভাবে WebP-তে সংকুচিত হবে।" : "JPEG/PNG/WebP — max 2MB. Auto-compressed to WebP."}
+            {isBn ? "JPEG/PNG/WebP — সর্বোচ্চ ৪০০KB। স্বয়ংক্রিয়ভাবে WebP-তে সংকুচিত হবে।" : "JPEG/PNG/WebP — max 400KB. Auto-compressed to WebP."}
           </p>
         </div>
       </div>

@@ -90,7 +90,8 @@ const nextConfig: NextConfig = {
       { source: "/employer/login", destination: "/login", permanent: true },
       { source: "/employer-login", destination: "/login", permanent: true },
       { source: "/employer/forgot-password", destination: "/forgot-password", permanent: true },
-      { source: "/employer-register", destination: "/employer/register", permanent: true },
+      { source: "/employer-register", destination: "/register", permanent: true },
+      { source: "/employer/register", destination: "/register?role=employer", permanent: true },
     ];
   },
 };

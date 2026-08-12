@@ -6,6 +6,17 @@ export type JobGroup = {
   isRemote: boolean;
   budget: number | null;
   budgetType: string | null;
+  job_type?: string;
+  location?: string;
+  salary_min?: number;
+  salary_max?: number;
+  salary_type?: string;
+  deadline?: string;
+  vacancies?: number;
+  workplace_type?: string;
+  description?: string;
+  required_skills?: string[];
+  experience_level?: string;
   applications: JobApplication[];
 };
 
@@ -65,13 +76,25 @@ export function groupByJob(apps: JobApplication[]): JobGroup[] {
   const map = new Map<number, JobGroup>();
   for (const app of apps) {
     const jobId = app.job_id;
+    const j = (app.job as any) || {};
     if (!map.has(jobId)) {
       map.set(jobId, {
         jobId,
-        title: app.job?.title || "Job",
-        isRemote: !!(app.job as any)?.is_remote_project,
-        budget: (app.job as any)?.budget ?? null,
-        budgetType: (app.job as any)?.budget_type ?? null,
+        title: j.title || "Job",
+        isRemote: !!j.is_remote_project,
+        budget: j.budget ?? null,
+        budgetType: j.budget_type ?? null,
+        job_type: j.job_type,
+        location: j.location,
+        salary_min: j.salary_min,
+        salary_max: j.salary_max,
+        salary_type: j.salary_type,
+        deadline: j.deadline,
+        vacancies: j.vacancies,
+        workplace_type: j.workplace_type,
+        description: j.description,
+        required_skills: Array.isArray(j.required_skills) ? j.required_skills : (typeof j.required_skills === 'string' ? j.required_skills.split(',').map((s: string) => s.trim()).filter(Boolean) : []),
+        experience_level: j.experience_level,
         applications: [],
       });
     }

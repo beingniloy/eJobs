@@ -120,4 +120,15 @@ export const authService = {
     const res = await api.post("/two-factor/verify-login-otp", { temp_token: tempToken, code });
     return res.data;
   },
+
+  // Email OTP verification (post-registration)
+  requestEmailOtp: async () => {
+    const res = await api.post("/verifications/email/request");
+    return res.data;
+  },
+
+  confirmEmailOtp: async (code: string) => {
+    const res = await api.post("/verifications/email/confirm", { otp_code: code });
+    return res.data;
+  },
 };

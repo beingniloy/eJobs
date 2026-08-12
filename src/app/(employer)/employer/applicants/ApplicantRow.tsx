@@ -14,10 +14,11 @@ interface Props {
   isBn: boolean;
   onStatusChange: (app: JobApplication, status: string) => void;
   onScheduleInterview?: (app: JobApplication) => void;
+  onCustomHire?: (app: JobApplication) => void;
   pending?: boolean;
 }
 
-export default function ApplicantRow({ app, isBn, onStatusChange, onScheduleInterview, pending }: Props) {
+export default function ApplicantRow({ app, isBn, onStatusChange, onScheduleInterview, onCustomHire, pending }: Props) {
   const profileUrl = getProfileUrl(app);
   const strength = app.profile_strength;
 
@@ -77,6 +78,7 @@ export default function ApplicantRow({ app, isBn, onStatusChange, onScheduleInte
           isBn={isBn}
           onStatusChange={onStatusChange}
           onScheduleInterview={onScheduleInterview}
+          onCustomHire={onCustomHire}
           pending={pending}
         />
       </div>

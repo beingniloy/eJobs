@@ -22,6 +22,7 @@ import {
   Loader2,
   Calendar,
   ChevronDown,
+  Handshake,
 } from "lucide-react";
 import type { JobApplication } from "@/types";
 import { getAvailableStatuses, getStatusLabel, candidateLabel } from "./applicants-utils";
@@ -32,10 +33,11 @@ interface Props {
   isBn: boolean;
   onStatusChange: (app: JobApplication, status: string) => void;
   onScheduleInterview?: (app: JobApplication) => void;
+  onCustomHire?: (app: JobApplication) => void;
   pending?: boolean;
 }
 
-export default function ApplicantActions({ app, profileUrl, isBn, onStatusChange, onScheduleInterview, pending }: Props) {
+export default function ApplicantActions({ app, profileUrl, isBn, onStatusChange, onScheduleInterview, onCustomHire, pending }: Props) {
   const router = useRouter();
   const available = getAvailableStatuses(app.status || "pending");
 
@@ -102,6 +104,12 @@ export default function ApplicantActions({ app, profileUrl, isBn, onStatusChange
       <DropdownMenuItem onClick={openMessages}>
         <MessageSquare className="h-4 w-4 mr-2" />{isBn ? "বার্তা" : "Message"}
       </DropdownMenuItem>
+
+      {onCustomHire && (
+        <DropdownMenuItem onClick={() => onCustomHire(app)}>
+          <Handshake className="h-4 w-4 mr-2 text-blue-600" />{isBn ? "কাস্টম হায়ার" : "Custom Hire"}
+        </DropdownMenuItem>
+      )}
     </>
   );
 
@@ -151,6 +159,13 @@ export default function ApplicantActions({ app, profileUrl, isBn, onStatusChange
             {renderMenuItems()}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Custom Hire (desktop) */}
+        {onCustomHire && (
+          <Button variant="default" size="sm" className="h-7 px-2 text-xs" onClick={() => onCustomHire(app)}>
+            <Handshake className="h-3.5 w-3.5 mr-1" />{isBn ? "কাস্টম হায়ার" : "Custom Hire"}
+          </Button>
+        )}
       </div>
 
       {/* Mobile: compact icon actions + overflow dropdown */}

@@ -274,7 +274,7 @@ export default function ResumeScoreClient() {
                           {isBn ? "ড্র্যাগ ও ড্রপ করুন অথবা ক্লিক করুন" : "Drag & drop or click to upload"}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {isBn ? "শুধুমাত্র PDF ফাইল (সর্বোচ্চ 2MB)" : "PDF files only (max 2MB)"}
+                          {isBn ? "শুধুমাত্র PDF ফাইল (সর্বোচ্চ ৪০০KB)" : "PDF files only (max 400KB)"}
                         </p>
                       </div>
                     </div>

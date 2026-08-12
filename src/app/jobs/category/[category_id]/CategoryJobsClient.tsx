@@ -458,7 +458,7 @@ export default function CategoryJobsClient({ categoryId }: { categoryId: string 
                                 </div>
                                 <div className="text-right shrink-0">
                                   <p className="text-lg font-bold text-primary">
-                                    {job.salary_min ? `${formatCurrency(job.salary_min)}${job.salary_max ? ` - ${formatCurrency(job.salary_max)}` : ""}` : (isBn ? "বার্তা" : "Negotiable")}
+                                    {job.salary_min ? `${formatCurrency(job.salary_min)}${job.salary_max ? ` - ${formatCurrency(job.salary_max)}` : ""}` : job.budget ? formatCurrency(job.budget) : (isBn ? "বার্তা" : "Negotiable")}
                                   </p>
                                   <p className="text-xs text-muted-foreground">{isBn ? "মাসিক" : "Monthly"}</p>
                                 </div>

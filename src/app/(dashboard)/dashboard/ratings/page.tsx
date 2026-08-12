@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import api from "@/lib/api-client";
-import { useThemeStore } from "@/store/theme-store";
+import { useTheme } from "next-themes";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,7 +76,10 @@ function RatingBar({ label, value }: { label: string; value: number }) {
 }
 
 export default function RatingsPage() {
-  const { isDarkActive: isDark } = useThemeStore();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [averages, setAverages] = useState<Averages | null>(null);
   const [loading, setLoading] = useState(true);

@@ -419,7 +419,7 @@ export default function EmployerVerifyClient() {
                         <p className="text-sm text-muted-foreground">
                           {isBn ? "ট্রেড লাইসেন্স এখানে আপলোড করুন" : "Click to upload trade license"}
                         </p>
-                        <p className="text-xs text-muted-foreground/60 mt-1">PDF, JPEG, PNG (max 10MB)</p>
+                        <p className="text-xs text-muted-foreground/60 mt-1">PDF, JPEG, PNG (max 400KB)</p>
                       </div>
                     )}
                     <input

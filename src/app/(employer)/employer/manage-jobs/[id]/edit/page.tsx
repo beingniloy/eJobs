@@ -21,13 +21,14 @@ const RichTextEditor = dynamic(() => import("@/components/ui/rich-text-editor"),
 const schema = z.object({
   title: z.string().min(5),
   description: z.string().min(50),
-  requirements: z.string().optional(),
+  experience_requirements: z.string().optional(),
+  education_requirements: z.string().optional(),
+  additional_requirements: z.string().optional(),
   salary_min: z.coerce.number().min(0).optional(),
   salary_max: z.coerce.number().min(0).optional(),
   job_type: z.string().min(1),
   experience_level: z.string().optional(),
   location: z.string().optional(),
-  is_remote: z.boolean().optional(),
   deadline: z.string().optional(),
 });
 type Form = z.input<typeof schema>;
@@ -57,7 +58,9 @@ export default function EditJobPage() {
         const job = res.data.data;
         setValue("title", job.title);
         setValue("description", job.description);
-        setValue("requirements", job.requirements || "");
+        setValue("experience_requirements", job.experience_requirements || "");
+        setValue("education_requirements", job.education_requirements || "");
+        setValue("additional_requirements", job.additional_requirements || "");
         setValue("salary_min", job.salary_min);
         setValue("salary_max", job.salary_max);
         setValue("job_type", job.job_type);
@@ -104,6 +107,18 @@ export default function EditJobPage() {
                 maxLength={5000}
               />
               {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label>{isBn ? "অভিজ্ঞতার প্রয়োজনীয়তা" : "Experience Requirements"}</Label>
+              <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" {...register("experience_requirements")} />
+            </div>
+            <div className="space-y-2">
+              <Label>{isBn ? "শিক্ষাগত যোগ্যতা" : "Education Requirements"}</Label>
+              <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" {...register("education_requirements")} />
+            </div>
+            <div className="space-y-2">
+              <Label>{isBn ? "অতিরিক্ত প্রয়োজনীয়তা" : "Additional Requirements"}</Label>
+              <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" {...register("additional_requirements")} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

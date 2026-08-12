@@ -279,7 +279,7 @@ export function useProfileForm() {
     } catch (error: any) {
       const data = error.response?.data;
       let msg = data?.message || "Failed to save";
-      if (error.response?.status === 413) msg = isBn ? "ফাইল বড় (সর্বোচ্চ 2MB)" : "File too large (max 2MB)";
+      if (error.response?.status === 413) msg = isBn ? "ফাইল বড় (সর্বোচ্চ ৪০০KB)" : "File too large (max 400KB)";
       else if (error.response?.status === 422 && data?.errors) {
         const k = Object.keys(data.errors)[0];
         if (k) msg = Array.isArray(data.errors[k]) ? data.errors[k][0] : data.errors[k];

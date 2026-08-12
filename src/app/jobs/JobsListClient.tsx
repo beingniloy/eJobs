@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { formatCurrency, truncate, stripHtml } from "@/lib/utils";
 import { trackBehavior } from "@/hooks/use-behavior-tracker";
+import { DIVISIONS_EN, DISTRICTS_EN, THANAS_EN } from "@/lib/bd-data";
 import { useAuth } from "@/hooks/use-auth";
 import { useSavedJobs } from "@/hooks/use-jobs";
 
@@ -108,6 +109,9 @@ export default function JobsListClient() {
   const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
   const [sortBy, setSortBy] = useState("recent");
+  const [filterDivision, setFilterDivision] = useState(searchParams.get("division") || "");
+  const [filterDistrict, setFilterDistrict] = useState(searchParams.get("district") || "");
+  const [filterUpazila, setFilterUpazila] = useState(searchParams.get("upazila") || "");
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [hydrated, setHydrated] = useState(false);
@@ -151,6 +155,9 @@ export default function JobsListClient() {
         else if (selectedSalary === 999999) params.append("salary_min", "100000");
       }
       if (sortBy && sortBy !== "recent") params.append("sort", sortBy);
+      if (filterDivision) params.append("division", filterDivision);
+      if (filterDistrict) params.append("district", filterDistrict);
+      if (filterUpazila) params.append("upazila", filterUpazila);
 
       const res = await api.get(`/jobs?${params.toString()}`);
       const payload = res.data.data;
@@ -159,10 +166,10 @@ export default function JobsListClient() {
       else { setJobs([]); setTotalPages(1); setTotalJobs(0); }
     } catch { toast.error(isBn ? "চাকরি লোড করতে ব্যর্থ" : "Failed to load jobs"); }
     finally { setLoading(false); }
-  }, [searchQuery, category, selectedJobType, selectedExperience, selectedSalary, sortBy, budgetMin, budgetMax, isBn]);
+  }, [searchQuery, category, selectedJobType, selectedExperience, selectedSalary, sortBy, budgetMin, budgetMax, filterDivision, filterDistrict, filterUpazila, isBn]);
 
   useEffect(() => { fetchJobs(currentPage); }, [currentPage, fetchJobs]);
-  useEffect(() => { setCurrentPage(1); }, [selectedExperience, selectedSalary, sortBy, category, selectedJobType]);
+  useEffect(() => { setCurrentPage(1); }, [selectedExperience, selectedSalary, sortBy, category, selectedJobType, filterDivision, filterDistrict, filterUpazila]);
 
   const handleSearch = () => { if (searchQuery.trim()) trackBehavior("search_history", { metaData: { query: searchQuery, category, jobType: selectedJobType } }); const url = new URL(window.location.href); if (searchQuery.trim()) url.searchParams.set("keyword", searchQuery.trim()); else url.searchParams.delete("keyword"); router.replace(url.pathname + url.search, { scroll: false }); setSortBy("recent"); setCurrentPage(1); };
   const handleSalarySelect = (idx: number) => { setSelectedSalary(idx); setBudgetMin(SALARY_RANGES[idx].min); setBudgetMax(SALARY_RANGES[idx].max); setCurrentPage(1); };
@@ -230,10 +237,43 @@ export default function JobsListClient() {
                 <button onClick={() => setLeftOpen(!leftOpen)} className="shrink-0 h-6 w-6 rounded hover:bg-muted flex items-center justify-center">{leftOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</button>
                 {leftOpen && <><Filter className="h-4 w-4 text-primary" /><h3 className="font-semibold text-sm whitespace-nowrap">{isBn ? "ফিল্টার" : "Filter"}</h3></>}
               </div>
-              {leftOpen && <button onClick={() => { setSelectedJobType("all"); setSelectedExperience("All Levels"); setSelectedSalary(0); setBudgetMin(""); setBudgetMax(""); setCategory("all"); setCurrentPage(1); }} className="shrink-0 text-xs text-primary hover:underline">{isBn ? "সব মুছুন" : "Clear All"}</button>}
+              {leftOpen && <button onClick={() => { setSelectedJobType("all"); setSelectedExperience("All Levels"); setSelectedSalary(0); setBudgetMin(""); setBudgetMax(""); setCategory("all"); setFilterDivision(""); setFilterDistrict(""); setFilterUpazila(""); setCurrentPage(1); }} className="shrink-0 text-xs text-primary hover:underline">{isBn ? "সব মুছুন" : "Clear All"}</button>}
             </div>
             {leftOpen && (<>
               <div><p className="text-xs font-semibold mb-2 uppercase tracking-wider text-muted-foreground">{isBn ? "চাকরির ধরন" : "Job Type"}</p><div className="space-y-1.5">{JOB_TYPES.map((t) => (<label key={t.value} className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary"><input type="radio" name="jobType" checked={selectedJobType === t.value} onChange={() => { setSelectedJobType(t.value); setCurrentPage(1); }} className="accent-primary" />{t.label}</label>))}</div></div>
+              <Separator />
+              <div>
+                <p className="text-xs font-semibold mb-2 uppercase tracking-wider text-muted-foreground">{isBn ? "অবস্থান" : "Location"}</p>
+                <div className="space-y-2">
+                  <Select value={filterDivision || "all"} onValueChange={(v) => { const val = v === "all" ? "" : v; setFilterDivision(val); setFilterDistrict(""); setFilterUpazila(""); }}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={isBn ? "বিভাগ" : "Division"} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{isBn ? "সব বিভাগ" : "All Divisions"}</SelectItem>
+                      {Object.entries(DIVISIONS_EN).map(([key, name]) => (
+                        <SelectItem key={key} value={key}>{name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={filterDistrict || "all"} disabled={!filterDivision} onValueChange={(v) => { const val = v === "all" ? "" : v; setFilterDistrict(val); setFilterUpazila(""); }}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={isBn ? "জেলা" : "District"} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{isBn ? "সব জেলা" : "All Districts"}</SelectItem>
+                      {(DISTRICTS_EN[filterDivision] || []).map((d) => (
+                        <SelectItem key={d} value={d}>{d}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={filterUpazila || "all"} disabled={!filterDistrict} onValueChange={(v) => { setFilterUpazila(v === "all" ? "" : v); }}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={isBn ? "উপজেলা" : "Upazila"} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{isBn ? "সব উপজেলা" : "All Upazilas"}</SelectItem>
+                      {(THANAS_EN[filterDistrict] || []).map((t) => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <Separator />
               <div><p className="text-xs font-semibold mb-2 uppercase tracking-wider text-muted-foreground">{isBn ? "অভিজ্ঞতা" : "Experience"}</p><div className="space-y-1.5">{EXPERIENCE_LEVELS.map((l) => (<label key={l} className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary"><input type="radio" name="experience" checked={selectedExperience === l} onChange={() => setSelectedExperience(l)} className="accent-primary" />{l}</label>))}</div></div>
               <Separator />
@@ -291,7 +331,7 @@ export default function JobsListClient() {
                                 </div>
                               </div>
                               <div className="text-right shrink-0">
-                                <p className="text-lg font-bold text-primary">{job.salary_min ? `${formatCurrency(job.salary_min)}${job.salary_max ? ` - ${formatCurrency(job.salary_max)}` : ""}` : (isBn ? "বার্তা" : "Negotiable")}</p>
+                                <p className="text-lg font-bold text-primary">{job.salary_min ? `${formatCurrency(job.salary_min)}${job.salary_max ? ` - ${formatCurrency(job.salary_max)}` : ""}` : job.budget ? formatCurrency(job.budget) : (isBn ? "বার্তা" : "Negotiable")}</p>
                                 <p className="text-xs text-muted-foreground">{isBn ? "মাসিক" : "Monthly"}</p>
                               </div>
                             </div>

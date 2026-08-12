@@ -908,7 +908,7 @@ function NidStep({
                         <p className="text-xs text-muted-foreground">
                           {isBn ? "NID এর সামনের ছবি" : "Front side of NID"}
                         </p>
-                        <p className="text-[10px] text-muted-foreground/60 mt-1">JPEG, PNG (max 5MB)</p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-1">JPEG, PNG (max 400KB)</p>
                       </div>
                     )}
                     <input
@@ -932,7 +932,7 @@ function NidStep({
                         <p className="text-xs text-muted-foreground">
                           {isBn ? "NID এর পিছনের ছবি" : "Back side of NID"}
                         </p>
-                        <p className="text-[10px] text-muted-foreground/60 mt-1">JPEG, PNG (max 5MB)</p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-1">JPEG, PNG (max 400KB)</p>
                       </div>
                     )}
                     <input

@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useThemeStore } from "@/store/theme-store";
 import { useTheme as useNextTheme } from "next-themes";
 import api from "@/lib/api-client";
-import { getStorageUrl } from "@/lib/utils";
+import { getStorageUrl, formatCurrency } from "@/lib/utils";
 import PublicLayout from "@/components/layout/PublicLayout";
 import { useHomepageData } from "@/hooks/use-homepage-data";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -418,7 +418,7 @@ export default function HomePage() {
     if (keyword) params.set("keyword", keyword);
     if (selectedDivision) params.set("division", selectedDivision);
     if (selectedDistrict) params.set("district", selectedDistrict);
-    if (selectedUpozilla) params.set("upozilla", selectedUpozilla);
+    if (selectedUpozilla) params.set("upazila", selectedUpozilla);
     if (location) params.set("location", location);
     router.push(`/jobs?${params.toString()}`);
   };
@@ -784,10 +784,12 @@ export default function HomePage() {
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-semibold" style={{ color: hjSalary }}>
                             {job.salary_min && job.salary_max
-                              ? `${job.salary_min?.toLocaleString()} - ${job.salary_max?.toLocaleString()}`
+                              ? `${formatCurrency(job.salary_min)} - ${formatCurrency(job.salary_max)}`
                               : job.salary_min
-                                ? `${job.salary_min?.toLocaleString()}+`
-                                : isBn ? "আলোচনা সাপেক্ষে" : "Negotiable"}
+                                ? `${formatCurrency(job.salary_min)}+`
+                                : job.budget
+                                  ? formatCurrency(job.budget)
+                                  : isBn ? "আলোচনা সাপেক্ষে" : "Negotiable"}
                           </span>
                           <span className="text-[10px] flex items-center gap-1" style={{ opacity: 0.5 }}>
                             <Clock className="w-3 h-3" />
@@ -819,10 +821,12 @@ export default function HomePage() {
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-semibold" style={{ color: hjSalary }}>
                             {job.salary_min && job.salary_max
-                              ? `${job.salary_min?.toLocaleString()} - ${job.salary_max?.toLocaleString()}`
+                              ? `${formatCurrency(job.salary_min)} - ${formatCurrency(job.salary_max)}`
                               : job.salary_min
-                                ? `${job.salary_min?.toLocaleString()}+`
-                                : isBn ? "আলোচনা সাপেক্ষে" : "Negotiable"}
+                                ? `${formatCurrency(job.salary_min)}+`
+                                : job.budget
+                                  ? formatCurrency(job.budget)
+                                  : isBn ? "আলোচনা সাপেক্ষে" : "Negotiable"}
                           </span>
                           <span className="text-[10px] flex items-center gap-1" style={{ opacity: 0.5 }}>
                             <Clock className="w-3 h-3" />
@@ -876,7 +880,9 @@ export default function HomePage() {
                     <div className="mt-auto flex items-center justify-between">
                       <span className="text-[11px] font-semibold" style={{ color: rjSalary }}>
                         {job.salary_min && job.salary_max
-                          ? `${job.salary_min?.toLocaleString()} - ${job.salary_max?.toLocaleString()}`
+                          ? `${formatCurrency(job.salary_min)} - ${formatCurrency(job.salary_max)}`
+                          : job.budget
+                          ? formatCurrency(job.budget)
                           : isBn ? "আলোচনা" : "Negotiable"}
                       </span>
                       <span className="text-[10px] flex items-center gap-0.5" style={{ color: rjDateColor }}>
@@ -896,7 +902,9 @@ export default function HomePage() {
                     <div className="mt-auto flex items-center justify-between">
                       <span className="text-[11px] font-semibold" style={{ color: rjSalary }}>
                         {job.salary_min && job.salary_max
-                          ? `${job.salary_min?.toLocaleString()} - ${job.salary_max?.toLocaleString()}`
+                          ? `${formatCurrency(job.salary_min)} - ${formatCurrency(job.salary_max)}`
+                          : job.budget
+                          ? formatCurrency(job.budget)
                           : isBn ? "আলোচনা" : "Negotiable"}
                       </span>
                       <span className="text-[10px] flex items-center gap-0.5" style={{ color: rjDateColor }}>

@@ -93,7 +93,7 @@ export function useEmployerCompany() {
       } else if (err.response?.status === 500) {
         msg = "Server error occurred. Please try again or contact support.";
       } else if (err.response?.status === 413) {
-        msg = "File too large. Maximum size is 2MB.";
+        msg = "File too large. Maximum size is 400KB.";
       } else {
         msg = err.message || "Failed to save profile";
       }

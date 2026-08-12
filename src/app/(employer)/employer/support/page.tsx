@@ -127,7 +127,7 @@ export default function EmployerSupportPage() {
   const ticketFileInputRef = useRef<HTMLInputElement>(null);
   const replyFileInputRef = useRef<HTMLInputElement>(null);
 
-  const MAX_FILE_SIZE = 2 * 1024 * 1024;
+  const MAX_FILE_SIZE = 400 * 1024;
   const ALLOWED_TYPES = [
     "image/jpeg",
     "image/png",
@@ -151,7 +151,7 @@ export default function EmployerSupportPage() {
     if (oversized.length)
       toast.error(
         `${
-          isBn ? "২MB+ ফাইল" : "Files over 2MB"
+          isBn ? "৪০০KB+ ফাইল" : "Files over 400KB"
         }: ${oversized.join(", ")}`
       );
     if (invalid.length)
@@ -585,8 +585,8 @@ export default function EmployerSupportPage() {
                   <AttachmentPreview files={ticketAttachments} />
                   <p className="text-[11px] text-muted-foreground mt-1">
                     {isBn
-                      ? "সর্বোচ্চ ২MB, ছবি অটো webp-তে রূপান্তর হবে"
-                      : "Max 2MB per file, images auto-convert to webp"}
+                      ? "সর্বোচ্চ ৪০০KB, ছবি অটো webp-তে রূপান্তর হবে"
+                      : "Max 400KB per file, images auto-convert to webp"}
                   </p>
                 </div>
                 <Button

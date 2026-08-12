@@ -208,8 +208,8 @@ export default function Navbar() {
             <Image
               src={getStorageUrl(settings.site_logo)!}
               alt={settings.site_name || "eJobs"}
-              width={32} height={32}
-              className="h-6 w-auto object-contain shrink-0" unoptimized
+              width={40} height={40}
+              className="h-10 w-auto object-contain shrink-0" unoptimized
             />
           ) : (
             <span style={{ color: settings.nav_text_color || undefined }} className="font-bold">{settings.site_name || "eJobs"}</span>
@@ -376,11 +376,11 @@ export default function Navbar() {
             {/* Mobile Header */}
             <div className="flex items-center justify-between p-4 border-b">
               <SheetTitle className="flex items-center gap-2 text-lg font-bold">
-                {settings.site_logo ? (
-                  <Image src={getStorageUrl(settings.site_logo)!}
-                    alt={settings.site_name || "eJobs"} width={24} height={24}
-                    className="h-6 w-auto object-contain" unoptimized />
-                ) : (
+                 {settings.site_logo ? (
+                   <Image src={getStorageUrl(settings.site_logo)!}
+                     alt={settings.site_name || "eJobs"} width={32} height={32}
+                     className="h-8 w-auto object-contain" unoptimized />
+                 ) : (
                   <span className="text-primary">{settings.site_name || "eJobs"}</span>
                 )}
               </SheetTitle>

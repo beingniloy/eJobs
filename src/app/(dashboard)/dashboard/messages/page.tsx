@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useEffect, useState, useRef, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useThemeStore } from "@/store/theme-store";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtimeMessages } from "@/hooks/use-realtime-messages";
@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageSquare, RefreshCw, Search, Send, ArrowLeft, Clock } from "lucide-react";
+import { MessageSquare, RefreshCw, Search, Send, ArrowLeft, Clock, FileText } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 
 function MessagesContent() {
@@ -22,6 +22,7 @@ function MessagesContent() {
   const isBn = language === "bn";
   const { user } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const targetUserId = searchParams.get("to");
 
   const [conversations, setConversations] = useState<any[]>([]);
@@ -33,6 +34,7 @@ function MessagesContent() {
   const [body, setBody] = useState("");
   const [search, setSearch] = useState("");
   const [showChat, setShowChat] = useState(false);
+  const [activeContract, setActiveContract] = useState<any>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fetchedRef = useRef(false);
@@ -80,6 +82,19 @@ function MessagesContent() {
 
   // Auto-scroll
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  // Fetch contract for selected conversation's other party
+  useEffect(() => {
+    if (!selectedConv) { setActiveContract(null); return; }
+    const otherUserId = selectedConv.other_party?.id || selectedConv.participant?.id;
+    if (!otherUserId) { setActiveContract(null); return; }
+    api.get("/candidate/contracts").then((res) => {
+      const contracts = res.data?.data;
+      const list = Array.isArray(contracts) ? contracts : contracts?.data || [];
+      const match = list.find((c: any) => c.employer_id === otherUserId);
+      setActiveContract(match || null);
+    }).catch(() => setActiveContract(null));
+  }, [selectedConv]);
 
   // Flash tab title when a new incoming message arrives, reset on focus
   useEffect(() => {
@@ -237,10 +252,23 @@ function MessagesContent() {
         ) : (
           <>
             {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b shrink-0">
-              <Button variant="ghost" size="icon" className="md:hidden h-8 w-8" onClick={() => setShowChat(false)}><ArrowLeft className="h-5 w-5" /></Button>
-              <DefaultAvatar src={getAvatar(selectedConv)} name={getName(selectedConv)} className="h-9 w-9" />
-              <span className="font-medium text-sm truncate">{getName(selectedConv)}</span>
+            <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" className="md:hidden h-8 w-8" onClick={() => setShowChat(false)}><ArrowLeft className="h-5 w-5" /></Button>
+                <DefaultAvatar src={getAvatar(selectedConv)} name={getName(selectedConv)} className="h-9 w-9" />
+                <span className="font-medium text-sm truncate">{getName(selectedConv)}</span>
+              </div>
+              {activeContract && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs gap-1.5"
+                  onClick={() => router.push(`/dashboard/contracts`)}
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{isBn ? "চুক্তি দেখুন" : "View Contract"}</span>
+                </Button>
+              )}
             </div>
 
             {/* Messages */}

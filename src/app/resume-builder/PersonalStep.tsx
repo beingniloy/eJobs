@@ -76,7 +76,7 @@ export default function PersonalStep({ wizard, onNext }: { wizard: ReturnType<ty
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) { toast.error(isBn ? "শুধুমাত্র ছবি" : "Only images"); return; }
-    if (file.size > 2 * 1024 * 1024) { toast.error(isBn ? "২MB এর কম" : "Max 2MB"); return; }
+    if (file.size > 400 * 1024) { toast.error(isBn ? "৪০০KB এর কম" : "Max 400KB"); return; }
     setUploadingPhoto(true);
     try {
       const compressed = await compressToWebp(file);
@@ -125,7 +125,7 @@ export default function PersonalStep({ wizard, onNext }: { wizard: ReturnType<ty
           <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoChange} />
           <div className="text-sm">
             <p className="font-medium">Add photo (optional)</p>
-            <p className="text-muted-foreground text-xs">JPEG/PNG/WebP — max 2MB.</p>
+            <p className="text-muted-foreground text-xs">JPEG/PNG/WebP — max 400KB.</p>
           </div>
         </div>
 

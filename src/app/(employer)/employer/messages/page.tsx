@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useEffect, useState, useRef, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useThemeStore } from "@/store/theme-store";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtimeMessages } from "@/hooks/use-realtime-messages";
@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageSquare, Loader2, RefreshCw, Search, Send, ArrowLeft, Paperclip, X, Ban, Flag, MoreVertical, Clock } from "lucide-react";
+import { MessageSquare, Loader2, RefreshCw, Search, Send, ArrowLeft, Paperclip, X, Ban, Flag, MoreVertical, Clock, FileText } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 
 function EmployerMessagesContent() {
@@ -22,6 +22,7 @@ function EmployerMessagesContent() {
   const isBn = language === "bn";
   const { user } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const targetUserId = searchParams.get("to");
 
   const [conversations, setConversations] = useState<any[]>([]);
@@ -36,6 +37,7 @@ function EmployerMessagesContent() {
   const [attachment, setAttachment] = useState<File | null>(null);
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState(false);
+  const [activeContract, setActiveContract] = useState<any>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fetchedRef = useRef(false);
@@ -99,6 +101,19 @@ function EmployerMessagesContent() {
 
   // Auto-scroll
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  // Fetch contract for selected conversation's other party
+  useEffect(() => {
+    if (!selectedConv) { setActiveContract(null); return; }
+    const otherUserId = selectedConv.other_party?.id || selectedConv.participant?.id;
+    if (!otherUserId) { setActiveContract(null); return; }
+    api.get("/employer/contracts").then((res) => {
+      const contracts = res.data?.data;
+      const list = Array.isArray(contracts) ? contracts : contracts?.data || [];
+      const match = list.find((c: any) => c.candidate_id === otherUserId);
+      setActiveContract(match || null);
+    }).catch(() => setActiveContract(null));
+  }, [selectedConv]);
 
   // Flash tab title when a new incoming message arrives, reset on focus
   useEffect(() => {
@@ -165,7 +180,7 @@ function EmployerMessagesContent() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      toast.error(isBn ? "ফাইল ১০MB এর বেশি হতে পারে না" : "File must be under 10MB");
+      toast.error(isBn ? "ফাইল ৪০০KB এর বেশি হতে পারে না" : "File must be under 400KB");
       return;
     }
     setAttachment(file);
@@ -312,7 +327,19 @@ function EmployerMessagesContent() {
                 <DefaultAvatar src={getAvatar(selectedConv)} name={getName(selectedConv)} className="h-9 w-9" />
                 <span className="font-medium text-sm truncate">{getName(selectedConv)}</span>
               </div>
-              <div className="relative">
+              <div className="flex items-center gap-1">
+                {activeContract && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs gap-1.5"
+                    onClick={() => router.push(`/employer/contracts/${activeContract.id}`)}
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">{isBn ? "চুক্তি দেখুন" : "View Contract"}</span>
+                  </Button>
+                )}
+                <div className="relative">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowMenu(!showMenu)}>
                   <MoreVertical className="h-4 w-4" />
                 </Button>
@@ -329,6 +356,7 @@ function EmployerMessagesContent() {
                     </div>
                   </>
                 )}
+                </div>
               </div>
             </div>
 

@@ -22,7 +22,7 @@ export default function BasicInfoStep({ state, isBn }: { state: ProfileState; is
         </div>
         <div>
           <p className="text-sm font-medium">{isBn ? "কোম্পানি লোগো" : "Company Logo"}</p>
-          <p className="text-xs text-muted-foreground">PNG, JPG, max 2MB</p>
+          <p className="text-xs text-muted-foreground">PNG, JPG, max 400KB</p>
         </div>
       </div>
       <div>

@@ -295,13 +295,58 @@ export default function JobDetailClient({ jobId }: Props) {
               ].map((tab) => (<button key={tab.key} onClick={() => setActiveTab(tab.key)} className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all cursor-pointer ${activeTab === tab.key ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}>{tab.label}</button>))}
             </div>
             {activeTab === "overview" && (<div className="space-y-6">
+              {job.job_summary && <Card><CardHeader><CardTitle>{isBn ? "সারসংক্ষেপ" : "Summary"}</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground whitespace-pre-wrap">{job.job_summary}</p></CardContent></Card>}
               <Card><CardHeader><CardTitle>{isBn ? "বিবরণ" : "Description"}</CardTitle></CardHeader><CardContent><div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(job.description || "") }} /></CardContent></Card>
               {job.responsibilities && <Card><CardHeader><CardTitle>{isBn ? "দায়িত্ব" : "Responsibilities"}</CardTitle></CardHeader><CardContent><div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(job.responsibilities) }} /></CardContent></Card>}
               {job.benefits && <Card><CardHeader><CardTitle>{isBn ? "সুবিধা" : "Benefits"}</CardTitle></CardHeader><CardContent><div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(job.benefits) }} /></CardContent></Card>}
+              {(job.contact_person_name || job.contact_email || job.contact_phone) && (
+                <Card><CardHeader><CardTitle>{isBn ? "যোগাযোগের তথ্য" : "Contact Info"}</CardTitle></CardHeader>
+                  <CardContent className="text-sm space-y-1">
+                    {job.contact_person_name && <p><span className="text-muted-foreground">{isBn ? "যোগাযোগকারী" : "Contact"}:</span> {job.contact_person_name}</p>}
+                    {job.contact_email && <p><span className="text-muted-foreground">Email:</span> {job.contact_email}</p>}
+                    {job.contact_phone && <p><span className="text-muted-foreground">{isBn ? "ফোন" : "Phone"}:</span> {job.contact_phone}</p>}
+                  </CardContent>
+                </Card>
+              )}
+              {(job.application_method || job.application_url || job.application_email) && (
+                <Card><CardHeader><CardTitle>{isBn ? "আবেদনের পদ্ধতি" : "How to Apply"}</CardTitle></CardHeader>
+                  <CardContent className="text-sm space-y-1">
+                    <p><span className="text-muted-foreground">{isBn ? "পদ্ধতি" : "Method"}:</span> {job.application_method === 'external' ? (isBn ? "বহিঃস্থ লিংক" : "External Link") : job.application_method === 'email' ? "Email" : (isBn ? "প্ল্যাটফর্মের মাধ্যমে" : "Via Platform")}</p>
+                    {job.application_url && <p><span className="text-muted-foreground">URL:</span> <a href={job.application_url} target="_blank" rel="noreferrer" className="text-primary underline">{job.application_url}</a></p>}
+                    {job.application_email && <p><span className="text-muted-foreground">Email:</span> {job.application_email}</p>}
+                  </CardContent>
+                </Card>
+              )}
             </div>)}
             {activeTab === "requirements" && (<div className="space-y-6">
-              {job.requirements && <Card><CardHeader><CardTitle>{isBn ? "যোগ্যতা" : "Requirements"}</CardTitle></CardHeader><CardContent><div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(job.requirements) }} /></CardContent></Card>}
+              {job.experience_requirements && <Card><CardHeader><CardTitle>{isBn ? "অভিজ্ঞতার প্রয়োজনীয়তা" : "Experience Requirements"}</CardTitle></CardHeader><CardContent><div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(job.experience_requirements) }} /></CardContent></Card>}
+              {job.education_requirements && <Card><CardHeader><CardTitle>{isBn ? "শিক্ষাগত যোগ্যতা" : "Education Requirements"}</CardTitle></CardHeader><CardContent><div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(job.education_requirements) }} /></CardContent></Card>}
+              {job.additional_requirements && <Card><CardHeader><CardTitle>{isBn ? "অতিরিক্ত প্রয়োজনীয়তা" : "Additional Requirements"}</CardTitle></CardHeader><CardContent><div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(job.additional_requirements) }} /></CardContent></Card>}
               {skills.length > 0 && <Card><CardHeader><CardTitle>{isBn ? "দক্ষতা" : "Skills"}</CardTitle></CardHeader><CardContent><div className="flex flex-wrap gap-2">{skills.map((s: string, i: number) => <Badge key={i} variant="secondary">{s}</Badge>)}</div></CardContent></Card>}
+              {(job.min_age || job.max_age || job.gender_preference) && (
+                <Card><CardHeader><CardTitle>{isBn ? "প্রার্থীর সংক্রান্ত" : "Candidate Criteria"}</CardTitle></CardHeader>
+                  <CardContent className="text-sm space-y-1">
+                    {(job.min_age || job.max_age) && <p><span className="text-muted-foreground">{isBn ? "বয়স" : "Age"}:</span> {job.min_age || "?"} - {job.max_age || "?"} {isBn ? "বছর" : "years"}</p>}
+                    {job.gender_preference && job.gender_preference !== 'any' && <p><span className="text-muted-foreground">{isBn ? "লিঙ্গ" : "Gender"}:</span> {job.gender_preference}</p>}
+                  </CardContent>
+                </Card>
+              )}
+              {job.language_skills && job.language_skills.length > 0 && (
+                <Card><CardHeader><CardTitle>{isBn ? "ভাষা দক্ষতা" : "Language Skills"}</CardTitle></CardHeader>
+                  <CardContent><div className="flex flex-wrap gap-2">{job.language_skills.map((lang: string, i: number) => <Badge key={i} variant="secondary">{lang}</Badge>)}</div></CardContent>
+                </Card>
+              )}
+              {job.required_certifications && job.required_certifications.length > 0 && (
+                <Card><CardHeader><CardTitle>{isBn ? "প্রয়োজনীয় সার্টিফিকেট" : "Required Certifications"}</CardTitle></CardHeader>
+                  <CardContent><div className="flex flex-wrap gap-2">{job.required_certifications.map((cert: string, i: number) => <Badge key={i} variant="outline">{cert}</Badge>)}</div></CardContent>
+                </Card>
+              )}
+              {job.driving_license_required && <p className="text-xs text-muted-foreground flex items-center gap-1"><Shield className="h-3 w-3" />{isBn ? "ড্রাইভিং লাইসেন্স প্রয়োজন" : "Driving license required"}</p>}
+              {job.required_documents && job.required_documents.length > 0 && (
+                <Card><CardHeader><CardTitle>{isBn ? "প্রয়োজনীয় ডকুমেন্ট" : "Required Documents"}</CardTitle></CardHeader>
+                  <CardContent><div className="flex flex-wrap gap-2">{job.required_documents.map((doc: string, i: number) => <Badge key={i} variant="secondary">{doc}</Badge>)}</div></CardContent>
+                </Card>
+              )}
             </div>)}
             {activeTab === "company" && (<div className="space-y-6">
               {typeof job.company === "object" && job.company ? (

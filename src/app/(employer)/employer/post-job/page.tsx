@@ -24,6 +24,7 @@ import { Loader2, Plus, Trash2, Sparkles, Briefcase, MapPin, Calendar, DollarSig
 import dynamic from "next/dynamic";
 import { aiService } from "@/services/ai.service";
 import { subscriptionService, type QuotaInfo } from "@/services/subscription.service";
+import { DIVISIONS_EN, DIVISIONS_BN, DISTRICTS_EN, THANAS_EN } from "@/lib/bd-data";
 
 const RichTextEditor = dynamic(() => import("@/components/ui/rich-text-editor"), { ssr: false });
 
@@ -33,6 +34,9 @@ const postJobSchema = z.object({
   job_type: z.string().min(1, "Job type is required"),
   vacancies: z.coerce.number().min(1, "At least 1 vacancy"),
   location: z.string().min(1, "Location is required"),
+  division: z.string().optional(),
+  district: z.string().optional(),
+  upazila: z.string().optional(),
   workplace_type: z.string().optional(),
   salary_min: z.coerce.number().min(0).optional(),
   salary_max: z.coerce.number().min(0).optional(),
@@ -342,12 +346,61 @@ export default function PostJobPage() {
                 <Input type="number" min={1} {...register("vacancies")} />
                 {errors.vacancies && <p className="text-sm text-destructive">{errors.vacancies.message}</p>}
               </div>
+            </div>
+
+            {/* Structured Location Dropdowns */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label>{isBn ? "চাকরির স্থান" : "Job Location"} *</Label>
-                <Input placeholder="e.g. Dhaka, Bangladesh" {...register("location")} />
-                {errors.location && <p className="text-sm text-destructive">{errors.location.message}</p>}
+                <Label>{isBn ? "বিভাগ" : "Division"} *</Label>
+                <Select value={watch("division") || ""} onValueChange={(v) => {
+                  setValue("division", v);
+                  setValue("district", "");
+                  setValue("upazila", "");
+                  const divName = DIVISIONS_EN[v] || v;
+                  setValue("location", divName);
+                }}>
+                  <SelectTrigger><SelectValue placeholder={isBn ? "বিভাগ নির্বাচন করুন" : "Select division"} /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(DIVISIONS_EN).map(([key, name]) => (
+                      <SelectItem key={key} value={key}>{isBn ? (DIVISIONS_BN[key] || name) : name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>{isBn ? "জেলা" : "District"} *</Label>
+                <Select value={watch("district") || ""} disabled={!watch("division")} onValueChange={(v) => {
+                  setValue("district", v);
+                  setValue("upazila", "");
+                  const divName = DIVISIONS_EN[watch("division") || ""] || "";
+                  setValue("location", v + (divName ? ", " + divName : ""));
+                }}>
+                  <SelectTrigger><SelectValue placeholder={isBn ? "জেলা নির্বাচন করুন" : "Select district"} /></SelectTrigger>
+                  <SelectContent>
+                    {(DISTRICTS_EN[watch("division") || ""] || []).map((d) => (
+                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>{isBn ? "উপজেলা" : "Upazila/Thana"}</Label>
+                <Select value={watch("upazila") || ""} disabled={!watch("district")} onValueChange={(v) => {
+                  setValue("upazila", v);
+                  const dist = watch("district") || "";
+                  const divName = DIVISIONS_EN[watch("division") || ""] || "";
+                  setValue("location", v + (dist ? ", " + dist : "") + (divName ? ", " + divName : ""));
+                }}>
+                  <SelectTrigger><SelectValue placeholder={isBn ? "উপজেলা নির্বাচন করুন" : "Select upazila"} /></SelectTrigger>
+                  <SelectContent>
+                    {(THANAS_EN[watch("district") || ""] || []).map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+            {errors.location && <p className="text-sm text-destructive">{errors.location.message}</p>}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">

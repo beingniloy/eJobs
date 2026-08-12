@@ -96,7 +96,7 @@ export default function EmployerConversationPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      toast.error(isBn ? "ফাইল ১০MB এর বেশি হতে পারে না" : "File must be under 10MB");
+      toast.error(isBn ? "ফাইল ৪০০KB এর বেশি হতে পারে না" : "File must be under 400KB");
       return;
     }
     setAttachment(file);

@@ -288,7 +288,15 @@ export default function ManageJobsPage() {
                 const boostLocked = !!(promo && (promo.status === "active" || promo.status === "pending_review"));
                 return (
                   <TableRow key={job.id}>
-                    <TableCell><div className="font-medium">{job.title}</div>{job.location && <div className="text-xs text-muted-foreground sm:hidden">{job.location}</div>}</TableCell>
+                    <TableCell>
+                      <div className="font-medium">{job.title}</div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-muted-foreground">
+                        {job.job_type && <span className="capitalize">{String(job.job_type).replace(/-/g, " ")}</span>}
+                        {job.location && <span>{job.location}</span>}
+                        {job.salary_min && <span>৳{Number(job.salary_min).toLocaleString()}{job.salary_max ? ` - ৳${Number(job.salary_max).toLocaleString()}` : "+"}</span>}
+                        {job.deadline && <span>{isBn ? "শেষ" : "Due"}: {new Date(job.deadline).toLocaleDateString()}</span>}
+                      </div>
+                    </TableCell>
                     <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">{typeLabel || "—"}</TableCell>
                     <TableCell className="text-center"><span className="text-sm text-muted-foreground">{job.applications_count || 0}</span></TableCell>
                     <TableCell className="hidden md:table-cell">

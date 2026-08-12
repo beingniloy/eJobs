@@ -185,9 +185,8 @@ function LoginClientInner() {
               <Button type="submit" className="w-full" disabled={login.isPending}>{login.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{isBn ? "লগইন" : "Sign In"}</Button>
             </form>
             <div className="mt-6"><Suspense fallback={<div className="h-16 bg-muted rounded animate-pulse" />}><SocialLoginButtons role="candidate" /></Suspense></div>
-            <div className="mt-4 text-center text-sm space-y-2">
-              <p>{isBn ? "নতুন প্রার্থী?" : "New candidate?"}{" "}<Link href="/register" className="text-primary hover:underline font-medium">{isBn ? "নিবন্ধন করুন" : "Register"}</Link></p>
-              <p>{isBn ? "নিয়োগকর্তা?" : "Employer?"}{" "}<Link href="/employer/register" className="text-primary hover:underline">{isBn ? "নিবন্ধন করুন" : "Register here"}</Link></p>
+            <div className="mt-4 text-center text-sm">
+              <p>{isBn ? "নতুন ব্যবহারকারী?" : "New here?"}{" "}<Link href="/register" className="text-primary hover:underline font-medium">{isBn ? "নিবন্ধন করুন" : "Register"}</Link></p>
             </div>
           </CardContent>
         </Card>

@@ -33,7 +33,7 @@ const PUBLIC_ROUTES = [
   "/account-restricted",
 ];
 
-const GUEST_ONLY_ROUTES = ["/login", "/register", "/employer/register"];
+const GUEST_ONLY_ROUTES = ["/login", "/employer/register"];
 
 const EMPLOYEE_AUTH_ROUTES = ["/employer/register"];
 

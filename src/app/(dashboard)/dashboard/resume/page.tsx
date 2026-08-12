@@ -127,8 +127,8 @@ export default function ResumePage() {
       toast.error(isBn ? "শুধুমাত্র PDF ফাইল অনুমোদিত" : "Only PDF files are allowed");
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error(isBn ? "ফাইল ২MB এর কম হতে হবে" : "File must be under 2MB");
+    if (file.size > 400 * 1024) {
+      toast.error(isBn ? "ফাইল ৪০০KB এর কম হতে হবে" : "File must be under 400KB");
       return;
     }
     setUploading(true);
@@ -359,8 +359,8 @@ export default function ResumePage() {
                 </h3>
                 <p className="text-sm text-muted-foreground mt-0.5">
                   {isBn
-                    ? "পিডিএফ ফরম্যাটে আপনার বিদ্যমান সিভি আপলোড করুন (সর্বোচ্চ ২MB)"
-                    : "Upload your existing CV in PDF format (max 2MB)"}
+                    ? "পিডিএফ ফরম্যাটে আপনার বিদ্যমান সিভি আপলোড করুন (সর্বোচ্চ ৪০০KB)"
+                    : "Upload your existing CV in PDF format (max 400KB)"}
                 </p>
               </div>
             </div>

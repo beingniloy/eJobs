@@ -19,6 +19,7 @@ import { exportApplicantsExcel, exportApplicantsPdf } from "./applicants-export"
 import { BulkMessageDialog } from "./BulkMessageDialog";
 import { DeliveryMonitorDialog } from "./DeliveryMonitor";
 import ScheduleInterviewModal from "@/components/interviews/ScheduleInterviewModal";
+import CustomHireModal from "./CustomHireModal";
 
 export default function ApplicantsClient() {
   const { language, settings } = useThemeStore();
@@ -37,6 +38,7 @@ export default function ApplicantsClient() {
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [scheduleInterviewApp, setScheduleInterviewApp] = useState<JobApplication | null>(null);
   const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
+  const [customHireApp, setCustomHireApp] = useState<JobApplication | null>(null);
 
   useEffect(() => {
     document.title = isBn ? `আবেদনকারী | ${siteName}` : `Applicants | ${siteName}`;
@@ -179,6 +181,7 @@ export default function ApplicantsClient() {
               onToggle={() => setExpandedJobs((p) => ({ ...p, [group.jobId]: p[group.jobId] !== false ? false : true }))}
               onStatusChange={handleStatusChange}
               onScheduleInterview={(app) => setScheduleInterviewApp(app)}
+              onCustomHire={(app) => setCustomHireApp(app)}
               pendingId={pendingId}
             />
           ))}
@@ -225,6 +228,19 @@ export default function ApplicantsClient() {
             setScheduleInterviewApp(null);
             refreshStatus(scheduleInterviewApp.id, "interview");
             toast.success(isBn ? "সাক্ষাৎকার নির্ধারিত হয়েছে" : "Interview scheduled");
+          }}
+        />
+      )}
+
+      {customHireApp && (
+        <CustomHireModal
+          app={customHireApp}
+          isBn={isBn}
+          open={!!customHireApp}
+          onOpenChange={(o) => { if (!o) setCustomHireApp(null); }}
+          onOfferSent={() => {
+            setCustomHireApp(null);
+            toast.success(isBn ? "অফার প্রেরিত হয়েছে" : "Offer sent");
           }}
         />
       )}
