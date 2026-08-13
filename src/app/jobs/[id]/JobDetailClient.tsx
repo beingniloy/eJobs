@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { aiService } from "@/services/ai.service";
+import { trackBehavior } from "@/hooks/use-behavior-tracker";
 import DOMPurify from "dompurify";
 
 interface Props { jobId: string; }
@@ -70,6 +71,12 @@ export default function JobDetailClient({ jobId }: Props) {
   const [submittingReport, setSubmittingReport] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "requirements" | "company">("overview");
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      trackBehavior("job_view", { targetId: Number(jobId) });
+    }
+  }, [jobId, isAuthenticated]);
 
   useEffect(() => {
     if (isAuthenticated && user?.role === "candidate") {

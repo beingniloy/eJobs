@@ -75,8 +75,9 @@ export default function EmployerAnalyticsPage() {
           setData((prev) => ({ ...prev, ...d }));
         }
       })
-      .catch(() => {
-        // Analytics endpoint may not exist yet — use defaults silently
+      .catch((err) => {
+        console.error("Analytics load failed:", err);
+        toast.error(isBn ? "অ্যানালিটিক্স লোড ব্যর্থ হয়েছে" : "Failed to load analytics", { duration: 3000 });
       })
       .finally(() => setLoading(false));
   }, []);
