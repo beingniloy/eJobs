@@ -13,7 +13,7 @@ import {
   ArrowLeft, Edit3, Pause, Play, Trash2, Copy, Check,
   MapPin, Briefcase, Users, Clock, DollarSign, Globe,
   FileText, Award, Car, Languages, Link2, Mail, Phone,
-  Building2, Calendar, Target, BookOpen, Heart,
+  Building2, Calendar, Target, BookOpen, Heart, User,
 } from "lucide-react";
 
 export default function EmployerJobDetailPage() {
