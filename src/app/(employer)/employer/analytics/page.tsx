@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import {
   Briefcase, Users, Eye, TrendingUp, Clock, BarChart3,
   DollarSign, MessageSquare, FileText, ArrowUpRight, ArrowDownRight,
