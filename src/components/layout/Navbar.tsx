@@ -208,8 +208,8 @@ export default function Navbar() {
             <Image
               src={getStorageUrl(settings.site_logo)!}
               alt={settings.site_name || "eJobs"}
-              width={72} height={72}
-              className="h-18 w-auto object-contain shrink-0" unoptimized
+               width={32} height={32}
+               className="h-8 w-auto object-contain shrink-0" unoptimized
             />
           ) : (
             <span style={{ color: settings.nav_text_color || undefined }} className="font-bold">{settings.site_name || "eJobs"}</span>
@@ -379,7 +379,7 @@ export default function Navbar() {
                  {settings.site_logo ? (
                     <Image src={getStorageUrl(settings.site_logo)!}
                       alt={settings.site_name || "eJobs"} width={48} height={48}
-                      className="h-12 w-auto object-contain" unoptimized />
+                       className="h-10 w-auto object-contain" unoptimized />
                  ) : (
                   <span className="text-primary">{settings.site_name || "eJobs"}</span>
                 )}
